@@ -2,6 +2,7 @@
 #define AYLINALG_HH
 
 #include <cstring>
+#include <cstdint>
 
 #include <gsl/gsl_matrix.h>
 #include <gsl/gsl_vector.h>

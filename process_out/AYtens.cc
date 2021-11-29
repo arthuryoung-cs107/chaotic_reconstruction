@@ -12,17 +12,12 @@ extern "C"
 AYtens::AYtens(int W_, int N_, int M_): W(W_), M(M_), N(N_)
 {
   M_ptr = (AYmat**)malloc((W_)*sizeof(AYmat*));
-  // for (int i = 0; i < W; i++)
-  // {
-  //   printf("%d\n", i);
-  //   *(M_ptr+i) = new AYmat(M, N);
-  // }
-  AYmat * mat = new AYmat(M, N);
 
 }
 AYtens::~AYtens()
 {
   for (int i = 0; i < W; i++) delete *(M_ptr+i);
+  free(M_ptr);
 }
 void AYtens::fprintf_tens(char name[], bool verbose)
 {
