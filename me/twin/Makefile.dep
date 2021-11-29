@@ -1,0 +1,13 @@
+p_grid.o: p_grid.cc p_grid.hh pg_structs.hh particle.hh
+swirl.o: swirl.cc swirl.hh swirl_param.hh \
+ particle.hh p_grid.hh pg_structs.hh wall.hh
+particle.o: particle.cc particle.hh
+common.o: common.cc common.hh
+filter_io.o: filter_io.cc filter.hh fil_param.hh swirl_param.hh swirl.hh \
+ particle.hh p_grid.hh pg_structs.hh wall.hh common.hh
+swirl_io.o: swirl_io.cc swirl.hh swirl_param.hh \
+ particle.hh p_grid.hh pg_structs.hh wall.hh common.hh
+wall.o: wall.cc wall.hh
+filter.o: filter.cc filter.hh fil_param.hh swirl_param.hh swirl.hh \
+ particle.hh p_grid.hh pg_structs.hh wall.hh common.hh
+swirl_param.o: swirl_param.cc swirl_param.hh
