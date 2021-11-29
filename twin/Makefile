@@ -1,5 +1,5 @@
 # Include the configuration file
-include ../config.mk
+include ../../config.mk
 
 # Create iflag to include files in the shared folder
 iflags=-I../shared `gsl-config --cflags`
