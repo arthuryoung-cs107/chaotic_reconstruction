@@ -117,6 +117,8 @@ AYmat * aysml_read(char name[])
   std::getline(tens_file, line);
   std::istringstream in(line);
   in >> M >> N;
+  tens_file.close();
+  
   AYmat * out = new AYmat(M, N);
   FILE * aydat_stream = fopen(aydat_name, "r");
   size_t success = fread(out->A_ptr, sizeof(double), M*N, aydat_stream);
@@ -126,38 +128,23 @@ AYmat * aysml_read(char name[])
 
 AYvec * aysml_read_vec(char name[])
 {
-  int i, j, M, N;
-  double data;
-  size_t success;
-  char extract[1000];
-  char aysml_specfile[300];
-  char aydat_specfile[300];
-  memset(aysml_specfile, 0, 299);
-  memset(aydat_specfile, 0, 299);
-  snprintf(aysml_specfile, 300, "%s.aysml", name);
-  snprintf(aydat_specfile, 300, "%s.aydat", name);
-
-  FILE * aysml_stream = fopen(aysml_specfile, "r");
-
-  char * check = fgets(extract, sizeof(extract), aysml_stream);
-  M = atoi(extract);
-  int next = (int) log10((double) M) + 1;
-  N = atoi(extract+next);
+  char aysml_specs[300]; memset(aysml_specs, 0, 299); snprintf(aysml_specs, 300, "%s.aysml", name);
+  char aydat_name[300]; memset(aydat_name, 0, 299); snprintf(aydat_name, 300, "%s.aydat", name);
+  int M, N;
+  std::ifstream tens_file;
+  tens_file.open(aysml_specs);
+  std::string line;
+  std::getline(tens_file, line);
+  std::istringstream in(line);
+  in >> M >> N;
+  tens_file.close();
 
   if (N != 1) printf("aysml_read_vec warning: aysml has N = %d. Reading first M = %d values\n", N, M);
 
   AYvec * out = new AYvec(M);
-  fclose(aysml_stream);
-
-  FILE * aydat_stream = fopen(aydat_specfile, "r");
-
-  for ( i = 0; i < M; i++)
-  {
-    success = fread(&data, sizeof(double), 1, aydat_stream );
-    out->set(i, data);
-  }
+  FILE * aydat_stream = fopen(aydat_name, "r");
+  size_t success = fread(out->A_ptr, sizeof(double), M, aydat_stream);
   fclose(aydat_stream);
-
   return out;
 }
 
@@ -172,6 +159,7 @@ AYtens * aysml_read_tens(char name[])
   std::getline(tens_file, line);
   std::istringstream in(line);
   in >> type >> M >> N >> W;
+  tens_file.close();
 
   AYtens * T_out = new AYtens(W, M, N);
   if (type == 1)
