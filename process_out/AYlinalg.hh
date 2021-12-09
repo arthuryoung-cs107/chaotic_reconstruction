@@ -2,6 +2,7 @@
 #define AYLINALG_HH
 
 #include <cstring>
+#include <cstdint>
 
 #include <gsl/gsl_matrix.h>
 #include <gsl/gsl_vector.h>
@@ -120,6 +121,7 @@ class AYmat
       friend class AYcolstack;
       friend class DCT_mapping;
       friend class AY_SVDspace;
+      friend class AYtens;
 
     private:
       void max_mag_elements_recursive(AYmat *top_vec_, int * index_array_, int i_next);
@@ -188,8 +190,56 @@ class AYcolstack : public AYmat
     {}
 };
 
+class AYtens
+{
+  public:
+    int W, M, N;
+    double *** T_AT;
+    AYmat * mat;
+
+    AYtens(int W_, int M_, int N_);
+    ~AYtens();
+    double get(int i_, int j_, int k_);
+    void set(int i_, int j_, int k_, double val_);
+    void print_dims();
+    void print_tens(bool space_ = true);
+    void fprintf_tens( char name_[], bool verbose_=false);
+    void init_0();
+    void init_123();
+    void init_mats123();
+};
+
+class AYsym
+{
+  public:
+    int N;
+
+    double ** A;
+
+    AYsym(int N_);
+    ~AYsym();
+
+    void mult_vec(AYvec * in_, AYvec * out_);
+};
+
+class AYdata
+{
+  public:
+  int counter=0;
+
+  bool writing = false;
+
+  AYdata();
+  ~AYdata();
+
+  void init_write_split_tensor(char prefix_[], int M, int N);
+  void write_split_tensor(AYmat * mat_);
+  void end_write_split_tensor(char prefix_[]);
+};
+
 AYmat * aysml_read(char name[]);
 AYvec * aysml_read_vec(char name[]);
+AYtens * aysml_read_tens(char name[]);
 
 AYvec * AYmat_2_AYvec_gen(AYmat * X_in);
 void AYmat_2_AYvec_copy(AYmat * X_in, AYvec * x_in);
@@ -202,14 +252,8 @@ AYmat * GSL_2_AYmat_gen(gsl_matrix * mat_in);
 AYmat * GSL_2_AYmat_gen(gsl_vector * vec_in);
 AYmat * GSL_2_diagAYmat_gen(gsl_vector * vec_in);
 
-class AYtens
-{
-  public:
-    int M, N, W;
-    AYmat ** M_ptr;
+double *** AYd3tensor(int W_, int M_, int N_);
+void free_AYd3tensor(double *** t_);
 
-    AYtens(int W_, int M_, int N_);
-    ~AYtens();
-    void fprintf_tens( char name_[], bool verbose_=false);
-};
+
 #endif

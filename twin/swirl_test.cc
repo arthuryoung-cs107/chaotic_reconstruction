@@ -25,8 +25,9 @@ int main() {
 
     // Set the initial positions of the splines
     proximity_grid pg;
-    swirl sw(sparam,&pg,wl,25);
-    sw.import("input.dat");
+    // swirl sw(sparam,&pg,wl,25);
+    swirl sw(sparam,&pg,wl,3);
+    sw.import("input3.dat");
 
     // Solve the system
     sw.setup_output_dir("circ6.odr");
@@ -35,6 +36,7 @@ int main() {
 
     sw.solve(120,0.0005,1200);
 
-    dstore.write("synth25.dat");
+    // dstore.write("synth25.dat");
+    dstore.write("synth3.dat");
     dstore.print_theta_info();
 }

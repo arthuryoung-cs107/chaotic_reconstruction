@@ -17,7 +17,7 @@ struct swirl_param {
     /** The bead moment of inertia. */
     double momi;
     /** The bead normal spring constant. */
-    double Kn;
+    double Kn; // likely to have more uncertainty relative to gamma
     /** The bead-bead normal damping. */
     double gamman_bead;
     /** The bead-base normal damping. */
@@ -31,13 +31,13 @@ struct swirl_param {
     /** The bead-wall friction coefficient. */
     double mu_wall;
     /** The dish spinning amplitude. */
-    double dsamp;
-    /** The dish x center in the images. */
-    double cx_im;
-    /** The dish y center in the images. */
-    double cy_im;
-    /** The bead diameter in the images. */
-    double cl_im;
+    double dsamp; // hold constant for all particles
+    /** The dish x center in the images. */ // hold constant for all particles
+    double cx_im; // hold constant for all particles
+    /** The dish y center in the images. */ // hold constant for all particles
+    double cy_im; // hold constant for all particles
+    /** The bead diameter in the images. */ // hold constant for all particles
+    double cl_im; // hold constant for all particles
     /** The wall scale factor. */
     double wall_sca;
     swirl_param(double rad_,double mass_,double Kn_,double gamman_bead_,double gamman_base_,double gamman_wall_,double mu_bead_,double mu_base_,double mu_wall_,double dsamp_,double cx_im_,double cy_im_,double cl_im_,double wall_sca_)

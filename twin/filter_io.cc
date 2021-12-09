@@ -42,7 +42,7 @@ void filter::write_files() {
     // Output the most probable particle, plus the associated experimental data
     if(fflags&3) {
         swirl *swa=sw[most_likely()];
-        if(fflags&1) output_particle(swa,"pa");
+        if(fflags&1) output_particle(swa,"pa"); // mode particle sample
         if(fflags&2) output_data(swa,"ea");
     }
 
@@ -50,7 +50,7 @@ void filter::write_files() {
     // associated experimental data
     if(fflags&12) {
         swirl swb(sw,npar,4);
-        if(fflags&4) output_particle(&swb,"pb");
+        if(fflags&4) output_particle(&swb,"pb"); // something in between, check the weighting in output_particle
         if(fflags&8) output_data(&swb,"eb");
     }
 
@@ -58,7 +58,7 @@ void filter::write_files() {
     // associated experimental data
     if(fflags&48) {
         swirl swc(sw,npar,1);
-        if(fflags&16) output_particle(&swc,"pc");
+        if(fflags&16) output_particle(&swc,"pc"); // mean particle sample. most visually compelling
         if(fflags&32) output_data(&swc,"ec");
     }
 

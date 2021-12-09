@@ -114,7 +114,7 @@ while(-e "$dr/$ARGV[1].$a") {
                 printf A "sphere{<0,0,0>,0.5 texture{T_Stone$q translate <$qq,0,0>} matrix<%.5g,%.5g,%.5g,%.5g,%.5g,%.5g,%.5g,%.5g,%.5g,$x,$y,$z>}\n",
                     1-2*($q2*$q2+$q3*$q3),2*($q1*$q2+$q3*$q0),2*($q1*$q3-$q2*$q0),
                     2*($q1*$q2-$q3*$q0),1-2*($q1*$q1+$q3*$q3),2*($q2*$q3+$q1*$q0),
-                    2*($q1*$q3+$q2*$q0),2*($q2*$q3-$q1*$q0),1-2*($q1*$q1+$q2*$q2)
+                    2*($q1*$q3+$q2*$q0),2*($q2*$q3-$q1*$q0),1-2*($q1*$q1+$q2*$q2) ## conversion of quaternion to rotation matrix
                     unless $x eq "nan";
             }
         } else {
