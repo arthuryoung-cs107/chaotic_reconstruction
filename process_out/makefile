@@ -10,7 +10,7 @@ CDEPS = nrutil.h auxiliary_functions.h knuth_lcg.h
 
 CPPDEPS = AYlinalg.hh
 
-OBJS1=main1.o nrutil.o auxiliary_functions.o knuth_lcg.o AYlinalg.o AYmat.o AYvec.o AYrng.o AYtens.o 
+OBJS1=main1.o nrutil.o auxiliary_functions.o knuth_lcg.o AYlinalg.o AYmat.o AYvec.o AYrng.o AYtens.o
 
 %.o: %.c $(CDEPS)
 	$(CC) -c -o $@ $< $(CFLAGS) $(LDIR)

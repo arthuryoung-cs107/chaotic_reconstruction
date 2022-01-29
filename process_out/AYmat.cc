@@ -152,7 +152,8 @@ void AYmat::print_mat(bool space_)
   if (space_) printf("\n");
 }
 
-void AYmat::print_dims() {printf("AYmat: matrix has dimensions (M, N) = (%d, %d)\n", M, N);}
+void AYmat::print_dims()
+{printf("AYmat: matrix has dimensions (M, N) = (%d, %d)\n", M, N);}
 
 void AYmat::fprintf_mat(char name[], bool verbose)
 {
@@ -181,10 +182,7 @@ void AYmat::init_123()
 }
 
 void AYmat::init_0()
-{
-  int i;
-  for ( i = 0; i < N*M; i++) AT[0][i] = 0.0;
-}
+{for (int i = 0; i < N*M; i++) *(A_ptr+i) = 0.0;}
 
 void AYmat::init_randuni(double low_, double high_)
 {
