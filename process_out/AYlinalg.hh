@@ -79,6 +79,7 @@ class AYmat
 
       virtual AYmat * copy_gen();
       virtual void copy_set(AYmat * X);
+      virtual void copy_set(AYmat * X, double scal_);
 
       virtual AYmat * row_slice_gen(int i_);
 
@@ -112,6 +113,8 @@ class AYmat
       int min_mag_elements(AYmat *top_vec_, int *index_array_);
       void min_mag_elements_ordered(AYmat *top_vec_, int *index_array_);
 
+      void Proj_1(AYmat *z_, int * ind_vec_, double R_=1.0);
+
       virtual void svd(gsl_vector *S, gsl_matrix *V, gsl_vector *work);
       virtual void svd_check();
 
@@ -122,6 +125,8 @@ class AYmat
       friend class DCT_mapping;
       friend class AY_SVDspace;
       friend class AYtens;
+      friend class AYsym;
+      friend class data_cloud;
 
     private:
       void max_mag_elements_recursive(AYmat *top_vec_, int * index_array_, int i_next);
@@ -145,7 +150,6 @@ class AYvec : public AYmat
     void print_vec(bool space_ = true);
 
     AYvec * copy_gen();
-    void copy_set(AYvec * x_in);
     AYvec * row_slice_gen(int i_);
     AYvec * col_slice_gen(int j_);
     AYmat * transpose_gen();
@@ -155,26 +159,6 @@ class AYvec : public AYmat
     void svd(gsl_vector *S, gsl_matrix *V, gsl_vector *work);
     void svd_check();
 };
-
-class AY_SVDspace // for now, assuming that we are working with a long thin matrix. A relatively simple conditional can be implemented in order to handle short fat case
-{
-    public:
-      AY_SVDspace(AYmat * mat_);
-      AY_SVDspace(int M_, int N_);
-      ~AY_SVDspace();
-
-      int M_in, N_in;
-      gsl_matrix * U;
-      gsl_matrix * V;
-      gsl_vector * s;
-      gsl_vector * work;
-
-      void svd();
-      void load_U(AYmat * X_);
-      void unpack(AYmat * U_, AYmat * S_, AYmat * V_);
-};
-
-void AYlinalg_svd(AYmat * mat_, AY_SVDspace * space_);
 
 class AYcolstack : public AYmat
 {
@@ -212,14 +196,20 @@ class AYtens
 class AYsym
 {
   public:
-    int N;
+    int N, len;
 
     double ** A;
 
     AYsym(int N_);
     ~AYsym();
 
-    void mult_vec(AYvec * in_, AYvec * out_);
+    void print_mat(bool space_ = true);
+    void fprintf_sym(char name[], bool verbose_=false);
+    void init_eye();
+    void init_123();
+    void init_sqrmat(AYmat * m_ );
+    void mult_vec(AYvec * in_, AYvec * out_, bool diff_ = false);
+    double vT_A_v(AYvec *v, AYvec * w);
 };
 
 class AYdata
@@ -237,6 +227,51 @@ class AYdata
   void end_write_split_tensor(char prefix_[]);
 };
 
+class AY_SVDspace // for now, assuming that we are working with a long thin matrix. A relatively simple conditional can be implemented in order to handle short fat case
+{
+    public:
+      AY_SVDspace(AYmat * mat_);
+      AY_SVDspace(int M_, int N_);
+      ~AY_SVDspace();
+
+      int M_in, N_in;
+      gsl_matrix * U;
+      gsl_matrix * V;
+      gsl_vector * s;
+      gsl_vector * work;
+
+      void svd();
+      void load_U(AYmat * X_);
+      void unpack(AYmat * U_, AYmat * S_, AYmat * V_);
+};
+
+class AY_Choleskyspace
+{
+    public:
+      AY_Choleskyspace(AYsym * mat_);
+      AY_Choleskyspace(int N_);
+      ~AY_Choleskyspace();
+
+      gsl_matrix * mat_gsl;
+      gsl_vector * x_gsl;
+
+      bool workspace_alloc = false;
+
+      int N_in;
+      void load_mat(AYsym * mat_);
+      void load_mat(AYsym * mat_, double scal_);
+      void Cholesky_decomp();
+      void Cholesky_decomp(AYsym * mat_, AYsym * L_);
+      void iCholesky_decomp(AYsym * mat_, AYsym * L_, double threshold_ = 1e-4);
+      void unpack(AYsym * L_);
+      void alloc_workspace();
+      void solve_system(AYvec* x_in, AYvec * b_in);
+      void solve_system(AYvec* x_in);
+};
+
+void AYlinalg_svd(AYmat * mat_, AY_SVDspace * space_);
+void AYlinalg_Cholesky_solve(AYsym * L_, AYvec *z_, AYvec * r_ );
+
 AYmat * aysml_read(char name[]);
 AYvec * aysml_read_vec(char name[]);
 AYtens * aysml_read_tens(char name[]);
@@ -252,8 +287,6 @@ AYmat * GSL_2_AYmat_gen(gsl_matrix * mat_in);
 AYmat * GSL_2_AYmat_gen(gsl_vector * vec_in);
 AYmat * GSL_2_diagAYmat_gen(gsl_vector * vec_in);
 
-double *** AYd3tensor(int W_, int M_, int N_);
-void free_AYd3tensor(double *** t_);
 
 
 #endif

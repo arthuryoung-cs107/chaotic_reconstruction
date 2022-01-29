@@ -7,34 +7,7 @@
 
 extern "C"
 {
-  #include "nrutil.h"
-  #include "auxiliary_functions.h"
-  #include "knuth_lcg.h"
-}
-
-AY_SVDspace::AY_SVDspace(AYmat * mat_): M_in(mat_->M), N_in(mat_->N), U(gsl_matrix_alloc(mat_->M, mat_->N)), V(gsl_matrix_alloc(mat_->N, mat_->N)), s(gsl_vector_alloc(mat_->N)), work(gsl_vector_alloc(mat_->N)) // assume long thin matrix for now
-{}
-AY_SVDspace::AY_SVDspace(int M_, int N_): M_in(M_), N_in(N_), U(gsl_matrix_alloc(M_, N_)), V(gsl_matrix_alloc(N_, N_)), s(gsl_vector_alloc(N_)), work(gsl_vector_alloc(N_)) // assume long thin matrix for now
-{}
-AY_SVDspace::~AY_SVDspace() { gsl_matrix_free(U); gsl_matrix_free(V); gsl_vector_free(s); gsl_vector_free(work); }
-
-void AY_SVDspace::load_U(AYmat * X_) {for (int i = 0; i < M_in; i++) {for (int j = 0; j < N_in; j++) {gsl_matrix_set(U, i, j, X_->AT[j][i]);}}}
-void AY_SVDspace::svd() {gsl_linalg_SV_decomp(U, V, s, work);}
-void AY_SVDspace::unpack(AYmat * U_, AYmat * S_, AYmat * V_)
-{
-  for (int j = 0; j < N_in; j++)
-  {
-    for (int i = 0; i < M_in; i++)
-    {
-      U_->set(i, j, gsl_matrix_get(U, i, j));
-      if (i < N_in)
-      {
-        V_->set(i, j, gsl_matrix_get(V, i, j));
-        S_->set(i, j, 0.0);
-      }
-    }
-    S_->set(j, j, gsl_vector_get(s, j));
-  }
+  #include "AYaux.h"
 }
 
 AYsym::AYsym(int N_): N(N_)
@@ -43,42 +16,129 @@ AYsym::AYsym(int N_): N(N_)
   double Np1 = Nd + 1.0;
   double Nd2 = Nd/2.0;
 
-  int len = (int) (Np1*Nd2); // Baby Gauss theorem
+  len = (int) (Np1*Nd2); // Baby Gauss theorem
 
-  A = (double**)malloc((size_t)(N)*sizeof(double*));
-  *A = (double*)malloc((size_t)(len)*sizeof(double));
-  int j = N;
-  for (int i = 1; i < N; i++) {A[i] = A[i-1] + j; j--;}
+  double *row00 = (double*)malloc((size_t)(len)*sizeof(double));
+  A =(double**)malloc((size_t)(N)*sizeof(double*));
+  int k = N;
+  A[0] = row00;
+  for (int i = 1; i < N; i++, k--) A[i] = A[i-1] + k;
 }
 
 AYsym::~AYsym()
 {
-  for (int i = 0; i < N; i++) free(A[i]);
+  free(A[0]);
   free(A);
 }
 
-void AYsym::mult_vec(AYvec * in_, AYvec * out_) // specialized for vector multiplication.
+
+void AYsym::init_eye()
+{
+  for (int i = 0; i < N; i++)
+  {
+    A[i][0] = 1.0;
+    for (int j = 1; j < (N-i); j++) A[i][j] = 0.0;
+  }
+}
+
+void AYsym::print_mat(bool space_)
+{
+  for (int i = 0; i < N; i++)
+  {
+    for (int j = 0; j < i; j++)
+    {
+      printf("%f ", A[j][i-j]);
+    }
+    for (int j = i; j < N; j++)
+    {
+      printf("%f ", A[i][j-i]);
+    }
+    printf("\n");
+  }
+  if (space_) printf("\n");
+}
+
+void AYsym::fprintf_sym(char name[], bool verbose_)
+{
+  char specfile[300]; memset(specfile, 0, 299); snprintf(specfile, 300, "%s.aydat", name);
+  char smlfile[300]; memset(smlfile, 0, 299); snprintf(smlfile, 300, "%s.aysml", name);
+  FILE * data_file = fopen(specfile, "wb");
+  FILE * aysml_file = fopen(smlfile, "w");
+  fprintf(aysml_file, "1 %d %d", N, len);
+  fclose(aysml_file);
+  fwrite(*A, sizeof(double), len, data_file);
+  fclose(data_file);
+  if (verbose_) printf("wrote file: %s.aydat/aysml\n", name);
+}
+
+void AYsym::init_123()
+{for (int i = 0; i < len; i++) A[0][i] = (double) (i+1);}
+
+void AYsym::init_sqrmat(AYmat * m_)
+{
+  for (int i = 0; i < N; i++)
+  {
+    for (int j = 0; j < (N - i); j++)
+    {
+      A[i][j] = 0.0; // this is being set. Adjust other dims
+      for (int k = 0; k < m_->M; k++)
+      {
+        A[i][j] += (m_->AT[i][k])*(m_->AT[j+i][k]);
+      }
+    }
+  }
+}
+
+void AYsym::mult_vec(AYvec * in_, AYvec * out_, bool diff_) // specialized for vector multiplication. Adds on top of output vector to keep it quick and simple
 {
   if ((in_->M==N)&&(out_->M==N))
   {
-    for (int i = 0; i < N; i++)
+    if (diff_)
     {
-      out_->A_ptr[i] += A[i][0]*in_->A_ptr[i];
-      for (int j = i+1; j < N-i; j++)
+      for (int i = 0; i < N; i++)
       {
-        out_->A_ptr[i] += A[i][j]*in_->A_ptr[i];
+        out_->A_ptr[i] -= A[i][0]*in_->A_ptr[i]; // diagonal element
+        for (int j = 1; j < (N - i); j++)
+        {
+          out_->A_ptr[i] -= A[i][j]*in_->A_ptr[i+j];
+          out_->A_ptr[i+j] -= A[i][j]*in_->A_ptr[i];
+        }
       }
-
-
+    }
+    else
+    {
+      for (int i = 0; i < N; i++)
+      {
+        out_->A_ptr[i] += A[i][0]*in_->A_ptr[i]; // diagonal element
+        for (int j = 1; j < (N - i); j++)
+        {
+          out_->A_ptr[i] += A[i][j]*in_->A_ptr[i+j];
+          out_->A_ptr[i+j] += A[i][j]*in_->A_ptr[i];
+        }
+      }
     }
   }
-  else printf("AYsym: mult_set error, dimensions are (%d %d)(%d %d) = (%d %d)\n", N, N, in_->M, in_->N, in_->M, in_->N);
+  else printf("AYsym: mult_set error, dimensions are (%d %d)(%d %d) = (%d %d)\n", N, N, in_->M, in_->N, out_->M, out_->N);
 }
 
-void AYlinalg_svd(AYmat * mat_, AY_SVDspace * space_) // assume long thin matrix for now
+double AYsym::vT_A_v(AYvec * v, AYvec * w)
 {
-  mat_->AYmat_2_GSL_copy(space_->U);
-  gsl_linalg_SV_decomp(space_->U, space_->V, space_->s, space_->work);
+  double out=0.0;
+  if ((v->M==N)&&(w->M==N))
+  {
+    for (int i = 0; i < N; i++)
+    {
+      w->A_ptr[i] += A[i][0]*v->A_ptr[i]; // diagonal element
+      for (int j = 1; j < (N - i); j++)
+      {
+        w->A_ptr[i] += A[i][j]*v->A_ptr[i+j];
+        w->A_ptr[i+j] += A[i][j]*v->A_ptr[i];
+      }
+      out += (w->A_ptr[i])*(v->A_ptr[i]); // actively updating the inner product
+    }
+  }
+  else printf("AYsym: vT_A_v error, dimensions are (%d %d)(%d %d) = (%d %d)\n", N, N, v->M, v->N, w->M, w->N);
+  return out;
 }
 
 AYvec * AYmat_2_AYvec_gen(AYmat * X_in)
@@ -118,7 +178,7 @@ AYmat * aysml_read(char name[])
   std::istringstream in(line);
   in >> M >> N;
   tens_file.close();
-  
+
   AYmat * out = new AYmat(M, N);
   FILE * aydat_stream = fopen(aydat_name, "r");
   size_t success = fread(out->A_ptr, sizeof(double), M*N, aydat_stream);
@@ -207,22 +267,3 @@ AYvec * GSL_2_AYvec_gen(gsl_vector * vec_in)
   for (int i = 0; i < vec_out->M; i++) vec_out->set(i, gsl_vector_get(vec_in, i));
   return vec_out;
 }
-
-double *** AYd3tensor(int W_, int M_, int N_)
-{
-  double * M00 = (double*)malloc((size_t)(W_*N_*M_)*sizeof(double)); // allocating space for all the values of each matrix
-  double ** M0 = (double**)malloc((size_t)(W_*M_)*sizeof(double*)); // allocating space for all the pointers to each COLUMN
-  double *** T = (double***)malloc((size_t)(W_)*sizeof(double**));
-
-  for (int j = 0; j < W_; j++)
-  {
-    for (int i = 0; i < M_; i++)
-    {
-      M0[i+(j*M_)] = M00 + (i*N_) + (j*(N_*M_));
-    }
-    T[j] = M0 + j*(M_);
-  }
-
-  return T;
-}
-void free_AYd3tensor(double *** t_) {free(t_[0][0]); free(t_[0]); free(t_);}

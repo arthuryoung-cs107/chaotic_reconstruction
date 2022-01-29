@@ -1,17 +1,15 @@
 #include <cstdio>
 
 #include "AYlinalg.hh"
-#include "blas.h"
+#include "AYblas.h"
 
 extern "C"
 {
-  #include "nrutil.h"
-  #include "auxiliary_functions.h"
-  #include "knuth_lcg.h"
+  #include "AYaux.h"
 }
 
 // note: this is designed to play nicely with BLAS, hence we store column major
-AYmat::AYmat(int M_, int N_): M(M_), N(N_), AT(dmatrix(0, N-1, 0, M-1)), dmatrix_alloc_flag(true)
+AYmat::AYmat(int M_, int N_): M(M_), N(N_), AT(AYdmatrix(N, M)), dmatrix_alloc_flag(true)
 {
   A_ptr = AT[0];
 }
@@ -21,7 +19,7 @@ AYmat::AYmat()
 
 AYmat::~AYmat()
 {
-  if  (dmatrix_alloc_flag) free_dmatrix(AT, 0, N-1, 0, M-1);
+  if  (dmatrix_alloc_flag) free_AYdmatrix(AT);
   if (GSL_flag != 0)
   {
     if (GSL_flag == 1)
@@ -114,7 +112,7 @@ void AYmat::GSL_2_AYmat_copy(gsl_vector * vec_in)
 {
   if ((vec_in->size == M) && (N == 1))
   {
-    for (int i = 0; i < M; i++) AT[0][i] = gsl_vector_get(vec_in, i);
+    for (int i = 0; i < M; i++) A_ptr[i] = gsl_vector_get(vec_in, i);
   }
   else printf("GSL_2_AYmat_copy (gslvec) failed: dimension mismatch\n");
 }
@@ -133,7 +131,7 @@ void AYmat::AYmat_2_GSL_copy(gsl_vector * vec_in)
 {
   if ((vec_in->size == M) && (N == 1))
   {
-    for (int i = 0; i < M; i++) gsl_vector_set(vec_in, i, AT[0][i]);
+    for (int i = 0; i < M; i++) gsl_vector_set(vec_in, i, A_ptr[i]);
   }
   else printf("AYmat_2_GSL_copy (gslvec) failed: dimension mismatch\n");
 }
@@ -234,7 +232,11 @@ void AYmat::copy_set(AYmat * X_in)
   if ((X_in->M == M)&&(X_in->N == N) ) memcpy(X_in->A_ptr, A_ptr, M*N*sizeof(double));
   else printf("AYmat: copy_set failed, inequal dimensions\n");
 }
-
+void AYmat::copy_set(AYmat * X_in, double scal_)
+{
+  if ((X_in->M == M)&&(X_in->N == N) ) for (int i = 0; i < M*N; i++) X_in->A_ptr[i] = scal_*(A_ptr[i]);
+  else printf("AYmat: copy_set failed, inequal dimensions\n");
+}
 void AYmat::copy_set_col(AYmat * mat_out, int local_index, int out_index)
 {
   if (M == mat_out->M) memcpy(mat_out->AT[out_index], AT[local_index], M*sizeof(double));
@@ -277,9 +279,7 @@ void AYmat::add(double alpha_, AYmat * out_)
 }
 
 void AYmat::scal_mult(double c)
-{
-  for (int i = 0; i < M*N; i++) A_ptr[i] *= c;
-}
+{for (int i = 0; i < M*N; i++) A_ptr[i] *= c;}
 
 // take in one matrix, post multiply this matrix with input, return pointer to new matrix
 AYmat * AYmat::mult_gen(AYmat * B_in, double alpha, bool trans1_, bool trans2_)
@@ -591,10 +591,7 @@ void AYmat::max_mag_elements_ordered(AYmat *top_vec_, int *index_array_)
     top_vec_->A_ptr[i_it] = val_temp; index_array_[i_it] = index_temp;
     max_mag_elements_recursive(top_vec_, index_array_, 1);
   }
-  else
-  {
-    printf("AYmat: max_mag_elements_ordered failed, searching for %d values within M.N = %d elements\n", top_vec_->N, M*N);
-  }
+  else printf("AYmat: max_mag_elements_ordered failed, searching for %d values within M.N = %d elements\n", top_vec_->N, M*N);
 }
 void AYmat::min_mag_elements_ordered(AYmat *top_vec_, int *index_array_)
 {
@@ -609,10 +606,7 @@ void AYmat::min_mag_elements_ordered(AYmat *top_vec_, int *index_array_)
     top_vec_->A_ptr[i_it] = val_temp; index_array_[i_it] = index_temp;
     min_mag_elements_recursive(top_vec_, index_array_, 1);
   }
-  else
-  {
-    printf("AYmat: min_mag_elements_ordered failed, searching for %d values within M.N = %d elements\n", top_vec_->N, M*N);
-  }
+  else printf("AYmat: min_mag_elements_ordered failed, searching for %d values within M.N = %d elements\n", top_vec_->N, M*N);
 }
 void AYmat::max_mag_elements_recursive(AYmat *top_vec_, int * index_array_, int i_next)
 {
@@ -634,6 +628,36 @@ void AYmat::min_mag_elements_recursive(AYmat *top_vec_, int * index_array_, int 
   top_vec_->A_ptr[i_next] = top_vec_->A_ptr[i_it]; index_array_[i_next] = index_array_[i_it];
   top_vec_->A_ptr[i_it] = val_temp; index_array_[i_it] = index_temp;
   if (i_next < (top_vec_->M-1)) min_mag_elements_recursive(top_vec_, index_array_, i_next+1);
+}
+
+void AYmat::Proj_1(AYmat *z_, int * ind_vec_, double R_)
+{
+  if ((z_->M*z_->N) == (M*N))
+  {
+    double tau, tau_test, acc=0.0, val_it, y_it;
+    int K=0, k;
+    max_mag_elements_ordered(z_, ind_vec_);
+    do
+    {
+      val_it = abs(z_->A_ptr[K]);
+      acc += val_it;
+      tau_test = (acc-R_)/((double)(K+1));
+      tau = (tau_test < val_it) ? tau_test : tau;
+      K++;
+    } while ((tau_test < val_it) && (K<M*N));
+    if (tau < 0.0) // if already in the unit ball
+    {for (int i = 0; i < N*M; i++) z_->A_ptr[i] = A_ptr[i];}
+    else
+    {
+      for (k = 0; k < K-1; k++) // the previous iteration gives us the index where this stops
+      {
+        val_it =  (A_ptr[ind_vec_[k]]) - tau;
+        z_->A_ptr[ind_vec_[k]] = ((A_ptr[ind_vec_[k]] > 0.0) ? val_it : -1.0*val_it);
+      }
+      for ( k = K-1; k < M*N; k++) z_->A_ptr[ind_vec_[k]] = 0.0;
+    }
+  }
+  else printf("AYmat: Proj_1 failed, dimension mismatch\n");
 }
 
 void AYmat::svd(gsl_vector * S_in, gsl_matrix * V_in, gsl_vector * work) {GSL_init(); gsl_linalg_SV_decomp(A_gsl, V_in, S_in, work);}
