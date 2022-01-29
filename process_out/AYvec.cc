@@ -4,9 +4,7 @@
 
 extern "C"
 {
-  #include "nrutil.h"
-  #include "auxiliary_functions.h"
-  #include "knuth_lcg.h"
+  #include "AYaux.h"
 }
 
 
@@ -38,11 +36,6 @@ AYvec * AYvec::copy_gen()
   memcpy(x_out->A_ptr, A_ptr, M*sizeof(double));
   return x_out;
 }
-void AYvec::copy_set(AYvec * x_in)
-{
-  if ((x_in->M == M)) memcpy(x_in->A_ptr, A_ptr, M*sizeof(double));
-  else printf("AYvec: copy_set failed, inequal dimensions\n");
-}
 
 AYvec * AYvec::row_slice_gen(int i_)
 {
@@ -73,7 +66,22 @@ AYmat * AYvec::transpose_gen()
   return X_out;
 }
 
-double AYvec::norm_2() {return norm_frob();}
-double AYvec::dot(AYmat *B_) {return inner(B_);}
+double AYvec::norm_2()
+{
+  double out = 0.0;
+  for (int i = 0; i < M; i++) out += (A_ptr[i]*A_ptr[i]);
+  return sqrt(out);
+}
+double AYvec::dot(AYmat *B_)
+{
+  double out = 0.0;
+  if ((B_->M ==  M)&&(B_->N == 1))
+  {
+    for (int i = 0; i < M; i++) out += B_->A_ptr[i]*A_ptr[i];
+  }
+  else printf("AYvec: dot failed, dim(A) = (%d %d) vs. dim(B) = (%d %d)\n", M, N, B_->M, B_->N);
+
+  return out;
+}
 void AYvec::svd(gsl_vector *S, gsl_matrix *V, gsl_vector *work) {printf("AYvec: svd failed, cannot take SVD of a vector\n");}
 void AYvec::svd_check() {printf("AYvec: svd_check failed, cannot take SVD of a vector\n");}

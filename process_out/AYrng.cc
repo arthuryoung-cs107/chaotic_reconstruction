@@ -3,9 +3,7 @@
 
 extern "C"
 {
-  #include "nrutil.h"
-  #include "auxiliary_functions.h"
-  #include "knuth_lcg.h"
+  #include "AYaux.h"
 }
 
 AYrng::AYrng(): jump(1000), seed((uint64_t) rand()) {}

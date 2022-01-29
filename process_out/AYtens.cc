@@ -5,9 +5,7 @@
 
 extern "C"
 {
-  #include "nrutil.h"
-  #include "auxiliary_functions.h"
-  #include "knuth_lcg.h"
+  #include "AYaux.h"
 }
 
 AYtens::AYtens(int W_, int M_, int N_): W(W_), M(M_), N(N_), T_AT(AYd3tensor(W_, N_, M_)), mat((AYmat*)malloc((size_t)(W_)*sizeof(AYmat)))
