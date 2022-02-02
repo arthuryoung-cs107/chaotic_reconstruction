@@ -215,16 +215,13 @@ class AYsym
 class AYdata
 {
   public:
-  int counter=0;
+    int Frames;
+    int depth;
+    int ** dims;
+    AYdata(int Frames_, int depth_);
+    ~AYdata();
+    virtual void set_dims();
 
-  bool writing = false;
-
-  AYdata();
-  ~AYdata();
-
-  void init_write_split_tensor(char prefix_[], int M, int N);
-  void write_split_tensor(AYmat * mat_);
-  void end_write_split_tensor(char prefix_[]);
 };
 
 class AY_SVDspace // for now, assuming that we are working with a long thin matrix. A relatively simple conditional can be implemented in order to handle short fat case

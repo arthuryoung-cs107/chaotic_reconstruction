@@ -8,7 +8,7 @@ extern "C"
   #include "AYaux.h"
 }
 
-AYtens::AYtens(int W_, int M_, int N_): W(W_), M(M_), N(N_), T_AT(AYd3tensor(W_, N_, M_)), mat((AYmat*)malloc((size_t)(W_)*sizeof(AYmat)))
+AYtens::AYtens(int W_, int M_, int N_): W(W_), M(M_), N(N_), T_AT(AYd3tensor(W_, N_, M_)), mat((AYmat*)malloc((size_t)(W_*sizeof(AYmat))))
 {
   for (int i = 0; i < W; i++)
   {
