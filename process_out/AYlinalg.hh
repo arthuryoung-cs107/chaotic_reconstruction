@@ -53,6 +53,7 @@ class AYmat
 
       int M, N;
       double * A_ptr;
+      double ** AT;
       bool dmatrix_alloc_flag = false;
       gsl_matrix * A_gsl;
       gsl_vector * v_gsl;
@@ -119,7 +120,6 @@ class AYmat
       virtual void svd_check();
 
     protected:
-      double ** AT;
       int GSL_flag = 0;
       friend class AYcolstack;
       friend class DCT_mapping;
@@ -221,6 +221,8 @@ class AYdata
     AYdata(int Frames_, int depth_);
     ~AYdata();
     virtual void set_dims();
+    void AYdata_aysml_gen(char name_[], int split_=1);
+    virtual void fprintf_split(char name_[], bool verbose_=false);
 
 };
 

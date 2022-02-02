@@ -49,7 +49,6 @@ void AYtens::print_tens(bool space_)
 }
 void AYtens::fprintf_tens(char name[], bool verbose_)
 {
-  int i;
   char specfile[300]; memset(specfile, 0, 299); snprintf(specfile, 300, "%s.aytens", name);
   char smlfile[300]; memset(smlfile, 0, 299); snprintf(smlfile, 300, "%s.aysml", name);
   FILE * data_file = fopen(specfile, "wb");
