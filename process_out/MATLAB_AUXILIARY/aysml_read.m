@@ -7,7 +7,19 @@ function dat_return = aysml_read(name)
       id = fopen([name '.aydat']);
       dat_return = (fread( id,[m, n], 'float64=>float64'));
       fclose(id);
-    elseif ((size(dims, 2) == 4)&&(dims(1)== 1))      
+    elseif (size(dims, 2) == 3)
+      m = dims(2);
+      n = m;
+      dat_return = zeros(m, n);
+      id = fopen([name '.aydat']);
+      for i=1:n
+        row = (fread( id,[n-i+1, 1], 'float64=>float64'));
+        dat_return(i, i) = row(1);
+        dat_return(i, i+1:n) = row(2:length(row));
+        dat_return(i+1:n, i) = row(2:length(row));
+      end
+      fclose(id);
+    elseif ((size(dims, 2) == 4)&&(dims(1)== 1))
       m = dims(2);
       n = dims(3);
       w = dims(4);

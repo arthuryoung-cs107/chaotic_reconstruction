@@ -3,28 +3,28 @@ CC=gcc-11
 OS=OSX
 CFLAGS= -O3 -I. -fopenmp -DGSL -DKNUTH
 
-LDIR= -I/usr/local/include/
+IDIR= -I/usr/local/include/
 LINK= -L/usr/local/lib/ -lm -lgsl -lgslcblas -lfftw3 -lblas
 
-CDEPS = nrutil.h auxiliary_functions.h knuth_lcg.h
+CDEPS = AYaux.h
 
-CPPDEPS = AYlinalg.hh
+CPPDEPS = AYlinalg.hh RYdat2AYdat.hh
 
-OBJS1=main1.o nrutil.o auxiliary_functions.o knuth_lcg.o AYlinalg.o AYmat.o AYvec.o AYrng.o AYtens.o
+OBJS1= AYaux.o AYlinalg.o AYmat.o AYvec.o AYrng.o AYtens.o AYdecomps.o RYdat2AYdat.o
 
-%.o: %.c $(CDEPS)
-	$(CC) -c -o $@ $< $(CFLAGS) $(LDIR)
+%.o:%.c
+	$(CC) $(CFLAGS) $(IDIR) -c $<
 
-%.o: %.cc $(CPPDEPS)
-	$(CXX) -c -o $@ $< $(CFLAGS) $(LDIR)
+%.o:%.cc
+	$(CXX) $(CFLAGS) $(IDIR) -c $<
 
-all: process_circ6
+all: test1
 
-process_circ6: $(OBJS1)
-	$(CXX) -o $@ $^ $(CFLAGS) $(LINK)
+test1: main1.cc $(OBJS1)
+	$(CXX) $(CFLAGS) $(IDIR) -o $@ $^ $(LINK)
 
 clean:
-	rm -f process_circ6
+	rm -f test1
 	rm -f *.o
 clean_dat:
 	rm -f *.dat
