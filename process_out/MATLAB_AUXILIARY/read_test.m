@@ -1,10 +1,8 @@
 clear
 close all
+dat_dir_name = '../dat_dir/';
+circ6_name = 'circ6.odr/';
+dat_name = 'pts';
+data_directory = circ6_name;
 
-mat1 = aysml_read('../dat_dir/mat1')
-fprintf_AYdata(mat1, '../dat_dir/mat1_back');
-
-tens1 = aysml_read('../dat_dir/tens1')
-fprintf_AYdata(tens1, '../dat_dir/tens1_back');
-
-sym3 = aysml_read('../dat_dir/sym3')
+circ6 = ODR_data(dat_dir_name, circ6_name, dat_name);

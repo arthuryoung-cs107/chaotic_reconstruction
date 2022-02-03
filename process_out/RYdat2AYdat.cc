@@ -13,15 +13,9 @@ extern "C"
 
 ODR_struct::ODR_struct(char name_[], int Frames_): AYdata(Frames_, 2)
 {
-    set_dims();
-    int len_specs = dims[0][1];
-    int len_dat = dims[1][1];
     memset(name, 0, 49); snprintf(name, 50, "%s", name_);
     memset(rydat_dir, 0, 74); snprintf(rydat_dir, 75, "../twin/%s", name);
     char file_it[100]; memset(file_it, 0, 99); snprintf(file_it, 100, "%spts.0", rydat_dir);
-
-    double t, cx, cy, wall_sca;
-    double x, y, z, q1, q2, q3, q4;
 
     std::ifstream ry_dat;
     ry_dat.open(file_it);
@@ -29,9 +23,13 @@ ODR_struct::ODR_struct(char name_[], int Frames_): AYdata(Frames_, 2)
     for(std::string line; std::getline(ry_dat, line);) ++lines; // determining the number of line in the file
     P=lines-1;
     ry_dat.close();
+    set_dims();
 
-    data = new AYtens(Frames, len_dat, P);
-    specs = new AYmat(len_specs, Frames);
+    data = AYd3tensor(Frames, P, len_dat);
+    specs = AYdmatrix(Frames, len_specs);
+
+    double t, cx, cy, wall_sca;
+    double x, y, z, q1, q2, q3, q4;
 
     for ( int i = 0; i < Frames; i++)
     {
@@ -45,21 +43,21 @@ ODR_struct::ODR_struct(char name_[], int Frames_): AYdata(Frames_, 2)
         if (count == 0)
         {
           in >> t >> cx >> cy >> wall_sca;
-          specs->set(0, i, t);
-          specs->set(1, i, cx);
-          specs->set(2, i, cy);
-          specs->set(3, i, wall_sca);
+          specs[i][0] = t;
+          specs[i][1] = cx;
+          specs[i][2] = cy;
+          specs[i][3] = wall_sca;
         }
         else
         {
           in >> x >> y >> z >> q1 >> q2 >> q3 >> q4;
-          data->set(0, count-1, i, x);
-          data->set(1, count-1, i, y);
-          data->set(2, count-1, i, z);
-          data->set(3, count-1, i, q1);
-          data->set(4, count-1, i, q2);
-          data->set(5, count-1, i, q3);
-          data->set(6, count-1, i, q4);
+          data[i][count-1][0] = x;
+          data[i][count-1][1] = y;
+          data[i][count-1][2] = z;
+          data[i][count-1][3] = q1;
+          data[i][count-1][4] = q2;
+          data[i][count-1][5] = q3;
+          data[i][count-1][6] = q4;
         }
         count++;
       }
@@ -69,13 +67,25 @@ ODR_struct::ODR_struct(char name_[], int Frames_): AYdata(Frames_, 2)
 
 ODR_struct::~ODR_struct()
 {
-  delete data; delete specs;
+  free_AYd3tensor(data); free_AYdmatrix(specs);
 }
 
 void ODR_struct::set_dims()
 {
-  dims[0][0] = 1; dims[0][1] = 4; dims[0][2] = 1;
-  dims[1][0] = 1; dims[1][1] = 7; dims[1][2] = P;
+  dims[0][0] = 1; dims[0][1] = 1; dims[0][2] = len_specs;
+  dims[1][0] = 1; dims[1][1] = P; dims[1][2] = len_dat;
+}
+
+void ODR_struct::AYdata_rysml_gen(char name_[], int split_)
+{
+  char smlfile[300]; memset(smlfile, 0, 299); snprintf(smlfile, 300, "%s.rysml", name_);
+  FILE * aysml_file = fopen(smlfile, "w");
+  fprintf(aysml_file, "%d %d %d \n", split_, Frames, depth);
+  for (int i = 0; i < depth; i++)
+  {
+    fprintf(aysml_file, "%d %d %d\n", dims[i][0], dims[i][1], dims[i][2]);
+  }
+  fclose(aysml_file);
 }
 
 
@@ -86,13 +96,13 @@ void ODR_struct::fprintf_split(char name_[], bool verbose_)
 
   for (int i = 0; i < Frames; i++)
   {
-    memset(specfile, 0, 299); snprintf(specfile, 300, "%s%s_%d.aydat", directory, name_, i);
+    memset(specfile, 0, 299); snprintf(specfile, 300, "%s%s.%d.aydat", directory, name_, i);
     FILE * data_file = fopen(specfile, "wb");
-    fwrite(specs->AT[i], sizeof(double), dims[0][1], data_file);
-    fwrite(data->T_AT[i], sizeof(double), dims[1][1]*dims[1][2], data_file);
+    fwrite(specs[i], sizeof(double), dims[0][1]*dims[0][2], data_file);
+    fwrite(data[i][0], sizeof(double), dims[1][1]*dims[1][2], data_file);
     fclose(data_file);
   }
-  AYdata_aysml_gen(aysml_name, 1);
+  AYdata_rysml_gen(aysml_name, 1);
   if (verbose_) printf("AYdata: wrote file(s) %s.aydat/aysml\n", name);
 }
 
