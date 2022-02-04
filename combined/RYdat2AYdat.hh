@@ -12,11 +12,12 @@ class ODR_struct : public AYdata
 
         bool writing = false;
         bool data_alloc_flag = false;
-        bool specs_alloc_flag = false; 
+        bool specs_alloc_flag = false;
 
         char name[50];
         char rydat_dir[75];
         char directory[100];
+        char * full_dir; 
         int P;
         int len_specs = 4;
         int len_dat = 7;

@@ -65,7 +65,20 @@ ODR_struct::ODR_struct(char name_[], int Frames_): AYdata(Frames_, 2)
     }
 }
 
-ODR_struct::ODR_struct(char name_[], int Frames_): AYdata(), alloc_flag(true)
+ODR_struct::ODR_struct(const char *full_dir_): AYdata()
+{
+  size_t l=strlen(full_dir_)+1;
+
+  // Allocate space for the directory filename and copy it. Allocate additional
+  // space for assembling the output filenames.
+  full_dir=new char[2*l+32];
+  memcpy(odir,odir_,sizeof(char)*l);
+  obuf=odir+l;
+
+  // Make the output directory if it doesn't already exist
+  mkdir(odir,S_IRWXU|S_IRWXG|S_IROTH|S_IXOTH);
+
+}
 
 ODR_struct::~ODR_struct()
 {
