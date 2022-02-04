@@ -44,6 +44,7 @@ class swirl : public swirl_param {
         /** A pointer to the class for storing the particle positions,
          * for creating synthetic data. */
         dat_store *dstore;
+        ODR_struct *odr; 
         swirl(swirl_param &sp,proximity_grid *pg_,wall_list &wl,int n_);
         swirl(swirl **sw,int npar,double gamma);
         ~swirl();

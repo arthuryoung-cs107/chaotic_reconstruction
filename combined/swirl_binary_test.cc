@@ -30,7 +30,9 @@ int main() {
     sw.import("input_dir/input3.dat");
 
     // Solve the system
-    sw.setup_output_dir("dat_dir/circ6.odr");
+    ODR_struct odr("dat_dir/circ6.odr");
+    // sw.setup_output_dir("dat_dir/circ6.odr");
+    sw.setup_output_dir(&odr);
     dat_store dstore(t_phys,402,380,37.6);
     sw.dstore=&dstore;
 

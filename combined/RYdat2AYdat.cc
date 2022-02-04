@@ -25,8 +25,8 @@ ODR_struct::ODR_struct(char name_[], int Frames_): AYdata(Frames_, 2)
     ry_dat.close();
     set_dims();
 
-    data = AYd3tensor(Frames, P, len_dat);
-    specs = AYdmatrix(Frames, len_specs);
+    data = AYd3tensor(Frames, P, len_dat); data_alloc_flag(true);
+    specs = AYdmatrix(Frames, len_specs); specs_alloc_flag(true);
 
     double t, cx, cy, wall_sca;
     double x, y, z, q1, q2, q3, q4;
@@ -64,6 +64,8 @@ ODR_struct::ODR_struct(char name_[], int Frames_): AYdata(Frames_, 2)
       ry_dat.close();
     }
 }
+
+ODR_struct::ODR_struct(char name_[], int Frames_): AYdata(), alloc_flag(true)
 
 ODR_struct::~ODR_struct()
 {

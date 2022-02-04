@@ -11,6 +11,8 @@ class ODR_struct : public AYdata
         int counter=0;
 
         bool writing = false;
+        bool data_alloc_flag = false;
+        bool specs_alloc_flag = false; 
 
         char name[50];
         char rydat_dir[75];
@@ -19,8 +21,8 @@ class ODR_struct : public AYdata
         int len_specs = 4;
         int len_dat = 7;
 
-
         ODR_struct(char name_[], int len_=1201);
+        ODR_struct(const char *odir_);
         ~ODR_struct();
         void set_dims();
         void AYdata_rysml_gen(char name_[], int split_=1);

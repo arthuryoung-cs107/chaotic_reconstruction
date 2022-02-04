@@ -215,10 +215,12 @@ class AYsym
 class AYdata
 {
   public:
+    bool dims_alloc_flag; 
     int Frames;
     int depth;
     int ** dims;
     AYdata(int Frames_, int depth_);
+    AYdata();
     ~AYdata();
     virtual void set_dims();
     void AYdata_aysml_gen(char name_[], int split_=1);
