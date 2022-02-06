@@ -27,6 +27,7 @@ void swirl::setup_output_dir(ODR_struct *odr_)
   odr = odr_;
   odr->P = n;
   odr->writing_flag = true;
+  odr->make_filter_inputs_flag =  make_filter_inputs_flag; 
   odr->set_dims();
 }
 
@@ -36,7 +37,8 @@ void swirl::output(int k) {
     if (ODR_struct_flag)
     {
       double specs_vector[] = {time, cx, cy, wall_sca};
-      odr->write_split(k, specs_vector, q);
+      if (make_filter_inputs_flag) odr->write_split(k, specs_vector, q, ctheta);
+      else odr->write_split(k, specs_vector, q);
     }
     else
     {
@@ -46,8 +48,8 @@ void swirl::output(int k) {
       FILE *fp=safe_fopen(obuf,"w");
       output(fp);
       fclose(fp);
+      if(dstore!=NULL) dstore->snapshot(time,q,n,cx,cy,ctheta);
     }
-    if(dstore!=NULL) dstore->snapshot(time,q,n,cx,cy,ctheta);
 
 }
 

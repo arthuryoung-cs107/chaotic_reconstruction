@@ -11,9 +11,7 @@ extern "C"
   #include "AYaux.h"
 }
 
-ODR_struct::ODR_struct(char *rydat_loc_, char *rydat_dir_, char *file_name_, int Frames_): AYdata(Frames_, 2), rydat_loc(string_gen_pruned(rydat_loc_)), rydat_dir(string_gen_pruned(rydat_dir_)), file_name(string_gen_pruned(file_name_)), rydat_loc_alloc_flag(true),
-rydat_dir_alloc_flag(true),
-file_name_alloc_flag(true)
+ODR_struct::ODR_struct(char *rydat_loc_, char *rydat_dir_, char *file_name_, int Frames_): AYdata(Frames_, 2), rydat_loc(string_gen_pruned(rydat_loc_)), rydat_dir(string_gen_pruned(rydat_dir_)), file_name(string_gen_pruned(file_name_))
 {
     size_t in_buf_len = (size_t)(strlen(rydat_loc)+strlen(rydat_dir)+strlen(file_name) + 50);
     in_buf = new char[in_buf_len]; sprintf(in_buf, "%s%s%s", rydat_loc, rydat_dir, file_name);
@@ -30,8 +28,8 @@ file_name_alloc_flag(true)
     ry_dat.close();
     set_dims();
 
-    data = AYd3tensor(Frames, P, len_dat); data_alloc_flag = true;
-    specs = AYdmatrix(Frames, len_specs); specs_alloc_flag = true;
+    data = AYd3tensor(Frames, P, len_dat);
+    specs = AYdmatrix(Frames, len_specs);
 
     double t, cx, cy, wall_sca;
     double x, y, z, q1, q2, q3, q4;
@@ -70,28 +68,28 @@ file_name_alloc_flag(true)
     }
 }
 
-ODR_struct::ODR_struct(const char * proc_loc_, const char * rydat_dir_, const char * file_name_): AYdata(), rydat_dir(string_gen_pruned(rydat_dir_)), file_name(string_gen_pruned(file_name_)), rydat_dir_alloc_flag(true), file_name_alloc_flag(true)
+ODR_struct::ODR_struct(const char * proc_loc_, const char * rydat_dir_, const char * file_name_): AYdata(), rydat_dir(string_gen_pruned(rydat_dir_)), file_name(string_gen_pruned(file_name_))
 {
   size_t proc_len = (size_t)(strlen(proc_loc_)+strlen(rydat_dir)+1);
-  proc_dir = new char[proc_len]; sprintf(proc_dir, "%s%s", proc_loc_, rydat_dir); proc_dir_alloc_flag=true; mkdir(proc_dir, S_IRWXU);
+  proc_dir = new char[proc_len]; sprintf(proc_dir, "%s%s", proc_loc_, rydat_dir); mkdir(proc_dir, S_IRWXU);
 
   size_t out_buf_len = (size_t)(strlen(proc_dir)+strlen(file_name)+50);
   out_buf = new char[out_buf_len]; sprintf(out_buf, "%s%s", proc_dir, file_name);
   obuf_end = strlen(out_buf);
 
-  Frames = 0; depth = 2; dims = AYimatrix(depth, 3); dims_alloc_flag = true;
+  Frames = 0; depth = 2; dims = AYimatrix(depth, 3);
 }
 
 ODR_struct::~ODR_struct()
 {
-  if (data_alloc_flag) free_AYd3tensor(data);
-  if (specs_alloc_flag) free_AYdmatrix(specs);
-  if (ibuf_alloc_flag) delete in_buf;
-  if (obuf_alloc_flag) delete out_buf;
-  if (rydat_loc_alloc_flag) delete rydat_loc;
-  if (rydat_dir_alloc_flag) delete rydat_dir;
-  if (file_name_alloc_flag) delete file_name;
-  if (proc_dir_alloc_flag) delete proc_dir;
+  if (data!=NULL) free_AYd3tensor(data);
+  if (specs!=NULL) free_AYdmatrix(specs);
+  if (in_buf!=NULL) delete in_buf;
+  if (out_buf!=NULL) delete out_buf;
+  if (rydat_loc!=NULL) delete rydat_loc;
+  if (rydat_dir!=NULL) delete rydat_dir;
+  if (file_name!=NULL) delete file_name;
+  if (proc_dir!=NULL) delete proc_dir;
 }
 
 void ODR_struct::set_dims()
@@ -125,9 +123,9 @@ void ODR_struct::fprintf_split(bool verbose_)
 void ODR_struct::prepare_datdir(char *proc_loc_)
 {
   size_t proc_len = (size_t)(strlen(proc_loc_)+strlen(rydat_dir)+1);
-  proc_dir = new char[proc_len]; sprintf(proc_dir, "%s%s", proc_loc_, rydat_dir); proc_dir_alloc_flag=true; mkdir(proc_dir, S_IRWXU);
+  proc_dir = new char[proc_len]; sprintf(proc_dir, "%s%s", proc_loc_, rydat_dir); mkdir(proc_dir, S_IRWXU);
   size_t obuf_len = (size_t)(strlen(proc_dir)+strlen(file_name)+50);
-  out_buf = new char[obuf_len]; sprintf(out_buf, "%s%s", proc_dir, file_name); obuf_alloc_flag = true;
+  out_buf = new char[obuf_len]; sprintf(out_buf, "%s%s", proc_dir, file_name);
   obuf_end = strlen(out_buf);
 
   printf("made directory  %s\n", proc_dir);
@@ -153,6 +151,33 @@ void ODR_struct::write_split(int k_, double * specs_vec_, particle * q_)
   }
 }
 
+void ODR_struct::write_split(int k_, double * specs_vec_, particle * q_, double ctheta_)
+{
+  char * file_it = out_buf + obuf_end;
+
+  if (writing_flag)
+  {
+    sprintf(file_it, ".%d.aydat", k_);
+    FILE * data_out = fopen(out_buf, "wb");
+    fwrite(specs_vec_, sizeof(double), (size_t)len_specs, data_out);
+
+    double cx_loc = specs_vec_[1]; double cy_loc = specs_vec_[2];
+
+    for (int i = 0; i < P; i++)
+    {
+      double data_vector[] = {q_[i].x, q_[i].y, q_[i].z, q_[i].q0, q_[i].q1, q_[i].q2, q_[i].q3};
+      fwrite(data_vector, sizeof(double), (size_t)len_dat, data_out);
+      xs.push_back(cx_im+cl_im*(q_[i].x-cx_loc));
+      xs.push_back(cy_im+cl_im*(q_[i].y-cy_loc));
+    }
+    fclose(data_out);
+    ts.push_back(specs_vec_[0]*t_phys);
+    d_ang.push_back(ctheta_);
+
+    Frames++;
+  }
+}
+
 void ODR_struct::end_writing(bool verbose_)
 {
   char * file_it = out_buf + obuf_end;
@@ -162,6 +187,38 @@ void ODR_struct::end_writing(bool verbose_)
   fprintf(aysml_file, "%d %d %d\n", 1, Frames, depth);
   for (int i = 0; i < depth; i++) fprintf(aysml_file, "%d %d %d\n", dims[i][0], dims[i][1], dims[i][2]);
   fclose(aysml_file);
-  
+
+  if (make_filter_inputs_flag)
+  {
+    double vidspecs_vec[] = {t_phys, cx_im, cy_im, cl_im};
+    sprintf(file_it, ".filin");
+    FILE * filin_dat = fopen(out_buf, "wb");
+    fwrite(&ts[0],sizeof(double),Frames,filin_dat);
+    fwrite(&xs[0],sizeof(double),2*P*Frames,filin_dat);
+    fwrite(&d_ang[0],sizeof(double),Frames,filin_dat);
+    fwrite(vidspecs_vec,sizeof(double),4,filin_dat);
+    fclose(filin_dat);
+
+    sprintf(file_it, ".fisml");
+    FILE * filin_sml = fopen(out_buf, "wb");
+    fprintf(filin_sml, "%d %d %d\n", 0, 1, 4);
+    fprintf(filin_sml, "%d %d %d\n", 1, 1, Frames);
+    fprintf(filin_sml, "%d %d %d\n", Frames, P, 2);
+    fprintf(filin_sml, "%d %d %d\n", 1, 1, Frames);
+    fprintf(filin_sml, "%d %d %d\n", 1, 1, 4);
+    fclose(filin_sml);
+  }
+
   writing_flag = false;
 }
+
+void ODR_struct::set_vidspecs(double t_phys_, double cx_im_, double cy_im_, double cl_im_)
+{
+  t_phys = t_phys_;
+  cx_im = cx_im_;
+  cy_im = cy_im_;
+  cl_im = cl_im_;
+}
+
+void ODR_struct::print_time_rotation()
+{for(int i=0;i<Frames;i++) printf("%f %f\n",ts[i],d_ang[i]);}

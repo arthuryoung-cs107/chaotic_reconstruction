@@ -84,6 +84,7 @@ class swirl : public swirl_param {
         void contact(int id1,int id2,double delx,double dely,double delz,double rsq,double dt);
 
         bool ODR_struct_flag = false;
+        bool make_filter_inputs_flag = true; 
 };
 
 #endif

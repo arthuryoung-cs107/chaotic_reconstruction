@@ -6,9 +6,11 @@ CFLAGS= -O3 -I. -fopenmp -DGSL -DKNUTH
 IDIR= -I/usr/local/include/
 LINK= -L/usr/local/lib/ -lm -lgsl -lgslcblas -lfftw3 -lblas
 
-OBJS1 = p_grid.o swirl.o particle.o common.o swirl_io.o wall.o swirl_param.o dat_store.o AYaux.o AYlinalg.o AYmat.o AYvec.o AYrng.o AYtens.o AYdecomps.o AYdata.o RYdat2AYdat.o
+OBJS1 = AYaux.o AYlinalg.o AYmat.o AYvec.o AYrng.o AYtens.o AYdecomps.o AYdata.o RYdat2AYdat.o
 
-OBJS2 = AYaux.o AYlinalg.o AYmat.o AYvec.o AYrng.o AYtens.o AYdecomps.o AYdata.o RYdat2AYdat.o
+OBJS2 = p_grid.o swirl.o particle.o common.o swirl_io.o wall.o swirl_param.o dat_store.o AYaux.o AYlinalg.o AYmat.o AYvec.o AYrng.o AYtens.o AYdecomps.o AYdata.o RYdat2AYdat.o
+
+OBJS3 = filter_io.o filter.o p_grid.o swirl.o particle.o common.o swirl_io.o wall.o swirl_param.o dat_store.o AYaux.o AYlinalg.o AYmat.o AYvec.o AYrng.o AYtens.o AYdecomps.o AYdata.o RYdat2AYdat.o
 
 %.o:%.c
 	$(CC) $(CFLAGS) $(IDIR) -c $<
@@ -16,17 +18,21 @@ OBJS2 = AYaux.o AYlinalg.o AYmat.o AYvec.o AYrng.o AYtens.o AYdecomps.o AYdata.o
 %.o:%.cc
 	$(CXX) $(CFLAGS) $(IDIR) -c $<
 
-all: swirl_binary_test process_test
+all: process_test swirl_test filter_test
 
-swirl_binary_test: swirl_binary_test.cc $(OBJS1)
+process_test: process_test.cc $(OBJS1)
 	$(CXX) $(CFLAGS) $(IDIR) -o $@ $^ $(LINK)
 
-process_test: process_test.cc $(OBJS2)
+swirl_test: swirl_test.cc $(OBJS2)
+	$(CXX) $(CFLAGS) $(IDIR) -o $@ $^ $(LINK)
+
+filter_test: filter_test.cc $(OBJS3)
 	$(CXX) $(CFLAGS) $(IDIR) -o $@ $^ $(LINK)
 
 clean:
-	rm -f swirl_binary_test
 	rm -f process_test
+	rm -f swirl_test
+	rm -f filter_test
 	rm -f *.o
 clean_dat:
 	rm -f *.aysml

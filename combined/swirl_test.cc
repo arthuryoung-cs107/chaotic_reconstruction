@@ -30,17 +30,20 @@ int main() {
     sw.import("input_dir/input3.dat");
 
     // Solve the system
-    ODR_struct odr("./dat_dir/", "circ6_bintest.odr/", "pts");
+    ODR_struct odr("./dat_dir/", "circ6_swrl.odr/", "pts");
+    odr.set_vidspecs(t_phys);
     // sw.setup_output_dir("dat_dir/circ6.odr");
     sw.setup_output_dir(&odr);
-    dat_store dstore(t_phys,402,380,37.6);
-    sw.dstore=&dstore;
+    // dat_store dstore(t_phys,402,380,37.6);
+    // sw.dstore=&dstore;
 
     sw.solve(120,0.0005,1200);
 
-    odr.end_writing(); 
+    odr.end_writing();
+    odr.print_time_rotation();
 
     // dstore.write("synth25.dat");
-    dstore.write("synth3.dat");
-    dstore.print_theta_info();
+    // dstore.write("synth3.dat");
+    // dstore.print_theta_info();
+
 }

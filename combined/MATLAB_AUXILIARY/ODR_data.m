@@ -10,6 +10,7 @@ classdef ODR_data < handle
     P;
 
     rysml;
+    filin;
     specs;
     data;
   end
@@ -34,6 +35,29 @@ classdef ODR_data < handle
         obj.data(:, :, f+1) = (fread( id,[obj.len_dat, obj.P], 'float64=>float64'))';
         fclose(id);
       end
+    end
+    function load_filin(obj)
+      obj.filin = filter_inputs([obj.dat_dir_name obj.exp_name obj.dat_name]);
+    end
+    function verify_filin(obj)
+      t_phys = obj.filin.vidspecs(1);
+      cx_im = obj.filin.vidspecs(2);
+      cy_im = obj.filin.vidspecs(3);
+      cl_im = obj.filin.vidspecs(4);
+
+      % works
+      % obj.specs(1:10, 1)'
+      % obj.filin.t(1:10)/t_phys
+
+      %%works
+      % ind = 100;
+      % cx_loc = obj.specs(ind, 2);
+      % cy_loc = obj.specs(ind, 3);
+      % x = obj.data(:, 1, ind);
+      % y = obj.data(:, 2, ind);
+      % [cx_im + cl_im*(x-cx_loc), cy_im + cl_im*(y-cy_loc)]
+      % obj.filin.pos(:, :, ind)
+
     end
   end
 
