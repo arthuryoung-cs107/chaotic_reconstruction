@@ -267,3 +267,11 @@ AYvec * GSL_2_AYvec_gen(gsl_vector * vec_in)
   for (int i = 0; i < vec_out->M; i++) vec_out->set(i, gsl_vector_get(vec_in, i));
   return vec_out;
 }
+
+char * string_gen_pruned(char * in_)
+{
+  size_t len = (size_t)(strlen(in_) + 1);  
+  char * out = new char[len];
+  strcpy(out, in_);
+  return out;
+}

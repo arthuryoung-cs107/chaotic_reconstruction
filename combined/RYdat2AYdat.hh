@@ -6,28 +6,32 @@
 class ODR_struct : public AYdata
 {
     public:
-        double *** data;
-        double ** specs;
-        int counter=0;
+        double ***data, ** specs;
 
-        bool writing = false;
-        bool data_alloc_flag = false;
-        bool specs_alloc_flag = false;
+        bool  writing = false,
+          data_alloc_flag = false,
+          specs_alloc_flag = false,
+          ibuf_alloc_flag = false,
+          obuf_alloc_flag = false,
+          rydat_loc_alloc_flag = false,
+          rydat_dir_alloc_flag = false,
+          file_name_alloc_flag = false,
+          proc_dir_alloc_flag = false;
 
-        char name[50];
-        char rydat_dir[75];
-        char directory[100];
-        char * full_dir; 
+        char *rydat_loc, *rydat_dir, *proc_dir, *file_name, *in_buf, *out_buf;
+
+        size_t in_buf_len, out_buf_len;
+
         int P;
         int len_specs = 4;
         int len_dat = 7;
+        int counter=0;
 
-        ODR_struct(char name_[], int len_=1201);
-        ODR_struct(const char *odir_);
+        ODR_struct(char *rydat_loc_, char *rydat_dir_, char *file_name_, int Frames_=1201);
+        // ODR_struct(const char *odir_);
         ~ODR_struct();
         void set_dims();
-        void AYdata_rysml_gen(char name_[], int split_=1);
-        void fprintf_split(char name_[], bool verbose_=false);
+        void fprintf_split(bool verbose_=false);
         void prepare_datdir(char name_[]);
 };
 

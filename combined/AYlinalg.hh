@@ -215,7 +215,7 @@ class AYsym
 class AYdata
 {
   public:
-    bool dims_alloc_flag; 
+    bool dims_alloc_flag;
     int Frames;
     int depth;
     int ** dims;
@@ -288,6 +288,7 @@ AYmat * GSL_2_AYmat_gen(gsl_matrix * mat_in);
 AYmat * GSL_2_AYmat_gen(gsl_vector * vec_in);
 AYmat * GSL_2_diagAYmat_gen(gsl_vector * vec_in);
 
+char * string_gen_pruned(char * in_);
 
 
 #endif

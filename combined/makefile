@@ -8,6 +8,8 @@ LINK= -L/usr/local/lib/ -lm -lgsl -lgslcblas -lfftw3 -lblas
 
 OBJS1 = p_grid.o swirl.o particle.o common.o swirl_io.o wall.o swirl_param.o dat_store.o AYaux.o AYlinalg.o AYmat.o AYvec.o AYrng.o AYtens.o AYdecomps.o AYdata.o RYdat2AYdat.o
 
+OBJS2 = AYaux.o AYlinalg.o AYmat.o AYvec.o AYrng.o AYtens.o AYdecomps.o AYdata.o RYdat2AYdat.o
+
 %.o:%.c
 	$(CC) $(CFLAGS) $(IDIR) -c $<
 
@@ -19,8 +21,12 @@ all: swirl_binary_test
 swirl_binary_test: swirl_binary_test.cc $(OBJS1)
 	$(CXX) $(CFLAGS) $(IDIR) -o $@ $^ $(LINK)
 
+process_test: process_test.cc $(OBJS2)
+	$(CXX) $(CFLAGS) $(IDIR) -o $@ $^ $(LINK)
+
 clean:
 	rm -f swirl_binary_test
+	rm -f process_test
 	rm -f *.o
 clean_dat:
 	rm -f *.aysml

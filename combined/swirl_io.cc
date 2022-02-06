@@ -21,10 +21,10 @@ void swirl::setup_output_dir(const char *odir_) {
     mkdir(odir,S_IRWXU|S_IRWXG|S_IROTH|S_IXOTH);
 }
 
-void swirl::setup_output_dir(ODR_struct *odr_)
-{
-  
-}
+// void swirl::setup_output_dir(ODR_struct *odr_)
+// {
+//
+// }
 
 /** Saves a snapshot of the particle positions and rotations. */
 void swirl::output(int k) {
