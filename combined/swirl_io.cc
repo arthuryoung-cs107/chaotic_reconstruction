@@ -21,22 +21,34 @@ void swirl::setup_output_dir(const char *odir_) {
     mkdir(odir,S_IRWXU|S_IRWXG|S_IROTH|S_IXOTH);
 }
 
-// void swirl::setup_output_dir(ODR_struct *odr_)
-// {
-//
-// }
+void swirl::setup_output_dir(ODR_struct *odr_)
+{
+  ODR_struct_flag = true;
+  odr = odr_;
+  odr->P = n;
+  odr->writing_flag = true;
+  odr->set_dims();
+}
 
 /** Saves a snapshot of the particle positions and rotations. */
 void swirl::output(int k) {
 
-    // Open the output file
-    if(odir==NULL) return;
-    sprintf(obuf,"%s/pts.%d",odir,k);
-    FILE *fp=safe_fopen(obuf,"w");
-    output(fp);
-    fclose(fp);
-
+    if (ODR_struct_flag)
+    {
+      double data_vector[] = {time, cx, cy, wall_sca};
+      odr->write_split(k, data_vector, q);
+    }
+    else
+    {
+      // Open the output file
+      if(odir==NULL) return;
+      sprintf(obuf,"%s/pts.%d",odir,k);
+      FILE *fp=safe_fopen(obuf,"w");
+      output(fp);
+      fclose(fp);
+    }
     if(dstore!=NULL) dstore->snapshot(time,q,n,cx,cy,ctheta);
+
 }
 
 void swirl::output(FILE *fp) {

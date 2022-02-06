@@ -16,7 +16,7 @@ OBJS2 = AYaux.o AYlinalg.o AYmat.o AYvec.o AYrng.o AYtens.o AYdecomps.o AYdata.o
 %.o:%.cc
 	$(CXX) $(CFLAGS) $(IDIR) -c $<
 
-all: swirl_binary_test
+all: swirl_binary_test process_test
 
 swirl_binary_test: swirl_binary_test.cc $(OBJS1)
 	$(CXX) $(CFLAGS) $(IDIR) -o $@ $^ $(LINK)

@@ -15,8 +15,8 @@ ODR_struct::ODR_struct(char *rydat_loc_, char *rydat_dir_, char *file_name_, int
 rydat_dir_alloc_flag(true),
 file_name_alloc_flag(true)
 {
-    in_buf_len = (size_t)(strlen(rydat_loc)+strlen(rydat_dir)+strlen(file_name) + 50);
-    in_buf = new char[in_buf_len]; snprintf(in_buf, in_buf_len, "%s%s%s", rydat_loc, rydat_dir, file_name);
+    size_t in_buf_len = (size_t)(strlen(rydat_loc)+strlen(rydat_dir)+strlen(file_name) + 50);
+    in_buf = new char[in_buf_len]; sprintf(in_buf, "%s%s%s", rydat_loc, rydat_dir, file_name);
 
     char *file_it = in_buf + strlen(in_buf); //address at the end of the input string
     sprintf(file_it, ".%d", 0);
@@ -69,20 +69,16 @@ file_name_alloc_flag(true)
     }
 }
 
-// ODR_struct::ODR_struct(const char *full_dir_): AYdata()
-// {
-  // size_t l=strlen(full_dir_)+1;
-  //
-  // // Allocate space for the directory filename and copy it. Allocate additional
-  // // space for assembling the output filenames.
-  // full_dir=new char[2*l+32];
-  // memcpy(odir,odir_,sizeof(char)*l);
-  // obuf=odir+l;
-  //
-  // // Make the output directory if it doesn't already exist
-  // mkdir(odir,S_IRWXU|S_IRWXG|S_IROTH|S_IXOTH);
+ODR_struct::ODR_struct(char * proc_loc_, char * rydat_dir_, char * file_name_): AYdata(), rydat_dir(string_gen_pruned(rydat_dir_)), file_name(string_gen_pruned(file_name_)), rydat_dir_alloc_flag(true), file_name_alloc_flag(true)
+{
+  size_t proc_len = (size_t)(strlen(proc_loc_)+strlen(rydat_dir)+1);
+  proc_dir = new char[proc_len]; sprintf(proc_dir, "%s%s", proc_loc_, rydat_dir); proc_dir_alloc_flag=true; mkdir(proc_dir, S_IRWXU);
 
-// }
+  size_t out_buf_len = (size_t)(strlen(proc_dir)+strlen(file_name)+50);
+  out_buf = new char[out_buf_len]; sprintf(out_buf, "%s%s", proc_dir, file_name);
+
+  Frames = 0; depth = 2; dims = AYimatrix(depth, 3); dims_alloc_flag = true;
+}
 
 ODR_struct::~ODR_struct()
 {
@@ -124,11 +120,28 @@ void ODR_struct::fprintf_split(bool verbose_)
   if (verbose_) printf("ODR_struct: wrote file(s) %s%s.aydat/rysml\n", proc_dir, file_name);
 }
 
-void ODR_struct::prepare_datdir(char *name_)
+void ODR_struct::prepare_datdir(char *proc_loc_)
 {
-  size_t proc_len = (size_t)(strlen(name_)+strlen(rydat_dir)+1);
-  proc_dir = new char[proc_len]; sprintf(proc_dir, "%s%s", name_, rydat_dir); proc_dir_alloc_flag=true; mkdir(proc_dir, S_IRWXU);
+  size_t proc_len = (size_t)(strlen(proc_loc_)+strlen(rydat_dir)+1);
+  proc_dir = new char[proc_len]; sprintf(proc_dir, "%s%s", proc_loc_, rydat_dir); proc_dir_alloc_flag=true; mkdir(proc_dir, S_IRWXU);
   printf("made directory  %s\n", proc_dir);
+}
 
-  out_buf_len = (size_t)(strlen(proc_dir)+strlen(file_name)+50); sprintf(out_buf, "%s%s", proc_dir, file_name);
+FILE * ODR_struct::write_split(int k_, particle * q_)
+{
+  char * file_it = out_buf + strlen(out_buf);
+
+  if (writing_flag)
+  {
+    sprintf(file_it, ".%d.aydat", k_);
+    FILE * data_out = fopen(out_buf, "wb");
+    Frames++;
+    return data_out;
+
+    // fwrite(specs[i], sizeof(double), dims[0][1]*dims[0][2], data_file);
+    // fwrite(data[i][0], sizeof(double), dims[1][1]*dims[1][2], data_file);
+    // fclose(data_file);
+
+
+  }
 }

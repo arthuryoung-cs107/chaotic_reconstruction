@@ -6,6 +6,7 @@
 #include "p_grid.hh"
 #include "dat_store.hh"
 #include "wall.hh"
+#include "RYdat2AYdat.hh"
 
 #include <vector>
 
@@ -44,7 +45,7 @@ class swirl : public swirl_param {
         /** A pointer to the class for storing the particle positions,
          * for creating synthetic data. */
         dat_store *dstore;
-        // ODR_struct *odr;
+        ODR_struct *odr;
         swirl(swirl_param &sp,proximity_grid *pg_,wall_list &wl,int n_);
         swirl(swirl **sw,int npar,double gamma);
         ~swirl();
@@ -57,6 +58,7 @@ class swirl : public swirl_param {
         void output(int k);
         void output(FILE *fp);
         void setup_output_dir(const char *odir_);
+        void setup_output_dir(ODR_struct *odr_);
         void init_positions(double time_,double ctheta_,float *f,gsl_rng *r);
         void update_weight(float *f,double dur,double t_wheels,double *lnorm);
         void output_state(FILE *fp);
@@ -80,6 +82,8 @@ class swirl : public swirl_param {
         }
         void set_dish_coords();
         void contact(int id1,int id2,double delx,double dely,double delz,double rsq,double dt);
+
+        bool ODR_struct_flag = false;
 };
 
 #endif
