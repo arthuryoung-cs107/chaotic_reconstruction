@@ -270,7 +270,15 @@ AYvec * GSL_2_AYvec_gen(gsl_vector * vec_in)
 
 char * string_gen_pruned(char * in_)
 {
-  size_t len = (size_t)(strlen(in_) + 1);  
+  size_t len = (size_t)(strlen(in_) + 1);
+  char * out = new char[len];
+  strcpy(out, in_);
+  return out;
+}
+
+char * string_gen_pruned(const char * in_)
+{
+  size_t len = (size_t)(strlen(in_) + 1);
   char * out = new char[len];
   strcpy(out, in_);
   return out;

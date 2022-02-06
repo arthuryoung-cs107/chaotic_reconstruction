@@ -289,6 +289,7 @@ AYmat * GSL_2_AYmat_gen(gsl_vector * vec_in);
 AYmat * GSL_2_diagAYmat_gen(gsl_vector * vec_in);
 
 char * string_gen_pruned(char * in_);
+char * string_gen_pruned(const char * in_);
 
 
 #endif

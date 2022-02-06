@@ -69,7 +69,7 @@ file_name_alloc_flag(true)
     }
 }
 
-ODR_struct::ODR_struct(char * proc_loc_, char * rydat_dir_, char * file_name_): AYdata(), rydat_dir(string_gen_pruned(rydat_dir_)), file_name(string_gen_pruned(file_name_)), rydat_dir_alloc_flag(true), file_name_alloc_flag(true)
+ODR_struct::ODR_struct(const char * proc_loc_, const char * rydat_dir_, const char * file_name_): AYdata(), rydat_dir(string_gen_pruned(rydat_dir_)), file_name(string_gen_pruned(file_name_)), rydat_dir_alloc_flag(true), file_name_alloc_flag(true)
 {
   size_t proc_len = (size_t)(strlen(proc_loc_)+strlen(rydat_dir)+1);
   proc_dir = new char[proc_len]; sprintf(proc_dir, "%s%s", proc_loc_, rydat_dir); proc_dir_alloc_flag=true; mkdir(proc_dir, S_IRWXU);
@@ -127,16 +127,15 @@ void ODR_struct::prepare_datdir(char *proc_loc_)
   printf("made directory  %s\n", proc_dir);
 }
 
-FILE * ODR_struct::write_split(int k_, particle * q_)
+void ODR_struct::write_split(int k_, double * specs_, particle * q_)
 {
   char * file_it = out_buf + strlen(out_buf);
 
   if (writing_flag)
   {
-    sprintf(file_it, ".%d.aydat", k_);
-    FILE * data_out = fopen(out_buf, "wb");
-    Frames++;
-    return data_out;
+    // sprintf(file_it, ".%d.aydat", k_);
+    // FILE * data_out = fopen(out_buf, "wb");
+    // Frames++;
 
     // fwrite(specs[i], sizeof(double), dims[0][1]*dims[0][2], data_file);
     // fwrite(data[i][0], sizeof(double), dims[1][1]*dims[1][2], data_file);
