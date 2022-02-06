@@ -30,13 +30,15 @@ int main() {
     sw.import("input_dir/input3.dat");
 
     // Solve the system
-    ODR_struct odr("./dat_dir/", "circ6.odr/", "pts");
+    ODR_struct odr("./dat_dir/", "circ6_bintest.odr/", "pts");
     // sw.setup_output_dir("dat_dir/circ6.odr");
     sw.setup_output_dir(&odr);
     dat_store dstore(t_phys,402,380,37.6);
     sw.dstore=&dstore;
 
     sw.solve(120,0.0005,1200);
+
+    odr.end_writing(); 
 
     // dstore.write("synth25.dat");
     dstore.write("synth3.dat");

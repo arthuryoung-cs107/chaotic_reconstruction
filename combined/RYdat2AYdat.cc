@@ -17,8 +17,9 @@ file_name_alloc_flag(true)
 {
     size_t in_buf_len = (size_t)(strlen(rydat_loc)+strlen(rydat_dir)+strlen(file_name) + 50);
     in_buf = new char[in_buf_len]; sprintf(in_buf, "%s%s%s", rydat_loc, rydat_dir, file_name);
+    ibuf_end = strlen(in_buf);
 
-    char *file_it = in_buf + strlen(in_buf); //address at the end of the input string
+    char *file_it = in_buf + ibuf_end; //address at the end of the input string
     sprintf(file_it, ".%d", 0);
 
     std::ifstream ry_dat;
@@ -76,6 +77,7 @@ ODR_struct::ODR_struct(const char * proc_loc_, const char * rydat_dir_, const ch
 
   size_t out_buf_len = (size_t)(strlen(proc_dir)+strlen(file_name)+50);
   out_buf = new char[out_buf_len]; sprintf(out_buf, "%s%s", proc_dir, file_name);
+  obuf_end = strlen(out_buf);
 
   Frames = 0; depth = 2; dims = AYimatrix(depth, 3); dims_alloc_flag = true;
 }
@@ -100,7 +102,7 @@ void ODR_struct::set_dims()
 
 void ODR_struct::fprintf_split(bool verbose_)
 {
-  char * file_it = out_buf + strlen(out_buf);
+  char * file_it = out_buf + obuf_end;
 
   for (int i = 0; i < Frames; i++)
   {
@@ -124,23 +126,42 @@ void ODR_struct::prepare_datdir(char *proc_loc_)
 {
   size_t proc_len = (size_t)(strlen(proc_loc_)+strlen(rydat_dir)+1);
   proc_dir = new char[proc_len]; sprintf(proc_dir, "%s%s", proc_loc_, rydat_dir); proc_dir_alloc_flag=true; mkdir(proc_dir, S_IRWXU);
+  size_t obuf_len = (size_t)(strlen(proc_dir)+strlen(file_name)+50);
+  out_buf = new char[obuf_len]; sprintf(out_buf, "%s%s", proc_dir, file_name); obuf_alloc_flag = true;
+  obuf_end = strlen(out_buf);
+
   printf("made directory  %s\n", proc_dir);
 }
 
-void ODR_struct::write_split(int k_, double * specs_, particle * q_)
+void ODR_struct::write_split(int k_, double * specs_vec_, particle * q_)
 {
-  char * file_it = out_buf + strlen(out_buf);
+  char * file_it = out_buf + obuf_end;
 
   if (writing_flag)
   {
-    // sprintf(file_it, ".%d.aydat", k_);
-    // FILE * data_out = fopen(out_buf, "wb");
-    // Frames++;
+    sprintf(file_it, ".%d.aydat", k_);
+    FILE * data_out = fopen(out_buf, "wb");
+    fwrite(specs_vec_, sizeof(double), (size_t)len_specs, data_out);
 
-    // fwrite(specs[i], sizeof(double), dims[0][1]*dims[0][2], data_file);
-    // fwrite(data[i][0], sizeof(double), dims[1][1]*dims[1][2], data_file);
-    // fclose(data_file);
-
-
+    for (int i = 0; i < P; i++)
+    {
+      double data_vector[] = {q_[i].x, q_[i].y, q_[i].z, q_[i].q0, q_[i].q1, q_[i].q2, q_[i].q3};
+      fwrite(data_vector, sizeof(double), (size_t)len_dat, data_out);
+    }
+    fclose(data_out);
+    Frames++;
   }
+}
+
+void ODR_struct::end_writing(bool verbose_)
+{
+  char * file_it = out_buf + obuf_end;
+
+  sprintf(file_it, ".rysml");
+  FILE * aysml_file = fopen(out_buf, "w");
+  fprintf(aysml_file, "%d %d %d\n", 1, Frames, depth);
+  for (int i = 0; i < depth; i++) fprintf(aysml_file, "%d %d %d\n", dims[i][0], dims[i][1], dims[i][2]);
+  fclose(aysml_file);
+  
+  writing_flag = false;
 }

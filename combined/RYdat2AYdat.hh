@@ -21,10 +21,11 @@ class ODR_struct : public AYdata
 
         char *rydat_loc, *rydat_dir, *proc_dir, *file_name, *in_buf, *out_buf;
 
+        size_t ibuf_end, obuf_end;
+
         int P;
         int len_specs = 4;
         int len_dat = 7;
-        int counter=0;
 
         ODR_struct(char *rydat_loc_, char *rydat_dir_, char *file_name_, int Frames_);
         ODR_struct(const char * proc_loc_, const char * rydat_dir_, const char * file_name_);
@@ -33,7 +34,7 @@ class ODR_struct : public AYdata
         void fprintf_split(bool verbose_=false);
         void prepare_datdir(char name_[]);
         void write_split(int k_, double * specs_, particle * q_);
-
+        void end_writing(bool verbose_=false);
 };
 
 #endif
