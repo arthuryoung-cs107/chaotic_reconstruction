@@ -80,6 +80,31 @@ ODR_struct::ODR_struct(const char * proc_loc_, const char * rydat_dir_, const ch
   Frames = 0; depth = 2; dims = AYimatrix(depth, 3);
 }
 
+ODR_struct::ODR_struct(const char * filin_dir_): AYdata(), filin_dir(string_gen_pruned(filin_dir_))
+{
+  size_t filin_dir_len = (size_t)(strlen(filin_dir) + 50);
+  in_buf = new char[filin_dir_len]; strcpy(in_buf, filin_dir);
+  ibuf_end = strlen(in_buf);
+
+  char * file_it = in_buf + ibuf_end;
+  sprintf(file_it, ".fisml");
+  int val1, val2, val3;
+  std::ifstream sml_stream; std::string line;
+  std::getline(sml_stream, line); std::istringstream dimline0(line);
+  dimline0 >> val1 >> depth >> val3;
+  std::getline(sml_stream, line); std::istringstream dimline1(line);
+  dimline1 >> val1 >> val2 >> Frames;
+  std::getline(sml_stream, line); std::istringstream dimline2(line);
+  dimline2 >> val1 >> P >> val3;
+  sml_stream.close();
+
+
+
+
+
+  dims = AYimatrix(depth, 3);
+}
+
 ODR_struct::~ODR_struct()
 {
   if (data!=NULL) free_AYd3tensor(data);

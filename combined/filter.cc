@@ -71,6 +71,55 @@ filter::filter(fil_param &fparam,swirl_param &sp_min_,swirl_param &sp_max_,swirl
     *ttab=*rloc=0;
 }
 
+filter::filter(fil_param &fparam,swirl_param &sp_min_,swirl_param &sp_max_,swirl_param &sp_rnd_,wall_list &wl_,double t_phys_, ODR_struct * odr_,int offset)
+    : fil_param(fparam), sp_min(sp_min_), sp_max(sp_max_), sp_rnd(sp_rnd_),
+    t_phys(t_phys_), min_l2(0.), min_linf(0.), nfail(0), sw(NULL), fflags(0),
+#ifdef _OPENMP
+    nt(omp_get_max_threads()),
+#else
+    nt(1),
+#endif
+    ttab(new int[nt+1]), rloc(new int[nt+1]), rng(new gsl_rng*[nt]), wl(wl_),
+    pg(new proximity_grid*[nt]), odir(NULL), fdigest(NULL) {
+
+    // Read in the header information and check it makes sense
+    FILE *fp=safe_fopen(filename,"rb");
+    safe_fread(&(this->n),sizeof(int),2,fp,"header information");
+    if(n<=0) fatal_error("Number of particles must be positive",1);
+    nsnap-=offset;
+    if(nsnap<=0) fatal_error("Number of snapshots must be positive",1);
+
+    // Set up memory for the snapshot times and read the data from the file
+    ts=new float[nsnap];
+    safe_fseek(fp,sizeof(float)*offset,SEEK_CUR);
+    safe_fread(ts,sizeof(float),nsnap,fp,"snapshot times");
+
+    // Read in the bead (x,y) positions
+    xs=new float[2*n*nsnap];
+    safe_fseek(fp,sizeof(float)*2*n*offset,SEEK_CUR);
+    safe_fread(xs,sizeof(float),2*n*nsnap,fp,"bead (x,y) positions");
+
+    // Read in the angle data
+    d_ang=new float[nsnap];
+    safe_fseek(fp,sizeof(float)*offset,SEEK_CUR);
+    safe_fread(d_ang,sizeof(float),nsnap,fp,"angle data");
+    fclose(fp);
+
+    // Set up the random number generators
+#pragma omp parallel
+    {
+        int t=thread_num();
+        rng[t]=gsl_rng_alloc(gsl_rng_taus2);
+        pg[t]=new proximity_grid();
+        gsl_rng_set(rng[t],t+1);
+    }
+
+    // Set the zeroth entries of the thread table and resampling location table
+    // to zero, since they are always held at this value
+    *ttab=*rloc=0;
+}
+
+
 /** The class destructor frees the dynamically allocated memory. */
 filter::~filter() {
     if(odir!=NULL) {

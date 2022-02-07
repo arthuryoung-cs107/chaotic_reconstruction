@@ -7,6 +7,7 @@
 #include "fil_param.hh"
 #include "swirl_param.hh"
 #include "swirl.hh"
+#include "RYdat2AYdat.hh"
 
 #ifdef _OPENMP
 #include "omp.h"
@@ -47,7 +48,9 @@ class filter : public fil_param {
         float* d_ang;
         /** The array of pointers to swirling simulations. */
         swirl** sw;
+        ODR_struct * odr;
         filter(fil_param &fparam,swirl_param &sp_min_,swirl_param &sp_max_,swirl_param &sp_rnd_,wall_list &wl_,double t_phys_,const char* filename,int offset=0);
+        filter(fil_param &fparam,swirl_param &sp_min_,swirl_param &sp_max_,swirl_param &sp_rnd_,wall_list &wl_,double t_phys_,ODR_struct * odr_,int offset=0);
         ~filter();
         void init(int npar_);
         void run(int frames);

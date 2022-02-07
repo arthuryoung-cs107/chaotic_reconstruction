@@ -12,7 +12,7 @@ class ODR_struct : public AYdata
 
         bool  writing_flag = false, make_filter_inputs_flag;
 
-        char *rydat_loc=NULL, *rydat_dir=NULL, *proc_dir=NULL, *file_name=NULL, *in_buf=NULL, *out_buf=NULL;
+        char *rydat_loc=NULL, *rydat_dir=NULL, *proc_dir=NULL, *file_name=NULL, *in_buf=NULL, *out_buf=NULL, *filin_dir=NULL;
 
         size_t ibuf_end, obuf_end;
 
@@ -30,6 +30,7 @@ class ODR_struct : public AYdata
 
         ODR_struct(char *rydat_loc_, char *rydat_dir_, char *file_name_, int Frames_);
         ODR_struct(const char * proc_loc_, const char * rydat_dir_, const char * file_name_);
+        ODR_struct(const char * filin_dir_);
         ~ODR_struct();
         void set_dims();
         void prepare_datdir(char name_[]);

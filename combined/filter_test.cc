@@ -31,7 +31,10 @@ int main() {
     wl.add_wall(&wp1);
     wl.add_wall(&wp2);
 
-    filter fi(fparam,sp_min,sp_max,sp_rnd,wl,t_phys,"synth25.dat",0);
+    ODR_struct odr("./dat_dir/circ6_swrl.odr/pts");
+
+    // filter fi(fparam,sp_min,sp_max,sp_rnd,wl,t_phys,"synth25.dat",0);
+    filter fi(fparam,sp_min,sp_max,sp_rnd,wl,t_phys,&odr,0);
     //filter fi(fparam,sp_min,sp_max,sp_rnd,wl,t_phys,"data/50_ramp.dat",2500);
     //filter fi(fparam,sp_min,sp_max,sp_rnd,wl,t_phys,"data/100_ramp.dat",2450);
     fi.setup_output_info(255,"sy2.odr",200);
