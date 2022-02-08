@@ -10,7 +10,7 @@ class ODR_struct : public AYdata
     public:
         double ***data=NULL, ** specs=NULL;
 
-        bool  writing_flag = false, make_filter_inputs_flag;
+        bool  writing_flag = false, reading_flag = false, make_filter_inputs_flag;
 
         char *rydat_loc=NULL, *rydat_dir=NULL, *proc_dir=NULL, *file_name=NULL, *in_buf=NULL, *out_buf=NULL, *filin_dir=NULL;
 
@@ -40,6 +40,8 @@ class ODR_struct : public AYdata
         void end_writing(bool verbose_=false);
         void set_vidspecs(double t_phys_, double cx_im_=402.0, double cy_im_ = 380.0, double cl_im_= 37.6);
         void print_time_rotation();
+        void load_filter(double *ts_, double *xs_, double *d_ang_, int offset_);
+        void read_filin(int offset_=0);
       private:
         /** The time points of the snapshots. */
         std::vector<double> ts;

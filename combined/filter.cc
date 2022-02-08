@@ -42,19 +42,19 @@ filter::filter(fil_param &fparam,swirl_param &sp_min_,swirl_param &sp_max_,swirl
     if(nsnap<=0) fatal_error("Number of snapshots must be positive",1);
 
     // Set up memory for the snapshot times and read the data from the file
-    ts=new float[nsnap];
-    safe_fseek(fp,sizeof(float)*offset,SEEK_CUR);
-    safe_fread(ts,sizeof(float),nsnap,fp,"snapshot times");
+    ts=new double[nsnap];
+    safe_fseek(fp,sizeof(double)*offset,SEEK_CUR);
+    safe_fread(ts,sizeof(double),nsnap,fp,"snapshot times");
 
     // Read in the bead (x,y) positions
-    xs=new float[2*n*nsnap];
-    safe_fseek(fp,sizeof(float)*2*n*offset,SEEK_CUR);
-    safe_fread(xs,sizeof(float),2*n*nsnap,fp,"bead (x,y) positions");
+    xs=new double[2*n*nsnap];
+    safe_fseek(fp,sizeof(double)*2*n*offset,SEEK_CUR);
+    safe_fread(xs,sizeof(double),2*n*nsnap,fp,"bead (x,y) positions");
 
     // Read in the angle data
-    d_ang=new float[nsnap];
-    safe_fseek(fp,sizeof(float)*offset,SEEK_CUR);
-    safe_fread(d_ang,sizeof(float),nsnap,fp,"angle data");
+    d_ang=new double[nsnap];
+    safe_fseek(fp,sizeof(double)*offset,SEEK_CUR);
+    safe_fread(d_ang,sizeof(double),nsnap,fp,"angle data");
     fclose(fp);
 
     // Set up the random number generators
@@ -73,7 +73,7 @@ filter::filter(fil_param &fparam,swirl_param &sp_min_,swirl_param &sp_max_,swirl
 
 filter::filter(fil_param &fparam,swirl_param &sp_min_,swirl_param &sp_max_,swirl_param &sp_rnd_,wall_list &wl_,double t_phys_, ODR_struct * odr_,int offset)
     : fil_param(fparam), sp_min(sp_min_), sp_max(sp_max_), sp_rnd(sp_rnd_),
-    t_phys(t_phys_), min_l2(0.), min_linf(0.), nfail(0), sw(NULL), fflags(0),
+    t_phys(t_phys_), min_l2(0.), min_linf(0.), nfail(0), sw(NULL), fflags(0), odr(odr_),
 #ifdef _OPENMP
     nt(omp_get_max_threads()),
 #else
@@ -82,28 +82,13 @@ filter::filter(fil_param &fparam,swirl_param &sp_min_,swirl_param &sp_max_,swirl
     ttab(new int[nt+1]), rloc(new int[nt+1]), rng(new gsl_rng*[nt]), wl(wl_),
     pg(new proximity_grid*[nt]), odir(NULL), fdigest(NULL) {
 
-    // Read in the header information and check it makes sense
-    FILE *fp=safe_fopen(filename,"rb");
-    safe_fread(&(this->n),sizeof(int),2,fp,"header information");
-    if(n<=0) fatal_error("Number of particles must be positive",1);
-    nsnap-=offset;
-    if(nsnap<=0) fatal_error("Number of snapshots must be positive",1);
+    n = odr->P;
+    nsnap = odr->Frames - offset;
+    ts=new double[nsnap];
+    xs=new double[2*n*nsnap];
+    d_ang=new double[nsnap];
 
-    // Set up memory for the snapshot times and read the data from the file
-    ts=new float[nsnap];
-    safe_fseek(fp,sizeof(float)*offset,SEEK_CUR);
-    safe_fread(ts,sizeof(float),nsnap,fp,"snapshot times");
-
-    // Read in the bead (x,y) positions
-    xs=new float[2*n*nsnap];
-    safe_fseek(fp,sizeof(float)*2*n*offset,SEEK_CUR);
-    safe_fread(xs,sizeof(float),2*n*nsnap,fp,"bead (x,y) positions");
-
-    // Read in the angle data
-    d_ang=new float[nsnap];
-    safe_fseek(fp,sizeof(float)*offset,SEEK_CUR);
-    safe_fread(d_ang,sizeof(float),nsnap,fp,"angle data");
-    fclose(fp);
+    odr->load_filter(ts, xs, d_ang, offset);
 
     // Set up the random number generators
 #pragma omp parallel
@@ -118,7 +103,6 @@ filter::filter(fil_param &fparam,swirl_param &sp_min_,swirl_param &sp_max_,swirl
     // to zero, since they are always held at this value
     *ttab=*rloc=0;
 }
-
 
 /** The class destructor frees the dynamically allocated memory. */
 filter::~filter() {
@@ -223,7 +207,7 @@ void filter::init(int npar_) {
     // Initialize the swirling simulations
     frame=0;
     double time=ts[frame]/t_phys;
-    float *f=xs+2*n*frame;
+    double *f=xs+2*n*frame;
 #pragma omp parallel
     {
         gsl_rng *r=rng[thread_num()];
@@ -243,7 +227,7 @@ void filter::step_frame() {
            ctheta=d_ang[frame],comega=d_ang[frame+1]-d_ang[frame],sp=0,spp=0;
     if(comega>M_PI) comega-=2*M_PI;else if(comega<-M_PI) comega+=2*M_PI;
     comega/=dur;
-    float *f=xs+2*n*++frame;
+    double *f=xs+2*n*++frame;
 
 #pragma omp parallel reduction(min:sum_l2) reduction(min:min_linf_)
     {

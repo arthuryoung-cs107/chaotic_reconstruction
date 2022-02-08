@@ -32,6 +32,34 @@ void filter::setup_output_info(unsigned int fflags_,const char *odir_,int state_
     }
 }
 
+void filter::setup_output_info(unsigned int fflags_,int state_freq_)
+{
+    if (odr!=NULL)
+    {
+      char suffix[] = ".filout";
+      fflags=fflags_;state_freq=state_freq_;
+      size_t l=odr->ibuf_end + strlen(suffix) + 1;
+
+      // Allocate space for the directory filename and copy it. Allocate additional
+      // space for assembling the output filenames.
+      odir=new char[2*l+64];
+      memcpy(odir,odr->in_buf,sizeof(char)*(odr->ibuf_end));
+      strcpy(odir+odr->ibuf_end, suffix);
+      obuf=odir+l;
+
+
+      // Make the output directory if it doesn't already exist
+      mkdir(odir,S_IRWXU|S_IRWXG|S_IROTH|S_IXOTH);
+
+      // Open the digest file if it is in use
+      if(fflags&128) {
+          sprintf(obuf,"%s/digest",odir);
+          fdigest=safe_fopen(obuf,"wb");
+      }
+    }
+    else setup_output_info(fflags_, "sy.odr", state_freq_);
+}
+
 /** Writes a selection of files about the swirling simulations and the
  * associated experimental data. */
 void filter::write_files() {
@@ -93,7 +121,7 @@ void filter::output_data(swirl *swp,const char* prefix) {
     fprintf(fp,"%g %g %g %g\n",swp->time,swp->cx,swp->cy,swp->wall_sca);
 
     // Output the experimental bead positions
-    float *f=xs+2*n*frame;
+    double *f=xs+2*n*frame;
     double sx=swp->cx_im,sy=swp->cy_im,icl=1./swp->cl_im;
     for(int i=0;i<n;i++,f+=2)
         fprintf(fp,"%g %g %g\n",(*f-sx)*icl+swp->cx,(f[1]-sy)*icl+swp->cy,swp->rad);
@@ -139,7 +167,7 @@ void filter::write_digest() {
     }
 
     // Assemble the output array, converting to single precision
-    float odig[2*sp_num_vparams+3],*op=odig+1;
+    double odig[2*sp_num_vparams+3],*op=odig+1;
     *odig=ts[frame];
     for(int i=0;i<sp_num_vparams;i++) {
         op[i]=gdig[i];
@@ -149,6 +177,6 @@ void filter::write_digest() {
     odig[2*sp_num_vparams+2]=min_linf;
 
     // Write the results to the digest file
-    fwrite(odig,sizeof(float),2*sp_num_vparams+3,fdigest);
+    fwrite(odig,sizeof(double),2*sp_num_vparams+3,fdigest);
     fflush(fdigest);
 }

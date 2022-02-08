@@ -59,8 +59,8 @@ class swirl : public swirl_param {
         void output(FILE *fp);
         void setup_output_dir(const char *odir_);
         void setup_output_dir(ODR_struct *odr_);
-        void init_positions(double time_,double ctheta_,float *f,gsl_rng *r);
-        void update_weight(float *f,double dur,double t_wheels,double *lnorm);
+        void init_positions(double time_,double ctheta_,double *f,gsl_rng *r);
+        void update_weight(double *f,double dur,double t_wheels,double *lnorm);
         void output_state(FILE *fp);
         void accumulators(double *tdig);
         void jiggle(swirl_param &sp_min,swirl_param &sp_max,swirl_param &sp_rnd,gsl_rng *r,double v_pert,double omega_pert);
@@ -84,7 +84,7 @@ class swirl : public swirl_param {
         void contact(int id1,int id2,double delx,double dely,double delz,double rsq,double dt);
 
         bool ODR_struct_flag = false;
-        bool make_filter_inputs_flag = true; 
+        bool make_filter_inputs_flag = true;
 };
 
 #endif

@@ -285,7 +285,7 @@ void swirl::contact(int id1,int id2,double delx,double dely,double delz,double r
  * \param[in] f a pointer to the experimental data, consisting of (x,y)
  *              positions measured in pixels.
  * \param[in] r a pointer to the GSL random number generator to use. */
-void swirl::init_positions(double time_,double ctheta_,float *f,gsl_rng *r) {
+void swirl::init_positions(double time_,double ctheta_,double *f,gsl_rng *r) {
 
     // Initialize time and the dish parameters
     time=time_;
@@ -309,7 +309,7 @@ void swirl::init_positions(double time_,double ctheta_,float *f,gsl_rng *r) {
  * \param[in] lnorm an array of three doubles for computing distance
  *                  diagnostics in the L_1, L_2, and L_infinity norms (without
  *                  normalization). */
-void swirl::update_weight(float *f,double dur,double t_wheels,double *lnorm) {
+void swirl::update_weight(double *f,double dur,double t_wheels,double *lnorm) {
     double fac=t_wheels/cl_im,idur=1./dur,rmax=cl_im*cl_im;
     *lnorm=lnorm[1]=lnorm[2]=0;logfac=0;
     for(int i=0;i<n;i++,f+=2) {

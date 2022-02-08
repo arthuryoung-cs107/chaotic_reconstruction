@@ -32,12 +32,13 @@ int main() {
     wl.add_wall(&wp2);
 
     ODR_struct odr("./dat_dir/circ6_swrl.odr/pts");
-
-    // filter fi(fparam,sp_min,sp_max,sp_rnd,wl,t_phys,"synth25.dat",0);
     filter fi(fparam,sp_min,sp_max,sp_rnd,wl,t_phys,&odr,0);
+    //filter fi(fparam,sp_min,sp_max,sp_rnd,wl,t_phys,"synth25.dat",0);
     //filter fi(fparam,sp_min,sp_max,sp_rnd,wl,t_phys,"data/50_ramp.dat",2500);
     //filter fi(fparam,sp_min,sp_max,sp_rnd,wl,t_phys,"data/100_ramp.dat",2450);
-    fi.setup_output_info(255,"sy2.odr",200);
+
+    fi.setup_output_info(255,200);
+    // fi.setup_output_info(255,"sy2.odr",200);
 
     // Solve the system
     fi.init(65536);

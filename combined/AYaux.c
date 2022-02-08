@@ -140,3 +140,20 @@ double *** AYd3tensor(int W_, int M_, int N_)
   return T;
 }
 void free_AYd3tensor(double *** in_) {free(in_[0][0]); free(in_[0]); free(in_);}
+
+void fseek_safe(FILE *fp,long int offset,int origin)
+{
+  if(fseek(fp,offset,origin)!=0)
+  {
+    printf("fseek_safe: error shifting file position by %ld bytes\n",offset);
+    exit(1);
+  }
+}
+void fread_safe(void *ptr,size_t size,size_t count,FILE *fp)
+{
+  if(fread(ptr,size,count,fp)!=count)
+  {
+    printf("fread_safe: can't read file\n");
+    exit(1);
+  }
+}

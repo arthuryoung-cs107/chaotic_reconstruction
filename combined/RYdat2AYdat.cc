@@ -80,7 +80,7 @@ ODR_struct::ODR_struct(const char * proc_loc_, const char * rydat_dir_, const ch
   Frames = 0; depth = 2; dims = AYimatrix(depth, 3);
 }
 
-ODR_struct::ODR_struct(const char * filin_dir_): AYdata(), filin_dir(string_gen_pruned(filin_dir_))
+ODR_struct::ODR_struct(const char * filin_dir_): AYdata(), filin_dir(string_gen_pruned(filin_dir_)), reading_flag(true)
 {
   size_t filin_dir_len = (size_t)(strlen(filin_dir) + 50);
   in_buf = new char[filin_dir_len]; strcpy(in_buf, filin_dir);
@@ -89,20 +89,15 @@ ODR_struct::ODR_struct(const char * filin_dir_): AYdata(), filin_dir(string_gen_
   char * file_it = in_buf + ibuf_end;
   sprintf(file_it, ".fisml");
   int val1, val2, val3;
-  std::ifstream sml_stream; std::string line;
+  std::ifstream sml_stream; std::string line; sml_stream.open(in_buf);
   std::getline(sml_stream, line); std::istringstream dimline0(line);
   dimline0 >> val1 >> depth >> val3;
   std::getline(sml_stream, line); std::istringstream dimline1(line);
   dimline1 >> val1 >> val2 >> Frames;
   std::getline(sml_stream, line); std::istringstream dimline2(line);
   dimline2 >> val1 >> P >> val3;
+
   sml_stream.close();
-
-
-
-
-
-  dims = AYimatrix(depth, 3);
 }
 
 ODR_struct::~ODR_struct()
@@ -247,3 +242,58 @@ void ODR_struct::set_vidspecs(double t_phys_, double cx_im_, double cy_im_, doub
 
 void ODR_struct::print_time_rotation()
 {for(int i=0;i<Frames;i++) printf("%f %f\n",ts[i],d_ang[i]);}
+
+void ODR_struct::load_filter(double *ts_, double *xs_, double *d_ang_, int offset_)
+{
+  if (reading_flag)
+  {
+    int nsnaps = Frames - offset_;
+    char * file_name = in_buf + ibuf_end;
+    sprintf(file_name, ".filin");
+    FILE * inputs = fopen(in_buf, "r"); // or "rb"?
+
+    fseek_safe(inputs, sizeof(double)*offset_, SEEK_SET);
+    fread_safe(ts_, sizeof(double), nsnaps, inputs);
+
+    fseek_safe(inputs, sizeof(double)*2*offset_*P, SEEK_CUR);
+    fread_safe(xs_, sizeof(double), 2*nsnaps*P, inputs);
+
+    fseek_safe(inputs, sizeof(double)*offset_, SEEK_CUR);
+    fread_safe(d_ang_, sizeof(double), nsnaps, inputs);
+    fclose(inputs);
+  }
+  else printf("ODR_struct: not staged for reading binary filter inputs\n");
+}
+
+void ODR_struct::read_filin(int offset_)
+{
+  if (reading_flag)
+  {
+    int nsnaps = Frames - offset_;
+    char * file_name = in_buf + ibuf_end;
+
+    AYvec t_vec(nsnaps), d_vec(nsnaps);
+    AYtens x_tens(nsnaps, 2, P);
+
+    double *ts_ = t_vec.A_ptr;
+    double *d_ang_ = d_vec.A_ptr;
+    double *xs_ = x_tens.T_AT[0][0];
+
+    sprintf(file_name, ".filin");
+    FILE * inputs = fopen(in_buf, "r"); // or "rb"?
+
+    fseek_safe(inputs, sizeof(double)*offset_, SEEK_SET);
+    fread_safe(ts_, sizeof(double), nsnaps, inputs);
+
+    fseek_safe(inputs, sizeof(double)*2*offset_*P, SEEK_CUR);
+    fread_safe(xs_, sizeof(double), 2*nsnaps*P, inputs);
+
+    fseek_safe(inputs, sizeof(double)*offset_, SEEK_CUR);
+    fread_safe(d_ang_, sizeof(double), nsnaps, inputs);
+    fclose(inputs);
+
+    x_tens.mat[0].print_mat();
+
+  }
+  else printf("ODR_struct: not staged for reading binary filter inputs\n");
+}

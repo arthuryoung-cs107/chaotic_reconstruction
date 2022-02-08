@@ -21,4 +21,7 @@ void free_AYdmatrix(double ** m_);
 double *** AYd3tensor(int W_, int M_, int N_);
 void free_AYd3tensor(double *** t_);
 
+void fseek_safe(FILE *fp,long int offset,int origin);
+void fread_safe(void *ptr,size_t size,size_t count,FILE *fp);
+
 #endif

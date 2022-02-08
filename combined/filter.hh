@@ -41,14 +41,14 @@ class filter : public fil_param {
         /** The current frame. */
         int frame;
         /** The time points of the snapshots. */
-        float* ts;
+        double* ts;
         /** The bead positions at the snapshots. */
-        float* xs;
+        double* xs;
         /** The dish angle data at the snapshots. */
-        float* d_ang;
+        double* d_ang;
         /** The array of pointers to swirling simulations. */
         swirl** sw;
-        ODR_struct * odr;
+        ODR_struct * odr=NULL;
         filter(fil_param &fparam,swirl_param &sp_min_,swirl_param &sp_max_,swirl_param &sp_rnd_,wall_list &wl_,double t_phys_,const char* filename,int offset=0);
         filter(fil_param &fparam,swirl_param &sp_min_,swirl_param &sp_max_,swirl_param &sp_rnd_,wall_list &wl_,double t_phys_,ODR_struct * odr_,int offset=0);
         ~filter();
@@ -58,6 +58,7 @@ class filter : public fil_param {
         void step_frame();
         void set_snap(int k,short int xc,short int yc,double s);
         void setup_output_info(unsigned int fflags_,const char *odir_,int state_freq_=1);
+        void setup_output_info(unsigned int fflags_,int state_freq_=1);
         void output_particle(swirl *swp,const char* prefix);
         void output_data(swirl *swp,const char* prefix);
         void write_digest();
