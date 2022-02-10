@@ -27,7 +27,7 @@ void swirl::setup_output_dir(ODR_struct *odr_)
   odr = odr_;
   odr->P = n;
   odr->writing_flag = true;
-  odr->make_filter_inputs_flag =  make_filter_inputs_flag; 
+  odr->make_filter_inputs_flag =  make_filter_inputs_flag;
   odr->set_dims();
 }
 
@@ -80,18 +80,18 @@ void swirl::import(const char* filename) {
     fclose(fp);
 }
 
-/** Saves the simulation parameters as single-precision floating point numbers
+/** Saves the simulation parameters as single-precision doubleing point numbers
  * in binary format.
  * \param[in] fp the file hand to write to. */
 void swirl::output_state(FILE *fp) {
-    float buf[sp_num_vparams+1];
+    double buf[sp_num_vparams+1];
     double *d=&(this->Kn);
 
     // Assemble the data in the buffer, converting to single precision, and
     // then write it out
-    *buf=static_cast<float>(wei);
+    *buf=static_cast<double>(wei);
     for(int k=0;k<sp_num_vparams;k++) buf[k+1]=d[k];
-    fwrite(buf,sizeof(float),sp_num_vparams+1,fp);
+    fwrite(buf,sizeof(double),sp_num_vparams+1,fp);
 }
 
 /** Adds the parameters and their squares to an array, for computing the mean

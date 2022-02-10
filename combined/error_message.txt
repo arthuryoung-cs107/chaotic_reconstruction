@@ -1,0 +1,10 @@
+# Frame 1195, n_eff=41060.7   {0.133809} {0.175715}
+# Frame 1196, n_eff=38144.7   {0.146267} {0.183884}
+# Frame 1197, n_eff=35424.9   {0.132655} {0.153043}
+# Frame 1198, n_eff=32900.7   {0.131862} {0.168238}
+# Frame 1199, n_eff=30564.6   {0.135845} {0.152854}
+passed output_data/particle
+passed output_states
+part way through write_digest
+# Frame 1200, n_eff=28405.4   {0.128961} {0.167648}
+Segmentation fault (core dumped)
