@@ -89,10 +89,8 @@ void filter::write_files() {
         if(fflags&16) output_particle(&swc,"pc"); // mean particle sample. most visually compelling
         if(fflags&32) output_data(&swc,"ec");
     }
-    if (frame==(1200-1)) printf("passed output_data/particle\n");
     // Output the state information
     if((fflags&64)&&frame%state_freq==0) output_states();
-    if (frame==(1200-1)) printf("passed output_states\n");
     // Save the digest information
     write_digest();
 }
@@ -136,7 +134,6 @@ void filter::output_states() {
     if(odir==NULL) return;
     sprintf(obuf,"%s/st.%d",odir,frame);
     FILE *fp=safe_fopen(obuf,"wb");
-    if (frame==(1200-1)) printf("passed output_data/particle\n");
     // Output the states of the all the simulations, and close the output file
     for(int k=0;k<npar;k++) sw[k]->output_state(fp);
     fclose(fp);
@@ -148,7 +145,7 @@ void filter::write_digest() {
     // Allocate and clear the global digest array
     double gdig[2*sp_num_vparams];
     for(int i=0;i<2*sp_num_vparams;i++) gdig[i]=0.;
-    if (frame==(1200-1)) printf("part way through write_digest\n");
+
 #pragma omp parallel
     {
 
@@ -179,4 +176,5 @@ void filter::write_digest() {
     // Write the results to the digest file
     fwrite(odig,sizeof(double),2*sp_num_vparams+3,fdigest);
     fflush(fdigest);
+    if (frame==(1200)) printf("write_digest 7\n");
 }

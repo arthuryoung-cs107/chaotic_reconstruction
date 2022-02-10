@@ -1,4 +1,7 @@
 #include <cstdio>
+#include <sstream>
+#include <string>
+#include <fstream>
 
 #include "AYlinalg.hh"
 #include "AYblas.h"
@@ -14,8 +17,47 @@ AYmat::AYmat(int M_, int N_): M(M_), N(N_), AT(AYdmatrix(N, M)), dmatrix_alloc_f
   A_ptr = AT[0];
 }
 
-AYmat::AYmat()
-{}
+AYmat::AYmat(char * name)
+{
+  size_t n_end = strlen(name);
+  char * buf = new char[n_end + 10]; strcpy(buf, name); char * buf_it = buf + n_end;
+
+  int num_lines=0;
+
+  std::ifstream aysml; strcpy(buf_it, ".aysml"); aysml.open(buf);
+  for (std::string line; std::getline(aysml, line);)
+  {
+    if (num_lines++==0)
+    {
+      std::istringstream in(line);
+      in >> M >> N;
+    }
+  }
+  aysml.close();
+
+  if (num_lines==1)
+  {
+    if (M>1)
+    {
+      AT = AYdmatrix(N, M); dmatrix_alloc_flag = true; A_ptr = AT[0];
+
+      strcpy(buf_it, ".aydat"); FILE * data_file = fopen(buf, "r");
+      fread_safe(A_ptr, sizeof(double), M*N, data_file);
+      fclose(data_file);
+    }
+    else
+    {
+      printf("AYmat: read failed. Invalid aysml (M = %d). Did you mean AYsym?\n", M);
+      exit (EXIT_FAILURE);
+    }
+  }
+  else
+  {
+    printf("AYmat: read failed. Invalid aysml (lines = %d)\n", num_lines);
+    exit (EXIT_FAILURE);
+  }
+  delete buf;
+}
 
 AYmat::~AYmat()
 {
@@ -155,28 +197,23 @@ void AYmat::print_dims()
 
 void AYmat::fprintf_mat(char name[], bool verbose)
 {
-  char specfile[300];
-  memset(specfile, 0, 299);
-  snprintf(specfile, 300, "%s.aydat", name);
-  FILE * data_file = fopen(specfile, "wb");
-  fwrite(A_ptr, sizeof(double), M*N, data_file);
-  fclose(data_file);
-  aysml_gen( name, M, N);
-  if (verbose) printf("wrote file: %s.aydat/aysml\n", name);
+  size_t n_end = strlen(name);
+  char * buf = new char[n_end + 10]; strcpy(buf, name); char * buf_it = buf + n_end;
+
+  strcpy(buf_it, ".aydat"); FILE * data_file = fopen(buf, "wb");
+  fwrite(A_ptr, sizeof(double), M*N, data_file); fclose(data_file);
+
+  strcpy(buf_it, ".aysml"); FILE * aysml_file = fopen(buf, "w");
+  fprintf(aysml_file, "%d %d", M, N); fclose(aysml_file);
+
+  if (verbose) printf("AYmat: wrote file  %s.aydat/aysml\n", name);
+  delete buf;
 }
 
 void AYmat::init_123()
 {
-  int i, j, count;
-  count = 1;
-  for ( i = 0; i < M; i++)
-  {
-    for ( j = 0; j < N; j++)
-    {
-      AT[j][i] = (double) count;
-      count++;
-    }
-  }
+  int i, j, count=1;
+  for ( i = 0; i < M; i++) for ( j = 0; j < N; j++) AT[j][i] = (double) count++;
 }
 
 void AYmat::init_0()

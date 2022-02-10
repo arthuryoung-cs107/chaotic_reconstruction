@@ -9,6 +9,8 @@ extern "C"
 
 
 AYvec::AYvec(int M_): AYmat(M_, 1) {}
+AYvec::AYvec(char * name): AYmat(name) {}
+
 AYvec::~AYvec() {}
 
 void AYvec::set(int i, double val)
@@ -29,6 +31,9 @@ void AYvec::AYvec_2_GSL_copy(gsl_vector * vec_in) {AYmat_2_GSL_copy(vec_in);}
 
 void AYvec::print_vec(bool space_)
 {print_mat(space_);}
+
+void AYvec::fprintf_vec(char name[], bool verbose)
+{fprintf_mat(name, verbose);}
 
 AYvec * AYvec::copy_gen()
 {

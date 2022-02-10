@@ -48,6 +48,8 @@ class AYmat
 {
     public:
       AYmat(int M_, int N_);
+      AYmat(char * name);
+      AYmat(const char * name): AYmat((char*) name) {}
       AYmat();
       ~AYmat();
 
@@ -72,6 +74,7 @@ class AYmat
       void print_mat(bool space_ = true);
       void print_dims();
       void fprintf_mat(char name[], bool verbose = false);
+      void fprintf_mat(const char name[], bool verbose = false) {fprintf_mat((char*) name, verbose);}
       void init_123();
       void init_0();
       void init_randuni(double low_=0.0, double high_=1.0);
@@ -137,6 +140,9 @@ class AYvec : public AYmat
 {
   public:
     AYvec(int M_);
+    AYvec(char * name_);
+    AYvec(const char * name): AYvec((char*)name) {}
+
     ~AYvec();
 
     void set(int i, double val);
@@ -148,6 +154,8 @@ class AYvec : public AYmat
     void AYvec_2_GSL_copy(gsl_vector * vec_in);
 
     void print_vec(bool space_ = true);
+    void fprintf_vec(char * name_, bool space_ = true);
+    void fprintf_vec(const char * name_, bool space_ = true) {fprintf_vec((char*) name_, space_);}
 
     AYvec * copy_gen();
     AYvec * row_slice_gen(int i_);
@@ -182,15 +190,20 @@ class AYtens
     AYmat * mat;
 
     AYtens(int W_, int M_, int N_);
+    AYtens(char * name);
+    AYtens(const char * name): AYtens((char*)name) {}
     ~AYtens();
     double get(int i_, int j_, int k_);
     void set(int i_, int j_, int k_, double val_);
     void print_dims();
     void print_tens(bool space_ = true);
-    void fprintf_tens( char name_[], bool verbose_=false);
+    void fprintf_tens(char name_[], int split_=1, bool verbose_=false);
+    void fprintf_tens(const char name_[], int split_=1, bool verbose_=false) {fprintf_tens((char*)name_, split_, verbose_);}
     void init_0();
     void init_123();
     void init_mats123();
+
+  private:
 };
 
 class AYsym
@@ -205,6 +218,7 @@ class AYsym
 
     void print_mat(bool space_ = true);
     void fprintf_sym(char name[], bool verbose_=false);
+    void fprintf_sym(const char name[], bool verbose_=false) {fprintf_sym((char*)name, verbose_);}
     void init_eye();
     void init_123();
     void init_sqrmat(AYmat * m_ );
@@ -215,15 +229,13 @@ class AYsym
 class AYdata
 {
   public:
-    bool dims_alloc_flag;
     int Frames;
     int depth;
-    int ** dims;
+    int ** dims=NULL;
     AYdata(int Frames_, int depth_);
     AYdata();
     ~AYdata();
     virtual void set_dims();
-    void AYdata_aysml_gen(char name_[], int split_=1);
     virtual void fprintf_split(char name_[], bool verbose_=false);
 
 };
@@ -272,10 +284,6 @@ class AY_Choleskyspace
 
 void AYlinalg_svd(AYmat * mat_, AY_SVDspace * space_);
 void AYlinalg_Cholesky_solve(AYsym * L_, AYvec *z_, AYvec * r_ );
-
-AYmat * aysml_read(char name[]);
-AYvec * aysml_read_vec(char name[]);
-AYtens * aysml_read_tens(char name[]);
 
 AYvec * AYmat_2_AYvec_gen(AYmat * X_in);
 void AYmat_2_AYvec_copy(AYmat * X_in, AYvec * x_in);

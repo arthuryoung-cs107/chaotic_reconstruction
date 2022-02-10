@@ -60,15 +60,17 @@ void AYsym::print_mat(bool space_)
 
 void AYsym::fprintf_sym(char name[], bool verbose_)
 {
-  char specfile[300]; memset(specfile, 0, 299); snprintf(specfile, 300, "%s.aydat", name);
-  char smlfile[300]; memset(smlfile, 0, 299); snprintf(smlfile, 300, "%s.aysml", name);
-  FILE * data_file = fopen(specfile, "wb");
-  FILE * aysml_file = fopen(smlfile, "w");
-  fprintf(aysml_file, "1 %d %d", N, len);
-  fclose(aysml_file);
-  fwrite(*A, sizeof(double), len, data_file);
-  fclose(data_file);
-  if (verbose_) printf("wrote file: %s.aydat/aysml\n", name);
+  size_t n_end = strlen(name);
+  char * buf = new char[n_end + 10]; strcpy(buf, name); char * buf_it = buf + n_end;
+
+  strcpy(buf_it, ".aydat"); FILE * data_file = fopen(buf, "wb");
+  fwrite(*A, sizeof(double), len, data_file); fclose(data_file);
+
+  strcpy(buf_it, ".aysml"); FILE * aysml_file = fopen(buf, "w");
+  fprintf(aysml_file, "1 %d %d", N, len); fclose(aysml_file);
+
+  if (verbose_) printf("AYsym: wrote file  %s.aydat/aysml\n", name);
+  delete buf;
 }
 
 void AYsym::init_123()
@@ -164,71 +166,6 @@ void AYvec_2_AYmat_copy(AYvec * x_in, AYmat * X_in)
 {
   if ((x_in->M) == (X_in->M)*(X_in->N)) memcpy(X_in->A_ptr, x_in->A_ptr, (X_in->M)*sizeof(double));
   else printf("AYvec: AYvec_2_AYmat_copy failed, inequal dimensions\n");
-}
-
-AYmat * aysml_read(char name[])
-{
-  char aysml_specs[300]; memset(aysml_specs, 0, 299); snprintf(aysml_specs, 300, "%s.aysml", name);
-  char aydat_name[300]; memset(aydat_name, 0, 299); snprintf(aydat_name, 300, "%s.aydat", name);
-  int M, N;
-  std::ifstream tens_file;
-  tens_file.open(aysml_specs);
-  std::string line;
-  std::getline(tens_file, line);
-  std::istringstream in(line);
-  in >> M >> N;
-  tens_file.close();
-
-  AYmat * out = new AYmat(M, N);
-  FILE * aydat_stream = fopen(aydat_name, "r");
-  size_t success = fread(out->A_ptr, sizeof(double), M*N, aydat_stream);
-  fclose(aydat_stream);
-  return out;
-}
-
-AYvec * aysml_read_vec(char name[])
-{
-  char aysml_specs[300]; memset(aysml_specs, 0, 299); snprintf(aysml_specs, 300, "%s.aysml", name);
-  char aydat_name[300]; memset(aydat_name, 0, 299); snprintf(aydat_name, 300, "%s.aydat", name);
-  int M, N;
-  std::ifstream tens_file;
-  tens_file.open(aysml_specs);
-  std::string line;
-  std::getline(tens_file, line);
-  std::istringstream in(line);
-  in >> M >> N;
-  tens_file.close();
-
-  if (N != 1) printf("aysml_read_vec warning: aysml has N = %d. Reading first M = %d values\n", N, M);
-
-  AYvec * out = new AYvec(M);
-  FILE * aydat_stream = fopen(aydat_name, "r");
-  size_t success = fread(out->A_ptr, sizeof(double), M, aydat_stream);
-  fclose(aydat_stream);
-  return out;
-}
-
-AYtens * aysml_read_tens(char name[])
-{
-  char aysml_specs[300]; memset(aysml_specs, 0, 299); snprintf(aysml_specs, 300, "%s.aysml", name);
-  char aytens_name[300]; memset(aytens_name, 0, 299); snprintf(aytens_name, 300, "%s.aytens", name);
-  int type, M, N, W;
-  std::ifstream tens_file;
-  tens_file.open(aysml_specs);
-  std::string line;
-  std::getline(tens_file, line);
-  std::istringstream in(line);
-  in >> type >> M >> N >> W;
-  tens_file.close();
-
-  AYtens * T_out = new AYtens(W, M, N);
-  if (type == 1)
-  {
-    FILE * aydat_stream = fopen(aytens_name, "r");
-    size_t success = fread(**(T_out->T_AT), sizeof(double), M*N*W, aydat_stream);
-    fclose(aydat_stream);
-  }
-  return T_out;
 }
 
 AYmat * GSL_2_AYmat_gen(gsl_matrix * mat_in)
