@@ -37,7 +37,7 @@ int main() {
 
     // Solve the system
     fi.init(65536);
-    // fi.run(1200);
+    fi.run(1200);
 
     return 0;
 }

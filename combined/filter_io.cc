@@ -176,5 +176,4 @@ void filter::write_digest() {
     // Write the results to the digest file
     fwrite(odig,sizeof(double),2*sp_num_vparams+3,fdigest);
     fflush(fdigest);
-    if (frame==(1200)) printf("write_digest 7\n");
 }
