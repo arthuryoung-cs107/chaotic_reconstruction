@@ -15,8 +15,15 @@ int main() {
     fil_param fparam(0.002,0.1,1,0.01,0.01,0.012,3);
 
     // Minimum and maximum parameters
+    //original
     swirl_param sp_min(0.5,1,500,5,5,5,0.1,0.1,0.1,1.8,402,380,37.6,1),
                 sp_max(0.5,1,5000,120,120,120,1.,1.,1.,1.8,402,380,37.6,1),
+                sp_rnd(sp_min,sp_max,0.005);
+    //true
+    swirl_param sparam(0.5,1,1000,40,40,40,0.5,0.25,0.5,1.8,203,178,27.6,1.);
+    //corrected
+    swirl_param sp_min(0.5,1,500,5,5,5,0.1,0.1,0.1,1.8,203.0,178.0,27.6,1.0),
+                sp_max(0.5,1,5000,120,120,120,1.,1.,1.,1.8,203.0,178.0,27.6,1.0),
                 sp_rnd(sp_min,sp_max,0.005);
 
     // Create the hexagonal dish

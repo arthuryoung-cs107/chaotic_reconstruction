@@ -8,6 +8,7 @@
 
 /** The total number of varying parameters in swirling parameter class. */
 const int sp_num_vparams=12;
+// const int sp_num_vparams=7;
 
 struct swirl_param {
     /** The bead radius. */
@@ -40,7 +41,7 @@ struct swirl_param {
     double cl_im; // hold constant for all particles
     /** The wall scale factor. */
     double wall_sca;
-    swirl_param(double rad_,double mass_,double Kn_,double gamman_bead_,double gamman_base_,double gamman_wall_,double mu_bead_,double mu_base_,double mu_wall_,double dsamp_,double cx_im_,double cy_im_,double cl_im_,double wall_sca_)
+    swirl_param(double rad_,double mass_,double Kn_,double gamman_bead_,double gamman_base_,double gamman_wall_,double mu_bead_,double mu_base_,double mu_wall_,double dsamp_=1.8,double cx_im_=203.0,double cy_im_=178.0,double cl_im_=27.6,double wall_sca_=1.0)
         : rad(rad_), mass(mass_), momi(0.4*mass*rad*rad), Kn(Kn_),
         gamman_bead(gamman_bead_), gamman_base(gamman_base_),
         gamman_wall(gamman_wall_), mu_bead(mu_bead_), mu_base(mu_base_),

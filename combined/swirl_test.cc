@@ -12,7 +12,7 @@ int main() {
            t_phys=sqrt(d_phys/g_phys);   // Time unit (s)
 
     swirl_param sparam(0.5,1,1000,40,40,40,0.5,0.25,0.5,1.8,203,178,27.6,1.);
-
+    // swirl_param sparam(0.5,1,1000,40,40,40,0.5,0.25,0.5);
     // Create the hexagonal dish
     wall_list wl;
     const double r=5.72,fa=sqrt(0.75);
