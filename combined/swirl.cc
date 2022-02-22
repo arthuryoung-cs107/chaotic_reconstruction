@@ -321,9 +321,9 @@ void swirl::update_weight(double *f,double dur,double t_wheels,double *lnorm) {
                rsq=xt*xt+yt*yt,r=sqrt(rsq);
 
         // Compute the diagnostic measurements
-        *lnorm+=r;
-        lnorm[1]+=rsq;
-        if(r>lnorm[2]) lnorm[2]=r;
+        *lnorm+=r; // accumulate error
+        lnorm[1]+=rsq; // accumulate square of residual
+        if(r>lnorm[2]) lnorm[2]=r; // most erronous particle position
         logfac=rsq>rmax?rmax:rsq;
 
         // Adjust the position of bead to drift toward the experimental

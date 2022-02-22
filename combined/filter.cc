@@ -229,7 +229,7 @@ void filter::step_frame() {
     comega/=dur;
     double *f=xs+2*n*++frame;
 
-#pragma omp parallel reduction(min:sum_l2) reduction(min:min_linf_)
+#pragma omp parallel reduction(min:sum_l2) reduction(min:min_linf_) // prevent race condition
     {
         int t=thread_num();
         double lnorm[3];
@@ -249,15 +249,15 @@ void filter::step_frame() {
             // Calculate the change in weight of the particle, based on how
             // well it matches the bead data
             sw[i]->update_weight(f,dur,t_wheels,lnorm);
-            if(lnorm[1]<sum_l2) sum_l2=lnorm[1];
-            if(lnorm[2]<min_linf_) min_linf_=lnorm[2];
+            if(lnorm[1]<sum_l2) sum_l2=lnorm[1]; // setting the least erronous net residual for all particles
+            if(lnorm[2]<min_linf_) min_linf_=lnorm[2]; // setting the least erronous individual particle position for all particles
         }
     }
 
     // Check for failure if the minimum L2 norm is beyond a complete bead
     // diameter
-    min_l2=sqrt(sum_l2/n);min_linf=min_linf_;
-    if(min_l2>sp_max.cl_im) {
+    min_l2=sqrt(sum_l2/n);min_linf=min_linf_; //
+    if(min_l2>sp_max.cl_im) { // if the least wrong simulation is still beyond a full particle position, the whole batch fails
         puts("# Inaccurate bead positions in all particles");
         if(nfail++==filter_nfail_thresh) {
             fputs("# Too many consecutive inaccurate frames\n",stderr);
@@ -269,7 +269,7 @@ void filter::step_frame() {
     // that at least one applied factor is non-zero
 #pragma omp parallel for reduction(+:sp) reduction(+:spp)
     for(int i=0;i<npar;i++) {
-        sw[i]->wei*=exp(gau_coeff*(sum_l2-sw[i]->logfac));
+        sw[i]->wei*=exp(gau_coeff*(sum_l2-sw[i]->logfac)); // recompute weights based off of each particles mean error, relative to the least erronous one.
 
         // Compute first and second moments of the weights
         sp+=sw[i]->wei;
@@ -283,7 +283,7 @@ void filter::step_frame() {
     // If the effective number of particles is less than a fraction of the
     // total particles, then resample the particles
     printf("# Frame %d, n_eff=%g   {%g} {%g}",frame,neff,min_l2,min_linf);
-    if(neff<rs_thresh*npar) {puts(" [resample]");resample();}
+    if(neff<rs_thresh*npar) {puts(" [resample]");resample();} // resample everything. Have we updated the distribution?
     else putchar('\n');
 }
 
