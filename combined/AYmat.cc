@@ -212,33 +212,20 @@ void AYmat::fprintf_mat(char name[], bool verbose)
 
 void AYmat::init_123()
 {
-  int i, j, count=1;
-  for ( i = 0; i < M; i++) for ( j = 0; j < N; j++) AT[j][i] = (double) count++;
+  for (int i = 0; i < M; i++) for (int j = 0; j < N; j++) AT[j][i] = (double)((i*N + j)+1);
 }
 
 void AYmat::init_0()
-{for (int i = 0; i < N*M; i++) *(A_ptr+i) = 0.0;}
+{for (int i = 0; i < N*M; i++) A_ptr[i] = 0.0;}
 
 void AYmat::init_randuni(double low_, double high_)
 {
-  int i;
-  uint64_t jump = 1000;
-  uint64_t seed  = (uint64_t) rand();
-  uint64_t carry = lcg_fwd(seed, jump);
-  double low = low_;
-  double high = high_;
-
-  for ( i = 0; i < N*M; i++)
-  {
-    double check = knuth_random_uni(low, high, &carry);
-    AT[0][i] = check;
-  }
+  uniform gen(low_, high_);
+  for (int i = 0; i < N*M; i++) A_ptr[i] = gen.rand_gen();
 }
 
 void AYmat::init_randgen(AYrng * rng_in)
-{
-  for ( int i = 0; i < N*M; i++) AT[0][i] = rng_in->rand_gen();
-}
+{for ( int i = 0; i < N*M; i++) AT[0][i] = rng_in->rand_gen();}
 
 AYmat * AYmat::copy_gen()
 {
@@ -399,13 +386,7 @@ void AYmat::mult_set(AYmat * B_in, AYmat * C_in, double alpha, double beta, bool
 double AYmat::mean()
 {
   double sum = 0.0;
-  for (int i = 0; i < M; i++)
-  {
-    for (int j = 0; j < N; j++)
-    {
-      sum += AT[j][i];
-    }
-  }
+  for (int j = 0; j < N; j++) for (int i = 0; i < M; i++) sum += AT[j][i];
   return sum/((double) M*N);
 }
 
@@ -414,9 +395,10 @@ double AYmat::variance()
   double diff;
   double sum = 0.0;
   double mu = mean();
-  for (int i = 0; i < M; i++)
+
+  for (int j = 0; j < N; j++)
   {
-    for (int j = 0; j < N; j++)
+    for (int i = 0; i < M; i++)
     {
       diff = AT[j][i] - mu;
       sum += diff*diff;
@@ -431,13 +413,7 @@ double AYmat::inner(AYmat * B_in)
   {
     int i, j;
     double sum = 0;
-    for ( i = 0; i < M; i++)
-    {
-      for ( j = 0; j < N; j++)
-      {
-        sum += (AT[j][i] * B_in->AT[j][i]);
-      }
-    }
+    for ( j = 0; j < N; j++) for ( i = 0; i < M; i++) sum += (AT[j][i] * B_in->AT[j][i]);
     return sum;
   }
   else
@@ -449,16 +425,15 @@ double AYmat::inner(AYmat * B_in)
 
 double AYmat::norm_frob()
 {
-  int i,j;
   double out = 0.0;
+  for (int j = 0; j < N; j++) for (int i = 0; i < M; i++) out += (AT[j][i])*(AT[j][i]);
+  return sqrt(out);
+}
 
-  for ( i = 0; i < M; i++)
-  {
-    for ( j = 0; j < N; j++)
-    {
-      out += (AT[j][i])*(AT[j][i]);
-    }
-  }
+double AYmat::norm_frob(AYmat * X_)
+{
+  double out = 0.0;
+  for (int j = 0; j < N; j++) for (int i = 0; i < M; i++) out += (AT[j][i]-X_->AT[j][i])*(AT[j][i]-X_->AT[j][i]);
   return sqrt(out);
 }
 
@@ -467,13 +442,7 @@ double AYmat::norm_1()
   int i, j;
   double out = 0.0;
 
-  for ( i = 0; i < M; i++)
-  {
-    for ( j = 0; j < N; j++)
-    {
-      out += abs(AT[j][i]);
-    }
-  }
+  for ( j = 0; j < N; j++) for ( i = 0; i < M; i++) out += abs(AT[j][i]);
 
   return out;
 }

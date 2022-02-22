@@ -91,6 +91,21 @@ void AYsym::init_sqrmat(AYmat * m_)
   }
 }
 
+void AYsym::init_XTWX(AYmat * m_, AYdiag * w_)
+{
+  for (int i = 0; i < N; i++)
+  {
+    for (int j = 0; j < (N - i); j++)
+    {
+      A[i][j] = 0.0; // this is being set. Adjust other dims
+      for (int k = 0; k < m_->M; k++) // multiply along the full column
+      {
+        A[i][j] += (w_->A[k])*(m_->AT[i][k])*(m_->AT[j+i][k]);
+      }
+    }
+  }
+}
+
 void AYsym::mult_vec(AYvec * in_, AYvec * out_, bool diff_) // specialized for vector multiplication. Adds on top of output vector to keep it quick and simple
 {
   if ((in_->M==N)&&(out_->M==N))
@@ -134,75 +149,95 @@ double AYsym::vT_A_v(AYvec * v, AYvec * w)
       for (int j = 1; j < (N - i); j++)
       {
         w->A_ptr[i] += A[i][j]*v->A_ptr[i+j];
-        w->A_ptr[i+j] += A[i][j]*v->A_ptr[i];
+        w->A_ptr[i+j] += A[i][j]*v->A_ptr[i]; // only updates the vector DOWNSTREAM
       }
-      out += (w->A_ptr[i])*(v->A_ptr[i]); // actively updating the inner product
+      out += (w->A_ptr[i])*(v->A_ptr[i]); // actively updating the inner product. w is already fully calculated by this point
     }
   }
   else printf("AYsym: vT_A_v error, dimensions are (%d %d)(%d %d) = (%d %d)\n", N, N, v->M, v->N, w->M, w->N);
   return out;
 }
 
-AYvec * AYmat_2_AYvec_gen(AYmat * X_in)
+AYdiag::AYdiag(int N_) : N(N_), A(new double[N_])
+{}
+
+AYdiag::AYdiag(AYmat * m_) : N((m_->M > m_->N) ? m_->N : m_->M), A(new double[N])
 {
-  AYvec * x_out = new AYvec((X_in->M)*(X_in->N));
-  memcpy(x_out->A_ptr, X_in->A_ptr, (X_in->M)*(X_in->N)*sizeof(double));
-  return x_out;
+  for (int i = 0; i < N; i++) A[i] = m_->AT[i][i];
 }
 
-void AYmat_2_AYvec_copy(AYmat * X_in, AYvec * x_in)
+AYdiag::AYdiag(AYvec * v_) : N(v_->M), A(new double[v_->M])
 {
-  if ((X_in->M)*(X_in->N) == x_in->M) memcpy(x_in->A_ptr, X_in->A_ptr, (X_in->M)*(X_in->N)*sizeof(double));
-  else printf("AYmat: AYmat_2_AYvec_copy failed, inequal dimensions\n");
+  memcpy(A, v_->A_ptr, N*sizeof(double));
 }
 
-AYmat * AYvec_2_AYmat_gen(AYvec * x_in)
-{
-  AYmat * X_out = new AYmat((x_in->M), 1);
-  memcpy(X_out->A_ptr, x_in->A_ptr, (x_in->M)*sizeof(double));
-  return X_out;
-}
-void AYvec_2_AYmat_copy(AYvec * x_in, AYmat * X_in)
-{
-  if ((x_in->M) == (X_in->M)*(X_in->N)) memcpy(X_in->A_ptr, x_in->A_ptr, (X_in->M)*sizeof(double));
-  else printf("AYvec: AYvec_2_AYmat_copy failed, inequal dimensions\n");
-}
+AYdiag::~AYdiag()
+{delete A;}
 
-AYmat * GSL_2_AYmat_gen(gsl_matrix * mat_in)
+void AYdiag::print_mat(bool space_)
 {
-  AYmat * mat_out = new AYmat(mat_in->size1, mat_in->size2);
-  for (int i = 0; i < mat_out->M; i++)
+  for (int i = 0; i < N; i++)
   {
-    for (int j = 0; j < mat_out->N; j++) mat_out->set(i, j, gsl_matrix_get(mat_in, i, j));
+    for (int j = 0; j < i; j++)
+    {
+      printf("%f ", 0.0);
+    }
+    printf("%f ", A[i]);
+    for (int j = i+1; j < N; j++)
+    {
+      printf("%f ", 0.0);
+    }
+    printf("\n");
   }
-  return mat_out;
+  if (space_) printf("\n");
 }
 
-AYmat * GSL_2_AYmat_gen(gsl_vector * vec_in)
+void AYdiag::fprintf_diag(char * name, bool verbose) // just interpret as a vector
 {
-  AYmat * vec_out = new AYmat(vec_in->size, 1);
-  for (int i = 0; i < vec_out->M; i++) vec_out->set(i, 0, gsl_vector_get(vec_in, i));
-  return vec_out;
+  size_t n_end = strlen(name);
+  char * buf = new char[n_end + 10]; strcpy(buf, name); char * buf_it = buf + n_end;
+
+  strcpy(buf_it, ".aydat"); FILE * data_file = fopen(buf, "wb");
+  fwrite(A, sizeof(double), N, data_file); fclose(data_file);
+
+  strcpy(buf_it, ".aysml"); FILE * aysml_file = fopen(buf, "w");
+  fprintf(aysml_file, "%d 1", N); fclose(aysml_file);
+
+  if (verbose) printf("AYdiag: wrote file  %s.aydat/aysml\n", name);
+  delete buf;
 }
 
-AYmat * GSL_2_diagAYmat_gen(gsl_vector * vec_in)
+void AYdiag::init_eye()
 {
-  AYmat * mat_out = new AYmat(vec_in->size, vec_in->size);
-  mat_out->init_0();
-  for (int i = 0; i < mat_out->M; i++) mat_out->set(i, i, gsl_vector_get(vec_in, i));
-  return mat_out;
+  for (int i = 0; i < N; i++) A[i] = 1.0;
 }
-AYvec * GSL_2_AYvec_gen(gsl_matrix * mat_in)
+
+void AYdiag::init_123()
 {
-  AYvec * vec_out = new AYvec((mat_in->size1)*(mat_in->size2));
-  for (int i = 0; i < mat_in->size1; i++) {for (int j = 0; j < mat_in->size2; j++) vec_out->set((i*(mat_in->size2))+j, gsl_matrix_get(mat_in, i, j));}
-  return vec_out;
+  for (int i = 0; i < N; i++) A[i] = (double)(i+1);
 }
-AYvec * GSL_2_AYvec_gen(gsl_vector * vec_in)
+
+void AYdiag::init_mat(AYmat * m_)
 {
-  AYvec * vec_out = new AYvec(vec_in->size);
-  for (int i = 0; i < vec_out->M; i++) vec_out->set(i, gsl_vector_get(vec_in, i));
-  return vec_out;
+  for (int i = 0; i < N; i++) A[i] = m_->AT[i][i];
+}
+
+void AYdiag::init_vec(AYvec * v_)
+{
+  memcpy(A, v_->A_ptr, N*sizeof(double));
+}
+
+void AYdiag::mult_vec(AYvec * in_, AYvec * out_, bool diff_)
+{
+  if ((N==in_->M)&&(N==out_->M))
+  {
+    if (diff_) for (int i = 0; i < N; i++) out_->A_ptr[i] -= (A[i])*in_->A_ptr[i];
+    else for (int i = 0; i < N; i++) out_->A_ptr[i] += (A[i])*in_->A_ptr[i];
+  }
+  else
+  {
+    char msg[200]; sprintf(msg, "AYdiag: mult_vec fatal error, dimension mismatch (AYdiag: %d x %d, in: %d, out: %d)", N, N, in_->M, out_->M); AYfatalerror(msg);
+  }
 }
 
 char * string_gen_pruned(char * in_)
@@ -220,3 +255,7 @@ char * string_gen_pruned(const char * in_)
   strcpy(out, in_);
   return out;
 }
+
+void AYfatalerror(char * msg, int exit_code)
+{printf("%s\n", msg); exit(exit_code);}
+void AYfatalerror(const char *msg, int exit_code){printf("%s\n", msg); exit(exit_code);}

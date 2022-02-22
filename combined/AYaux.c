@@ -18,15 +18,13 @@ void aysml_gen(char name[], int m, int n)
 void name_gen(char ptr[], int length, const char * name)
 {
   memset(ptr, 0, length-1);
-  // snprintf(ptr, length, name);
   memcpy(ptr, name, length*sizeof(char));
 }
 
 double knuth_random_uni(double low, double high, uint64_t * carry) // knuth rng
 {
   double rand_uni = ((double) lcg_uni(carry))/(lcg_sze());
-  rand_uni = (rand_uni - 0.5)*(high - low) + ((high + low)/(2.0));
-  return rand_uni;
+  return (rand_uni - 0.5)*(high - low) + ((high + low)/(2.0));
 }
 
 uint64_t lcg_uni(uint64_t *lcg_carry) // call this evertime you want a random integer, or rand()
@@ -37,7 +35,7 @@ uint64_t lcg_uni(uint64_t *lcg_carry) // call this evertime you want a random in
 
   #ifdef KNUTH
     //ax+c mod m: m=2^64
-    *lcg_carry= (__uint128_t) *lcg_carry*6364136223846793005ULL+1442695040888963407ULL; //knuth
+    *lcg_carry= (__uint128_t) (*lcg_carry*6364136223846793005ULL+1442695040888963407ULL); //knuth
   #else
     *lcg_carry=rand();
   #endif
@@ -54,13 +52,8 @@ uint64_t lcg_fwd(uint64_t seed,uint64_t jump) // eq to srand(seed)
   //being lazy here, should use the function  a^k x + (a^k-1)*c/(a-1)
 
   #ifdef KNUTH
-    uint64_t ix;
-    uint64_t ret;
-    ret=0;
-    for(ix=0;ix<jump;ix++)
-    {
-      ret=lcg_uni(&seed);
-    }
+    uint64_t ix,ret=0;
+    for(ix=0;ix<jump;ix++) ret=lcg_uni(&seed);
     return ret;
   #else
     srand(seed);
@@ -75,9 +68,9 @@ double lcg_sze() // replaces randmax
   // *******************************/
 
   #ifdef KNUTH
-    return pow(2,64);
+    return pow(2.0,64.0);
   #else
-    return (double) RAND_MAX + 1.0;
+    return (double) (RAND_MAX + 1.0);
   #endif
 }
 double boxmuller_knuth(double mean, double variance, uint64_t * carry)

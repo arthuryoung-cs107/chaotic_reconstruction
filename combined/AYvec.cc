@@ -29,9 +29,6 @@ void AYvec::GSL_2_AYvec_copy(gsl_vector * vec_in) {GSL_2_AYmat_copy(vec_in);}
 void AYvec::AYvec_2_GSL_copy(gsl_matrix * mat_in) {AYmat_2_GSL_copy(mat_in);}
 void AYvec::AYvec_2_GSL_copy(gsl_vector * vec_in) {AYmat_2_GSL_copy(vec_in);}
 
-void AYvec::print_vec(bool space_)
-{print_mat(space_);}
-
 void AYvec::fprintf_vec(char name[], bool verbose)
 {fprintf_mat(name, verbose);}
 
@@ -71,12 +68,6 @@ AYmat * AYvec::transpose_gen()
   return X_out;
 }
 
-double AYvec::norm_2()
-{
-  double out = 0.0;
-  for (int i = 0; i < M; i++) out += (A_ptr[i]*A_ptr[i]);
-  return sqrt(out);
-}
 double AYvec::dot(AYmat *B_)
 {
   double out = 0.0;
