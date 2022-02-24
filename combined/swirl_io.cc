@@ -37,8 +37,8 @@ void swirl::output(int k) {
     if (ODR_struct_flag)
     {
       double specs_vector[] = {time, cx, cy, wall_sca};
-      if (make_filter_inputs_flag) odr->write_split(k, specs_vector, q, ctheta);
-      else odr->write_split(k, specs_vector, q);
+      if (make_filter_inputs_flag) odr->write(k, specs_vector, q, ctheta);
+      else odr->write(k, specs_vector, q);
     }
     else
     {

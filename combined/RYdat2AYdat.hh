@@ -10,7 +10,7 @@ class ODR_struct : public AYdata
     public:
         double ***data=NULL, ** specs=NULL;
 
-        bool  writing_flag = false, reading_flag = false, make_filter_inputs_flag;
+        bool  writing_flag = false, reading_flag = false, make_filter_inputs_flag, write_split_flag;
 
         char *rydat_loc=NULL, *rydat_dir=NULL, *proc_dir=NULL, *file_name=NULL, *in_buf=NULL, *out_buf=NULL, *filin_dir=NULL;
 
@@ -33,10 +33,10 @@ class ODR_struct : public AYdata
         ODR_struct(const char * filin_dir_);
         ~ODR_struct();
         void set_dims();
-        void prepare_datdir(char name_[]);
+        void prepare_datdir(char name_[], bool write_split_flag_=true);
         void fprintf_split(bool verbose_=false);
-        void write_split(int k_, double * specs_, particle * q_);
-        void write_split(int k_, double * specs_, particle * q_, double ctheta_);
+        void write(int k_, double * specs_, particle * q_);
+        void write(int k_, double * specs_, particle * q_, double ctheta_);
         void end_writing(bool verbose_=false);
         void set_vidspecs(double t_phys_, double cx_im_=402.0, double cy_im_ = 380.0, double cl_im_= 37.6);
         void print_time_rotation();
@@ -50,6 +50,7 @@ class ODR_struct : public AYdata
         /** The array of pointers to swirling simulations. */
         std::vector<double> d_ang;
 
+        FILE * file_ptr=NULL; 
 };
 
 #endif

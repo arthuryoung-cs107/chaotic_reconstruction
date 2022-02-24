@@ -140,8 +140,9 @@ void ODR_struct::fprintf_split(bool verbose_)
   if (verbose_) printf("ODR_struct: wrote file(s) %s%s.aydat/rysml\n", proc_dir, file_name);
 }
 
-void ODR_struct::prepare_datdir(char *proc_loc_)
+void ODR_struct::prepare_datdir(char *proc_loc_, bool write_split_flag_)
 {
+  write_split_flag = write_split_flag_;
   size_t proc_len = (size_t)(strlen(proc_loc_)+strlen(rydat_dir)+1);
   proc_dir = new char[proc_len]; sprintf(proc_dir, "%s%s", proc_loc_, rydat_dir); mkdir(proc_dir, S_IRWXU);
   size_t obuf_len = (size_t)(strlen(proc_dir)+strlen(file_name)+50);
@@ -149,29 +150,46 @@ void ODR_struct::prepare_datdir(char *proc_loc_)
   obuf_end = strlen(out_buf);
 
   printf("made directory  %s\n", proc_dir);
+
+  if (!write_split_flag)
+  {
+    file_ptr =
+  }
 }
 
-void ODR_struct::write_split(int k_, double * specs_vec_, particle * q_)
+void ODR_struct::write(int k_, double * specs_vec_, particle * q_)
 {
   char * file_it = out_buf + obuf_end;
 
   if (writing_flag)
   {
-    sprintf(file_it, ".%d.aydat", k_);
-    FILE * data_out = fopen(out_buf, "wb");
-    fwrite(specs_vec_, sizeof(double), (size_t)len_specs, data_out);
-
-    for (int i = 0; i < P; i++)
+    if (write_split_flag)
     {
-      double data_vector[] = {q_[i].x, q_[i].y, q_[i].z, q_[i].q0, q_[i].q1, q_[i].q2, q_[i].q3};
-      fwrite(data_vector, sizeof(double), (size_t)len_dat, data_out);
+      sprintf(file_it, ".%d.aydat", k_);
+      FILE * data_out = fopen(out_buf, "wb");
+      fwrite(specs_vec_, sizeof(double), (size_t)len_specs, data_out);
+      for (int i = 0; i < P; i++)
+      {
+        double data_vector[] = {q_[i].x, q_[i].y, q_[i].z, q_[i].q0, q_[i].q1, q_[i].q2, q_[i].q3};
+        fwrite(data_vector, sizeof(double), (size_t)len_dat, data_out);
+      }
+      fclose(data_out);
     }
-    fclose(data_out);
+    else
+    {
+      fwrite(specs_vec_, sizeof(double), (size_t)len_specs, file_ptr);
+      for (int i = 0; i < P; i++)
+      {
+        double data_vector[] = {q_[i].x, q_[i].y, q_[i].z, q_[i].q0, q_[i].q1, q_[i].q2, q_[i].q3};
+        fwrite(file_ptr, sizeof(double), (size_t)len_dat, data_out);
+      }
+
+    }
     Frames++;
   }
 }
 
-void ODR_struct::write_split(int k_, double * specs_vec_, particle * q_, double ctheta_)
+void ODR_struct::write(int k_, double * specs_vec_, particle * q_, double ctheta_)
 {
   char * file_it = out_buf + obuf_end;
 
