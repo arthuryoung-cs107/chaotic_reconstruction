@@ -58,7 +58,7 @@ class swirl : public swirl_param {
         void output(int k);
         void output(FILE *fp);
         void setup_output_dir(const char *odir_);
-        void setup_output_dir(ODR_struct *odr_);
+        void setup_output_dir(ODR_struct *odr_, bool make_filter_inputs_flag_=true, bool solve_verbose_=true);
         void init_positions(double time_,double ctheta_,double *f,gsl_rng *r);
         void update_weight(double *f,double dur,double t_wheels,double *lnorm);
         void output_state(FILE *fp);
@@ -84,7 +84,8 @@ class swirl : public swirl_param {
         void contact(int id1,int id2,double delx,double dely,double delz,double rsq,double dt);
 
         bool ODR_struct_flag = false;
-        bool make_filter_inputs_flag = true;
+        bool make_filter_inputs_flag;
+        bool solve_verbose;
 };
 
 #endif

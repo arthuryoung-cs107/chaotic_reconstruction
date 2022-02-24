@@ -56,6 +56,7 @@ struct swirl_param {
     swirl_param(swirl_param &sp,double l);
     swirl_param(swirl_param &sp_min,swirl_param &sp_max,double frac);
     swirl_param(swirl_param &sp_min,swirl_param &sp_max,gsl_rng *r);
+    swirl_param(double * d): swirl_param(d[0], d[1], d[2], d[3], d[4], d[5], d[6], d[7], d[8], d[9], d[10], d[11], d[12], d[13]) {}
     void add_param(swirl_param &sp,double gw);
     void scale_param(double cw);
     void copy_param(swirl_param &sp);

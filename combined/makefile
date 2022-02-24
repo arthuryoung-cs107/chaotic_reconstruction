@@ -26,7 +26,7 @@ FTOBJS = $(FIOBJS) $(SWOBJS) $(RYOBJS) $(AYOBJS)
 %.o:%.cc
 	$(CXX) $(CFLAGS) $(IDIR) -c $<
 
-all: process_test swirl_test filter_test
+all: process_test swirl_test filter_test stat_test
 
 process_test: process_test.cc $(PTOBJS)
 	$(CXX) $(CFLAGS) $(IDIR) -o $@ $^ $(LINK)
@@ -44,6 +44,7 @@ clean:
 	rm -f process_test
 	rm -f swirl_test
 	rm -f filter_test
+	rm -f stat_test
 	rm -f *.o
 clean_dat:
 	rm -f *.aysml

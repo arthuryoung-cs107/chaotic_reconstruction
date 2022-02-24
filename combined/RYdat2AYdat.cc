@@ -68,7 +68,7 @@ ODR_struct::ODR_struct(char *rydat_loc_, char *rydat_dir_, char *file_name_, int
     }
 }
 
-ODR_struct::ODR_struct(const char * proc_loc_, const char * rydat_dir_, const char * file_name_): AYdata(), rydat_dir(string_gen_pruned(rydat_dir_)), file_name(string_gen_pruned(file_name_))
+ODR_struct::ODR_struct( char * proc_loc_, char * rydat_dir_, char * file_name_, bool write_split_flag_): AYdata(), rydat_dir(string_gen_pruned(rydat_dir_)), file_name(string_gen_pruned(file_name_)), write_split_flag(write_split_flag_)
 {
   size_t proc_len = (size_t)(strlen(proc_loc_)+strlen(rydat_dir)+1);
   proc_dir = new char[proc_len]; sprintf(proc_dir, "%s%s", proc_loc_, rydat_dir); mkdir(proc_dir, S_IRWXU);
@@ -78,9 +78,15 @@ ODR_struct::ODR_struct(const char * proc_loc_, const char * rydat_dir_, const ch
   obuf_end = strlen(out_buf);
 
   Frames = 0; depth = 2; dims = AYimatrix(depth, 3);
+  if (!write_split_flag)
+  {
+    strcpy( out_buf+obuf_end, ".rydat");
+    file_ptr = fopen(out_buf, "wb");
+  }
+
 }
 
-ODR_struct::ODR_struct(const char * filin_dir_): AYdata(), filin_dir(string_gen_pruned(filin_dir_)), reading_flag(true)
+ODR_struct::ODR_struct( char * filin_dir_): AYdata(), filin_dir(string_gen_pruned(filin_dir_)), reading_flag(true)
 {
   size_t filin_dir_len = (size_t)(strlen(filin_dir) + 50);
   in_buf = new char[filin_dir_len]; strcpy(in_buf, filin_dir);
@@ -104,12 +110,13 @@ ODR_struct::~ODR_struct()
 {
   if (data!=NULL) free_AYd3tensor(data);
   if (specs!=NULL) free_AYdmatrix(specs);
-  if (in_buf!=NULL) delete in_buf;
-  if (out_buf!=NULL) delete out_buf;
   if (rydat_loc!=NULL) delete rydat_loc;
   if (rydat_dir!=NULL) delete rydat_dir;
-  if (file_name!=NULL) delete file_name;
   if (proc_dir!=NULL) delete proc_dir;
+  if (file_name!=NULL) delete file_name;
+  if (filin_dir!=NULL) delete filin_dir;
+  if (in_buf!=NULL) delete in_buf;
+  if (out_buf!=NULL) delete out_buf;
 }
 
 void ODR_struct::set_dims()
@@ -140,9 +147,8 @@ void ODR_struct::fprintf_split(bool verbose_)
   if (verbose_) printf("ODR_struct: wrote file(s) %s%s.aydat/rysml\n", proc_dir, file_name);
 }
 
-void ODR_struct::prepare_datdir(char *proc_loc_, bool write_split_flag_)
+void ODR_struct::prepare_datdir(char *proc_loc_)
 {
-  write_split_flag = write_split_flag_;
   size_t proc_len = (size_t)(strlen(proc_loc_)+strlen(rydat_dir)+1);
   proc_dir = new char[proc_len]; sprintf(proc_dir, "%s%s", proc_loc_, rydat_dir); mkdir(proc_dir, S_IRWXU);
   size_t obuf_len = (size_t)(strlen(proc_dir)+strlen(file_name)+50);
@@ -150,11 +156,6 @@ void ODR_struct::prepare_datdir(char *proc_loc_, bool write_split_flag_)
   obuf_end = strlen(out_buf);
 
   printf("made directory  %s\n", proc_dir);
-
-  if (!write_split_flag)
-  {
-    file_ptr =
-  }
 }
 
 void ODR_struct::write(int k_, double * specs_vec_, particle * q_)
@@ -181,9 +182,8 @@ void ODR_struct::write(int k_, double * specs_vec_, particle * q_)
       for (int i = 0; i < P; i++)
       {
         double data_vector[] = {q_[i].x, q_[i].y, q_[i].z, q_[i].q0, q_[i].q1, q_[i].q2, q_[i].q3};
-        fwrite(file_ptr, sizeof(double), (size_t)len_dat, data_out);
+        fwrite(data_vector, sizeof(double), (size_t)len_dat, file_ptr);
       }
-
     }
     Frames++;
   }
@@ -222,7 +222,7 @@ void ODR_struct::end_writing(bool verbose_)
 
   sprintf(file_it, ".rysml");
   FILE * aysml_file = fopen(out_buf, "w");
-  fprintf(aysml_file, "%d %d %d\n", 1, Frames, depth);
+  fprintf(aysml_file, "%d %d %d\n", (write_split_flag)?1:0, Frames, depth);
   for (int i = 0; i < depth; i++) fprintf(aysml_file, "%d %d %d\n", dims[i][0], dims[i][1], dims[i][2]);
   fclose(aysml_file);
 
@@ -246,6 +246,7 @@ void ODR_struct::end_writing(bool verbose_)
     fprintf(filin_sml, "%d %d %d\n", 1, 1, 4);
     fclose(filin_sml);
   }
+  else if (file_ptr!=NULL) fclose(file_ptr);
 
   writing_flag = false;
 }

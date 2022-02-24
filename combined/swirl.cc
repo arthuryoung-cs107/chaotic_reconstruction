@@ -85,11 +85,10 @@ void swirl::solve(double dur,double dt,int frames) {
     double fint=dur/frames;
     int l=static_cast<int>(fint/dt)+1;
     double adt=fint/l;
-    printf("# %d steps per frame\n",l);
+    if (solve_verbose) printf("# %d steps per frame\n",l);
 
-    puts("# Output frame 0");
+    if (solve_verbose) puts("# Output frame 0");
     output(0);
-
     for(int j=1;j<=frames;j++) {
 
         for(int k=0;k<l;k++) {
@@ -97,7 +96,7 @@ void swirl::solve(double dur,double dt,int frames) {
             comega+=0.015*adt;if(comega>comega_max) comega=comega_max;
         }
 
-        printf("# Output frame %d (%g)\n",j,comega);
+        if (solve_verbose) printf("# Output frame %d (%g)\n",j,comega);
         output(j);
     }
 }

@@ -21,8 +21,10 @@ void swirl::setup_output_dir(const char *odir_) {
     mkdir(odir,S_IRWXU|S_IRWXG|S_IROTH|S_IXOTH);
 }
 
-void swirl::setup_output_dir(ODR_struct *odr_)
+void swirl::setup_output_dir(ODR_struct *odr_, bool make_filter_inputs_flag_, bool solve_verbose_)
 {
+  make_filter_inputs_flag = make_filter_inputs_flag_;
+  solve_verbose = solve_verbose_;
   ODR_struct_flag = true;
   odr = odr_;
   odr->P = n;

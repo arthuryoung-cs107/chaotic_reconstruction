@@ -10,9 +10,10 @@ class ODR_struct : public AYdata
     public:
         double ***data=NULL, ** specs=NULL;
 
-        bool  writing_flag = false, reading_flag = false, make_filter_inputs_flag, write_split_flag;
+        bool  writing_flag = false, reading_flag = false, make_filter_inputs_flag, write_split_flag=true;
 
-        char *rydat_loc=NULL, *rydat_dir=NULL, *proc_dir=NULL, *file_name=NULL, *in_buf=NULL, *out_buf=NULL, *filin_dir=NULL;
+        char *rydat_loc=NULL, *rydat_dir=NULL, *proc_dir=NULL, *file_name=NULL, *filin_dir=NULL,
+        *in_buf=NULL, *out_buf=NULL;
 
         size_t ibuf_end, obuf_end;
 
@@ -29,11 +30,13 @@ class ODR_struct : public AYdata
         double cl_im;
 
         ODR_struct(char *rydat_loc_, char *rydat_dir_, char *file_name_, int Frames_);
-        ODR_struct(const char * proc_loc_, const char * rydat_dir_, const char * file_name_);
-        ODR_struct(const char * filin_dir_);
+        ODR_struct(char * proc_loc_, char * rydat_dir_, char * file_name_, bool write_split_flag_=true);
+          ODR_struct(const char * proc_loc_, const char * rydat_dir_, const char * file_name_, bool write_split_flag_=true): ODR_struct((char*)proc_loc_, (char*)rydat_dir_, (char*)file_name_, write_split_flag_) {}
+        ODR_struct(char * filin_dir_);
+          ODR_struct(const char * filin_dir_): ODR_struct((char*)filin_dir_) {}
         ~ODR_struct();
         void set_dims();
-        void prepare_datdir(char name_[], bool write_split_flag_=true);
+        void prepare_datdir(char name_[]);
         void fprintf_split(bool verbose_=false);
         void write(int k_, double * specs_, particle * q_);
         void write(int k_, double * specs_, particle * q_, double ctheta_);
@@ -50,7 +53,7 @@ class ODR_struct : public AYdata
         /** The array of pointers to swirling simulations. */
         std::vector<double> d_ang;
 
-        FILE * file_ptr=NULL; 
+        FILE * file_ptr=NULL;
 };
 
 #endif
