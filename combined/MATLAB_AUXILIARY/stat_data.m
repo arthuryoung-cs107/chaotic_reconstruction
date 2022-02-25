@@ -17,13 +17,16 @@ classdef stat_data < handle
   end
 
   methods
-    function obj = stat_data(dat_dir_name_, exp_name_, dat_name_)
+    function obj = stat_data(dat_dir_name_, exp_name_, dat_name_, noise_len_)
       obj.dat_dir_name = dat_dir_name_;
       obj.exp_name = exp_name_;
       obj.dat_name = dat_name_;
 
       obj.pars = AYdata.aysml_read([obj.dat_dir_name obj.exp_name obj.dat_name '_pars']);
       obj.dels = AYdata.aysml_read([obj.dat_dir_name obj.exp_name obj.dat_name '_dels']);
+      if (noise_len_~=0)
+        obj.pars = obj.pars(:, 1:(noise_len_+1));
+      end
       obj.par_len = size(obj.pars, 1);
       obj.noise_len = size(obj.pars, 2);
 
@@ -57,7 +60,6 @@ classdef stat_data < handle
     end
     function plot_param_frame_error(obj, fig_in, base_color)
       Frames = size(obj.pos_err,2 );
-      % Frames = 50;
       al = 0.1;
       af = (al-1)/(1-(Frames+1));
       ab = al - af;
@@ -66,8 +68,10 @@ classdef stat_data < handle
       for i=1:Frames
         plot(err_it, obj.pos_err(I_it, i), ' -', 'Color', [base_color, ab+(i*af)], 'LineWidth', 2);
       end
-
     end
-
+    function make_moviei(obj, AYfig_in, i )
+      obj.sw(i).make_movie(AYfig_in);
+      AYfig_in.play_movie;
+    end
   end
 end

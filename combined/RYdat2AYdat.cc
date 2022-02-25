@@ -171,6 +171,7 @@ void ODR_struct::write(int k_, double * specs_vec_, particle * q_)
       fwrite(specs_vec_, sizeof(double), (size_t)len_specs, data_out);
       for (int i = 0; i < P; i++)
       {
+        q_[i].normalize_q();
         double data_vector[] = {q_[i].x, q_[i].y, q_[i].z, q_[i].q0, q_[i].q1, q_[i].q2, q_[i].q3};
         fwrite(data_vector, sizeof(double), (size_t)len_dat, data_out);
       }
@@ -181,6 +182,7 @@ void ODR_struct::write(int k_, double * specs_vec_, particle * q_)
       fwrite(specs_vec_, sizeof(double), (size_t)len_specs, file_ptr);
       for (int i = 0; i < P; i++)
       {
+        q_[i].normalize_q();
         double data_vector[] = {q_[i].x, q_[i].y, q_[i].z, q_[i].q0, q_[i].q1, q_[i].q2, q_[i].q3};
         fwrite(data_vector, sizeof(double), (size_t)len_dat, file_ptr);
       }
@@ -203,6 +205,7 @@ void ODR_struct::write(int k_, double * specs_vec_, particle * q_, double ctheta
 
     for (int i = 0; i < P; i++)
     {
+      q_[i].normalize_q();
       double data_vector[] = {q_[i].x, q_[i].y, q_[i].z, q_[i].q0, q_[i].q1, q_[i].q2, q_[i].q3};
       fwrite(data_vector, sizeof(double), (size_t)len_dat, data_out);
       xs.push_back(cx_im+cl_im*(q_[i].x-cx_loc));

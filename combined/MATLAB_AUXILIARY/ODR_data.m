@@ -76,6 +76,26 @@ classdef ODR_data < handle
         err_vec(i) = norm(obj.data(:, 1:3, i+1) - oth.data(:, 1:3, i+1), 'fro')/norm(obj.data(:, 1:3, i+1), 'fro');
       end
     end
+    function make_movie(obj, AYfig_in)
+      frames = obj.Frames;
+      % frames = 10;
+
+      walld = 2*5.72;
+      wallL = sqrt(3)/4*walld;
+      wallv = [-wallL/2 -walld/2; -walld/2 0; -wallL/2 walld/2 ; wallL/2 walld/2 ; walld/2 0; wallL/2 -walld/2; -wallL/2 -walld/2;];
+      AYfig_in.init_movie(frames);
+      lims = [-walld, walld, -walld, walld];
+      for i=1:frames
+        plot(AYfig_in.ax, wallv(:, 1), wallv(:, 2), 'k -')
+        hold(AYfig_in.ax, 'on');
+        plot(AYfig_in.ax, obj.data(:, 1, i), obj.data(:, 2, i), 'o', 'Color', [0 0 1], 'LineWidth', 1.0, 'MarkerSize', 10);
+        hold(AYfig_in.ax, 'off');
+        axis(AYfig_in.ax, lims);
+        drawnow
+
+        AYfig_in.movie_gen(i) = getframe(AYfig_in.ax);
+      end
+    end
   end
 
 end
