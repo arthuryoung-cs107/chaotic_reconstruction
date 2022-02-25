@@ -96,6 +96,27 @@ classdef ODR_data < handle
         AYfig_in.movie_gen(i) = getframe(AYfig_in.ax);
       end
     end
+    function make_movie_comp(obj, AYfig_in, oth)
+      frames = obj.Frames;
+      % frames = 10;
+
+      walld = 2*5.72;
+      wallL = sqrt(3)/4*walld;
+      wallv = [-wallL/2 -walld/2; -walld/2 0; -wallL/2 walld/2 ; wallL/2 walld/2 ; walld/2 0; wallL/2 -walld/2; -wallL/2 -walld/2;];
+      AYfig_in.init_movie(frames);
+      lims = [-walld, walld, -walld, walld];
+      for i=1:frames
+        plot(AYfig_in.ax, wallv(:, 1), wallv(:, 2), 'k -')
+        hold(AYfig_in.ax, 'on');
+        plot(AYfig_in.ax, obj.data(:, 1, i), obj.data(:, 2, i), 'o', 'Color', [0 0 1], 'LineWidth', 1.0, 'MarkerSize', 10);
+        plot(AYfig_in.ax, oth.data(:, 1, i), oth.data(:, 2, i), 'h', 'Color', [1 0 0], 'LineWidth', 1.0, 'MarkerSize', 10);
+        hold(AYfig_in.ax, 'off');
+        axis(AYfig_in.ax, lims);
+        drawnow
+
+        AYfig_in.movie_gen(i) = getframe(AYfig_in.ax);
+      end
+    end
   end
 
 end

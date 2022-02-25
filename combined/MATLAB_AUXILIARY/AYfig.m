@@ -25,7 +25,7 @@ classdef AYfig < handle
     end
     function play_movie(obj)
       obj.fig.Visible = 'on';
-      movie(obj.ax, obj.movie_gen);
+      movie(obj.ax, obj.movie_gen, 1, 30);
     end
   end
   methods(Static)
