@@ -28,11 +28,19 @@ classdef ODR_data < handle
 
       obj.specs = nan(obj.Frames, obj.len_specs);
       obj.data = nan(obj.P, obj.len_dat, obj.Frames);
-
-      for f=0:(obj.Frames-1)
-        id = fopen([obj.dat_dir_name obj.exp_name obj.dat_name '.' num2str(f) '.aydat']);
-        obj.specs(f+1, :) = (fread( id,[1, obj.len_specs], 'float64=>float64'));
-        obj.data(:, :, f+1) = (fread( id,[obj.len_dat, obj.P], 'float64=>float64'))';
+      if (obj.rysml(1,1)==1)
+        for f=0:(obj.Frames-1)
+          id = fopen([obj.dat_dir_name obj.exp_name obj.dat_name '.' num2str(f) '.aydat']);
+          obj.specs(f+1, :) = (fread( id,[1, obj.len_specs], 'float64=>float64'));
+          obj.data(:, :, f+1) = (fread( id,[obj.len_dat, obj.P], 'float64=>float64'))';
+          fclose(id);
+        end
+      elseif (obj.rysml(1,1)==0)
+        id = fopen([obj.dat_dir_name obj.exp_name obj.dat_name '.rydat']);
+        for f=0:(obj.Frames-1)
+          obj.specs(f+1, :) = (fread( id,[1, obj.len_specs], 'float64=>float64'));
+          obj.data(:, :, f+1) = (fread( id,[obj.len_dat, obj.P], 'float64=>float64'))';
+        end
         fclose(id);
       end
     end
@@ -58,6 +66,15 @@ classdef ODR_data < handle
       % [cx_im + cl_im*(x-cx_loc), cy_im + cl_im*(y-cy_loc)]
       % obj.filin.pos(:, :, ind)
 
+    end
+    function err_vec = comp_pos_err(obj, oth)
+      %% computes mean bead position error for each frame
+      err_vec = zeros(1, obj.Frames-1); %% ignore first frame, assuming equivalent initial conditions
+      for i=1:(obj.Frames-1)
+        % res = obj.data(:, 1:3, i+1) - oth.data(:, 1:3, i+1);
+        % err_vec(i) = mean(sum((res.*res)'));
+        err_vec(i) = norm(obj.data(:, 1:3, i+1) - oth.data(:, 1:3, i+1), 'fro')/norm(obj.data(:, 1:3, i+1), 'fro');
+      end
     end
   end
 

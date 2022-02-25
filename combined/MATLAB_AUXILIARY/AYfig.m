@@ -20,7 +20,7 @@ classdef AYfig < handle
     function struct_out = specs_gen(name_in_, pos_in_)
       struct_out = {'Name', name_in_; 'Renderer', 'painters'; 'Position', pos_in_;};
     end
-    function fig_pos_out = fig_pos_gen(obj, rows_, cols_)
+    function fig_pos_out = fig_pos_gen(rows_, cols_)
       rows = rows_;
       if rows > 10;
         rows = 10;
