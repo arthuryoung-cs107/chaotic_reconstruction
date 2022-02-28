@@ -21,12 +21,22 @@ classdef AYfig < handle
       str(Frames_) = struct('cdata', [], 'colormap', []);
       obj.movie_gen = str;
       obj.ax.NextPlot = 'replaceChildren';
+      axdims = get(obj.ax, 'Position');
+      axdims(3:4) = min(axdims(3:4));
+      set(obj.ax, 'Position', axdims);
       % obj.fig.Visible = 'off';
     end
-    function play_movie(obj)
+    function play_movie(obj, nplay_, fps_)
       obj.fig.Visible = 'on';
-      movie(obj.ax, obj.movie_gen, 1, 30);
+      movie(obj.ax, obj.movie_gen, nplay_, fps_);
     end
+    function dims_out = get_dims(obj)
+      curunits = get(obj.ax, 'Units');
+      set(obj.ax, 'Units', 'Points');
+      dims_out = get(obj.ax, 'Position');
+      set(obj.ax, 'Units', curunits);
+    end
+
   end
   methods(Static)
     function fig_out = figure(props_in_)
@@ -69,6 +79,5 @@ classdef AYfig < handle
         end
       end
     end
-
   end
 end

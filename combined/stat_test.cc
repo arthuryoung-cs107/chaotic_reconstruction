@@ -35,9 +35,9 @@ int main()
       case 2:
       {
         sp_del.init_0();
-        for (int i = 2; i < 9; i++) sp_del.A_ptr[i] = abs(sptrue[i]);
+        for (int i = 2; i < 9; i++) sp_del.A_ptr[i] = fabs(sptrue[i]);
         strcpy(rydat_dir, "stat3_gauss.odr/");
-        AYnormal norm(0.0, 1e-6);
+        AYnormal norm(0.0, 1e-20);
         for (int i = 1; i < noise_len; i++) for (int j = 0; j < par_len; j++) par_mat.AT[i][j] = sptrue[j] + (sp_del.A_ptr[j]*norm.rand_gen());
       }
       break;

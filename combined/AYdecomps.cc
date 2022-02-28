@@ -88,14 +88,14 @@ void AY_Choleskyspace::iCholesky_decomp(AYsym * mat_, AYsym * L_, double thresho
     for ( j = 0; j < i; j++)
     {
       gsl_matrix_set(mat_gsl, i, j, mat_->A[j][i-j]);
-      l1_thresh[i]+=abs(mat_->A[j][i-j]);
+      l1_thresh[i]+=fabs(mat_->A[j][i-j]);
     }
     j = i;
     gsl_matrix_set(mat_gsl, i, j, mat_->A[i][j-i]);
     for ( j = i+1; j < N_in; j++)
     {
       gsl_matrix_set(mat_gsl, i, j, mat_->A[i][j-i]);
-      l1_thresh[i]+=abs(mat_->A[i][j-i]);
+      l1_thresh[i]+=fabs(mat_->A[i][j-i]);
     }
     l1_thresh[i] /= (double)(N_in-1);
     l1_thresh[i] *= threshold_;
@@ -105,7 +105,7 @@ void AY_Choleskyspace::iCholesky_decomp(AYsym * mat_, AYsym * L_, double thresho
   {
     j = i;
     L_->A[i][j-i] = gsl_matrix_get(mat_gsl, j, i);
-    for ( j = i+1; j < N_in; j++) L_->A[i][j-i] = ((abs(mat_->A[i][j-i])) < l1_thresh[i]) ? 0.0 : gsl_matrix_get(mat_gsl, j, i);
+    for ( j = i+1; j < N_in; j++) L_->A[i][j-i] = ((fabs(mat_->A[i][j-i])) < l1_thresh[i]) ? 0.0 : gsl_matrix_get(mat_gsl, j, i);
   }
   delete l1_thresh;
 }

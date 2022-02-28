@@ -442,7 +442,7 @@ double AYmat::norm_1()
   int i, j;
   double out = 0.0;
 
-  for ( j = 0; j < N; j++) for ( i = 0; i < M; i++) out += abs(AT[j][i]);
+  for ( j = 0; j < N; j++) for ( i = 0; i < M; i++) out += fabs(AT[j][i]);
 
   return out;
 }
@@ -451,7 +451,7 @@ double AYmat::max_val_mag()
 {
   int i;
   double out = 0.0;
-  for ( i = 0; i < M*N; i++) { if (abs(A_ptr[i]) > out) out = abs(A_ptr[i]); }
+  for ( i = 0; i < M*N; i++) { if (fabs(A_ptr[i]) > out) out = fabs(A_ptr[i]); }
   return out;
 }
 
@@ -460,13 +460,13 @@ double AYmat::max_val_mag(int * index, int start_index)
   if (start_index<(M*N-1))
   {
     int i;
-    double out = abs(A_ptr[start_index]); * index = start_index;
+    double out = fabs(A_ptr[start_index]); * index = start_index;
     for ( i = start_index+1; i < M*N; i++)
     {
-      if (abs(A_ptr[i]) > out)
+      if (fabs(A_ptr[i]) > out)
       {
         * index = i;
-        out = abs(A_ptr[i]);
+        out = fabs(A_ptr[i]);
       }
     }
     return out;
@@ -474,14 +474,14 @@ double AYmat::max_val_mag(int * index, int start_index)
   else
   {
     * index = M*N-1; // just return last value
-    return abs(A_ptr[M*N-1]);
+    return fabs(A_ptr[M*N-1]);
   }
 }
 double AYmat::min_val_mag()
 {
   int i;
-  double out = abs(A_ptr[0]);
-  for ( i = 1; i < M*N; i++) { if (abs(A_ptr[i])<out) out = abs(A_ptr[i]); }
+  double out = fabs(A_ptr[0]);
+  for ( i = 1; i < M*N; i++) { if (fabs(A_ptr[i])<out) out = fabs(A_ptr[i]); }
   return out;
 }
 
@@ -490,13 +490,13 @@ double AYmat::min_val_mag(int * index, int start_index)
   if (start_index<(M*N-1))
   {
     int i;
-    double out = abs(A_ptr[start_index]); * index = start_index;
+    double out = fabs(A_ptr[start_index]); * index = start_index;
     for ( i = start_index+1; i < M*N; i++)
     {
-      if (abs(A_ptr[i])<out)
+      if (fabs(A_ptr[i])<out)
       {
         * index = i;
-        out = abs(A_ptr[i]);
+        out = fabs(A_ptr[i]);
       }
     }
     return out;
@@ -504,7 +504,7 @@ double AYmat::min_val_mag(int * index, int start_index)
   else
   {
     * index = M*N-1; // just return the last element
-    return abs(A_ptr[M*N-1]);
+    return fabs(A_ptr[M*N-1]);
   }
 }
 
@@ -516,7 +516,7 @@ int AYmat::norm_0(double tol)
   {
     for ( j = 0; j < N; j++)
     {
-      if (abs(AT[j][i]) > tol) out++;
+      if (fabs(AT[j][i]) > tol) out++;
     }
   }
   return out;
@@ -537,7 +537,7 @@ int AYmat::max_mag_elements(AYmat *top_vec_, int *index_array_)
     min_large = top_vec_->min_val_mag(&i_it); // determine the smallest magnitude on this list
     for ( i = top_vec_->M; i < N*M; i++) // go through the rest of them
     {
-      if (abs(A_ptr[i]) > min_large) // if we find somethng bigger than the current smallest element on the top list
+      if (fabs(A_ptr[i]) > min_large) // if we find somethng bigger than the current smallest element on the top list
       {
         top_vec_->A_ptr[i_it] = A_ptr[i]; // kick off the smallest 'large' element
         index_array_[i_it] = i;
@@ -568,7 +568,7 @@ int AYmat::min_mag_elements(AYmat *top_vec_, int *index_array_)
     max_small = top_vec_->max_val_mag(&i_it); // determine the largest magnitude on this list
     for ( i = top_vec_->M; i < N*M; i++) // go through the rest of them
     {
-      if (abs(A_ptr[i]) < max_small) // if we find somethng smaller than the current largest element on the top list
+      if (fabs(A_ptr[i]) < max_small) // if we find somethng smaller than the current largest element on the top list
       {
         top_vec_->A_ptr[i_it] = A_ptr[i]; // kick off the largest 'small' element
         index_array_[i_it] = i;
@@ -645,7 +645,7 @@ void AYmat::Proj_1(AYmat *z_, int * ind_vec_, double R_)
     max_mag_elements_ordered(z_, ind_vec_);
     do
     {
-      val_it = abs(z_->A_ptr[K]);
+      val_it = fabs(z_->A_ptr[K]);
       acc += val_it;
       tau_test = (acc-R_)/((double)(K+1));
       tau = (tau_test < val_it) ? tau_test : tau;

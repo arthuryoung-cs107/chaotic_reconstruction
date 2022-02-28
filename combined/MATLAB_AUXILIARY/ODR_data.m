@@ -53,19 +53,6 @@ classdef ODR_data < handle
       cy_im = obj.filin.vidspecs(3);
       cl_im = obj.filin.vidspecs(4);
 
-      % works
-      % obj.specs(1:10, 1)'
-      % obj.filin.t(1:10)/t_phys
-
-      %%works
-      % ind = 100;
-      % cx_loc = obj.specs(ind, 2);
-      % cy_loc = obj.specs(ind, 3);
-      % x = obj.data(:, 1, ind);
-      % y = obj.data(:, 2, ind);
-      % [cx_im + cl_im*(x-cx_loc), cy_im + cl_im*(y-cy_loc)]
-      % obj.filin.pos(:, :, ind)
-
     end
     function err_vec = comp_pos_err(obj, oth)
       %% computes mean bead position error for each frame
@@ -78,17 +65,23 @@ classdef ODR_data < handle
     end
     function make_movie(obj, AYfig_in)
       frames = obj.Frames;
-      % frames = 10;
+      % frames = 200;
 
-      walld = 2*5.72;
-      wallL = sqrt(3)/4*walld;
-      wallv = [-wallL/2 -walld/2; -walld/2 0; -wallL/2 walld/2 ; wallL/2 walld/2 ; walld/2 0; wallL/2 -walld/2; -wallL/2 -walld/2;];
+      walld = 5.72;
+      wallL = (2/sqrt(3))*walld;
+      wallv = [-wallL/2 -walld; -walld 0; -wallL/2 walld ; wallL/2 walld; walld 0; wallL/2 -walld; -wallL/2 -walld];
+
       AYfig_in.init_movie(frames);
       lims = [-walld, walld, -walld, walld];
+
+      figdims = AYfig_in.get_dims();
+      r = 0.5;
+      MS = figdims(4)/(4*walld);
+
       for i=1:frames
         plot(AYfig_in.ax, wallv(:, 1), wallv(:, 2), 'k -')
         hold(AYfig_in.ax, 'on');
-        plot(AYfig_in.ax, obj.data(:, 1, i), obj.data(:, 2, i), 'o', 'Color', [0 0 1], 'LineWidth', 1.0, 'MarkerSize', 10);
+        plot(AYfig_in.ax, obj.data(:, 1, i)-obj.specs(i, 2), obj.data(:, 2, i)-obj.specs(i, 3), 'o', 'Color', [0 0 1], 'LineWidth', 1.0, 'MarkerSize', MS);
         hold(AYfig_in.ax, 'off');
         axis(AYfig_in.ax, lims);
         drawnow
@@ -97,24 +90,39 @@ classdef ODR_data < handle
       end
     end
     function make_movie_comp(obj, AYfig_in, oth)
-      frames = obj.Frames;
-      % frames = 10;
+      % frames = obj.Frames;
+      frames = 200;
 
-      walld = 2*5.72;
-      wallL = sqrt(3)/4*walld;
-      wallv = [-wallL/2 -walld/2; -walld/2 0; -wallL/2 walld/2 ; wallL/2 walld/2 ; walld/2 0; wallL/2 -walld/2; -wallL/2 -walld/2;];
+      walld = 5.72;
+      wallL = (2/sqrt(3))*walld;
+      wallv = [-wallL/2 -walld; -walld 0; -wallL/2 walld ; wallL/2 walld; walld 0; wallL/2 -walld; -wallL/2 -walld];
       AYfig_in.init_movie(frames);
       lims = [-walld, walld, -walld, walld];
+
+      figdims = AYfig_in.get_dims();
+      r = 0.5;
+      MS = figdims(4)/(4*walld);
+
       for i=1:frames
         plot(AYfig_in.ax, wallv(:, 1), wallv(:, 2), 'k -')
         hold(AYfig_in.ax, 'on');
-        plot(AYfig_in.ax, obj.data(:, 1, i), obj.data(:, 2, i), 'o', 'Color', [0 0 1], 'LineWidth', 1.0, 'MarkerSize', 10);
-        plot(AYfig_in.ax, oth.data(:, 1, i), oth.data(:, 2, i), 'h', 'Color', [1 0 0], 'LineWidth', 1.0, 'MarkerSize', 10);
+        plot(AYfig_in.ax, obj.data(:, 1, i)-obj.specs(i, 2), obj.data(:, 2, i)-obj.specs(i, 3), 'o', 'Color', [0 0 1], 'LineWidth', 1.0, 'MarkerSize', MS);
+        plot(AYfig_in.ax, oth.data(:, 1, i)-oth.specs(i, 2), oth.data(:, 2, i)-oth.specs(i, 3), 'o', 'Color', [1 0 0], 'LineWidth', 1.0, 'MarkerSize', MS);
         hold(AYfig_in.ax, 'off');
         axis(AYfig_in.ax, lims);
         drawnow
 
         AYfig_in.movie_gen(i) = getframe(AYfig_in.ax);
+      end
+    end
+    function make_POVray_inputs(obj, pov_dir_, dat_name_)
+      save_dir = [pov_dir_ obj.exp_name];
+      status = mkdir(save_dir);
+      for i=1:obj.Frames
+        id = fopen([save_dir dat_name_ '.' num2str(i-1)], 'w');
+        fprintf(id, '%g %g %g %g\n', obj.specs(i, :));
+        fprintf(id, '%g %g %g %g %g %g %g\n', obj.data(:, :, i)');
+        fclose(id);
       end
     end
   end
