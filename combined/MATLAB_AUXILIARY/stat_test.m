@@ -17,7 +17,7 @@ hold on
 figs(3) = AYfig.figure(AYfig.specs_gen('position error vs parameter index', fig_pos(3, : )));
 xlabel('parameter index', 'Interpreter', 'Latex', 'Fontsize', 14)
 ylabel('position error', 'Interpreter', 'Latex', 'Fontsize', 14)
-% set(gca, 'YScale', 'log')
+set(gca, 'YScale', 'log')
 hold on
 
 figs(4) = AYfig.figure(AYfig.specs_gen('position error vs parameter error', fig_pos(4, : )));
