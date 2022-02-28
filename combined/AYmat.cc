@@ -220,7 +220,7 @@ void AYmat::init_0()
 
 void AYmat::init_randuni(double low_, double high_)
 {
-  uniform gen(low_, high_);
+  AYuniform gen(low_, high_);
   for (int i = 0; i < N*M; i++) A_ptr[i] = gen.rand_gen();
 }
 

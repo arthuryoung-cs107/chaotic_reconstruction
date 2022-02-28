@@ -11,7 +11,7 @@ nt(omp_get_max_threads()),
 #else
 nt(1),
 #endif
-ttab(new int[nt+1]), rloc(new int[nt+1]), uni(new AYuniform*[nt]), wl(wl_),
+ttab(new int[nt+1]), rloc(new int[nt+1]), rng(new gsl_rng*[nt]), wl(wl_),
 pg(new proximity_grid*[nt]), odir(NULL), fdigest(NULL)
 {
   n = odr->P;
@@ -34,5 +34,23 @@ pg(new proximity_grid*[nt]), odir(NULL), fdigest(NULL)
   // Set the zeroth entries of the thread table and resampling location table
   // to zero, since they are always held at this value
   *ttab=*rloc=0;
+}
 
+void race::init()
+{
+
+}
+
+void race::run(int frames_)
+{
+  bool race_underway = true;
+  while (race_underway)
+  {
+    #pragma omp parallel
+    {
+
+
+
+    }
+  }
 }

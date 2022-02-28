@@ -20,28 +20,30 @@ class AYrng
         uint64_t jump=100;
         uint64_t carry;
 
-        void rng_true_init(uint64_t seed_=8.888e18, uint64_t jump_=100)
+        void rng_true_init(uint64_t seed_=8.888e18, uint64_t jump_=100);
         virtual void rng_init(uint64_t seed_=0);
         virtual double rand_gen();
+        double dseed();
+        double dcarry();
 };
 
-class uniform : public AYrng
+class AYuniform : public AYrng
 {
   public:
     double low, high;
-    uniform(double low_=0.0, double high_=1.0);
-    uniform(double low_, double high_, uint64_t seed_);
-    ~uniform();
+    AYuniform(double low_=0.0, double high_=1.0);
+    AYuniform(double low_, double high_, uint64_t seed_);
+    ~AYuniform();
     double rand_gen();
 };
 
-class normal : public AYrng
+class AYnormal : public AYrng
 {
   public:
     double mu, var;
-    normal(double mu_=0.0, double var_=1.0);
-    normal(double mu_, double var_, uint64_t seed_);
-    ~normal();
+    AYnormal(double mu_=0.0, double var_=1.0);
+    AYnormal(double mu_, double var_, uint64_t seed_);
+    ~AYnormal();
     double rand_gen();
 };
 

@@ -78,9 +78,8 @@ class race : public race_param {
         int* const ttab;
         /** The thread resampling relocation table. */
         int* const rloc;
-        /** The array of Knuth uniform random number generators. */
-        uniform **uni;
-
+        /** The array of GSL random number generators. */
+        gsl_rng** const rng;
         /** A reference to the list of walls for the swirling simulation. */
         wall_list &wl;
         /** The array of proximity grids. */
