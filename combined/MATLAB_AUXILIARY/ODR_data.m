@@ -90,8 +90,8 @@ classdef ODR_data < handle
       end
     end
     function make_movie_comp(obj, AYfig_in, oth)
-      % frames = obj.Frames;
-      frames = 200;
+      frames = obj.Frames;
+      % frames = 200;
 
       walld = 5.72;
       wallL = (2/sqrt(3))*walld;
