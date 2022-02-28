@@ -58,9 +58,9 @@ classdef ODR_data < handle
       %% computes mean bead position error for each frame
       err_vec = zeros(1, obj.Frames-1); %% ignore first frame, assuming equivalent initial conditions
       for i=1:(obj.Frames-1)
-        % res = obj.data(:, 1:3, i+1) - oth.data(:, 1:3, i+1);
-        % err_vec(i) = mean(sum((res.*res)'));
-        err_vec(i) = norm(obj.data(:, 1:3, i+1) - oth.data(:, 1:3, i+1), 'fro')/norm(obj.data(:, 1:3, i+1), 'fro');
+        diff_mat = obj.data(:, 1:3, i+1) - oth.data(:, 1:3, i+1);
+        err_vec(i) = sum(sum((diff_mat.*diff_mat)'));
+        % err_vec(i) = norm(obj.data(:, 1:3, i+1) - oth.data(:, 1:3, i+1), 'fro')/norm(obj.data(:, 1:3, i+1), 'fro');
       end
     end
     function make_movie(obj, AYfig_in)

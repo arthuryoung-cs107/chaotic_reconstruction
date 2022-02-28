@@ -32,8 +32,8 @@ stat_name_maxmin = 'stat3_maxmin.odr/';
 stat_name_gauss = 'stat3_gauss.odr/';
 stat_name_gauss_good = 'stat3_gauss_good.odr/';
 
-stat_name = stat_name_gauss_good;
-% stat_name = stat_name_gauss;
+% stat_name = stat_name_gauss_good;
+stat_name = stat_name_gauss;
 dat_dir_name = '../dat_dir/';
 pov_dir = '../POV_AUXILIARY/';
 dat_name = 'rand';
@@ -47,6 +47,6 @@ stat3.plot_param_pos_error(figs(4), red5);
 % stat3.make_POVray_inputsi(1, pov_dir);
 
 % stat3.make_moviei(movie1, 1);
-stat3.make_movieij(movie1, 1, stat3.I_best(1));
+stat3.make_movieij(movie1, 1, stat3.I_best(2)+1);
 
 % movie1.play_movie(10, 60)
