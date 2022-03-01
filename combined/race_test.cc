@@ -21,7 +21,6 @@ int main() {
     //original
     swirl_param sp_min(0.5,1,500,5,5,5,0.1,0.1,0.1,1.8,402,380,37.6,1),
                 sp_max(0.5,1,5000,120,120,120,1.,1.,1.,1.8,402,380,37.6,1),
-                sp_rnd(sp_min,sp_max,0.005);
     //true
     swirl_param sptrue(0.5,1,1000,40,40,40,0.5,0.25,0.5,1.8,203,178,27.6,1.);
 
@@ -37,8 +36,8 @@ int main() {
     wl.add_wall(&wp2);
 
     ODR_struct odr("./dat_dir/circ6_swrl.odr/pts");
-    referee ref(100, 1000, 0.002,3);
-    race prace(ref,sp_min,sp_max,sp_rnd,wl,t_phys,&odr);
+    referee ref(100, 1000, sp_num_vparams, 0.002,3);
+    race prace(ref,sp_min,sp_max,wl,t_phys,&odr);
 
     prace.setup_output_info(255,200);
 

@@ -43,7 +43,7 @@ class ODR_struct : public AYdata
         void end_writing(bool verbose_=false);
         void set_vidspecs(double t_phys_, double cx_im_=402.0, double cy_im_ = 380.0, double cl_im_= 37.6);
         void print_time_rotation();
-        void load_filter(double *ts_, double *xs_, double *d_ang_, int offset_);
+        void load_filter(double *ts_, double *xs_, double *d_ang_, int offset_=0);
         void read_filin(int offset_=0);
       private:
         /** The time points of the snapshots. */

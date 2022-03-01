@@ -27,13 +27,32 @@ struct referee
     const int npool;
     /** The number of best performing particles we store */
     const int nleaders;
+    /** The length of the parameter vector corresponding to a particle */
+    const int param_len;
 
-    double ** pool;
-    double ** leaders;
 
-    referee(int npool_, int n_leaders_, double dt_sim_, double gau_scale_): npool(npool_), nleaders(n_leaders_), dt_sim(dt_sim_), gau_scale(gau_scale_), gau_coeff(0.5/(gau_scale*gau_scale)) {}
-    referee(referee &ref_): npool(ref_.npool), nleaders(ref_.nleaders), dt_sim(ref_.dt_sim), gau_scale(ref_.gau_scale), gau_coeff(0.5/(gau_scale*gau_scale)) {}
-    ~referee();
+    double ** pool = NULL;
+    double ** leaders = NULL;
+
+    double * l2_score = NULL;
+    int * frame_score = NULL;
+
+    referee(int npool_, int n_leaders_, int param_len_, double dt_sim_, double gau_scale_): npool(npool_), nleaders(n_leaders_), param_len(param_len_), dt_sim(dt_sim_), gau_scale(gau_scale_), gau_coeff(0.5/(gau_scale*gau_scale)) {}
+    referee(referee &ref_): npool(ref_.npool), nleaders(ref_.nleaders), param_len(ref_.param_len), dt_sim(ref_.dt_sim), gau_scale(ref_.gau_scale), gau_coeff(0.5/(gau_scale*gau_scale)) {}
+    ~referee()
+    {
+      if (pool!=NULL) free_AYdmatrix(pool);
+      if (leaders!=NULL) free_AYdmatrix(leaders);
+      if (l2_score!=NULL) delete l2_score;
+      if (frame_score!=NULL) delete frame_score;
+    }
+    void alloc_records()
+    {
+      pool = AYdmatrix(npool, param_len);
+      leaders = AYdmatrix(nleaders, param_len);
+      l2_score = new double[nleaders];
+      frame_score = new int[nleaders]; 
+    }
 };
 
 class runner : public swirl
@@ -63,10 +82,6 @@ class race : public referee {
         int nsnap;
         /** The total number of particles. */
         int npar;
-        /** The failure count. */
-        int nfail;
-        /** The current frame. */
-        int frame;
         /** The time points of the snapshots. */
         double* ts;
         /** The bead positions at the snapshots. */
@@ -89,12 +104,11 @@ class race : public referee {
         AYuniform * uni;
         /** A reference to the list of walls for the swirling simulation. */
         wall_list &wl;
+        /** The array of GSL random number generators. */
+        gsl_rng** const rng;
         /** The array of proximity grids. */
         proximity_grid** const pg;
 
-
-        /** Array of uniform random number generators. */
-        AYuniform ** uni;
         /** Array of swirl simulations used by each thread to test particles */
         runner ** run;
 
