@@ -10,7 +10,8 @@ double knuth_random_uni(double low, double high, uint64_t * carry);
 uint64_t lcg_uni(uint64_t *lcg_carry); // call this evertime you want a random integer, or rand()
 uint64_t lcg_fwd(uint64_t seed,uint64_t jump); // eq to srand(seed)
 double lcg_sze(); // replaces randmax
-double boxmuller_knuth(double mean, double variance, uint64_t * carry);
+double boxmuller_knuth(double mean_, double variance_, uint64_t * carry_);
+double boxmuller_2uni(double mean_, double variance_, double uni1_, double uni2_);
 
 int ** AYimatrix(int M_, int N_);
 void free_AYimatrix(int ** m_);

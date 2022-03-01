@@ -21,11 +21,6 @@ classdef stat_data < handle
     I_best;
     I_truest;
 
-    frame_early = 10;
-    pos_err_sum_early;
-    par_cov_early;
-    pos_err_best_early;
-    I_best_early;
   end
 
   methods
@@ -56,9 +51,6 @@ classdef stat_data < handle
       [obj.par_err_truest, obj.I_truest] = mink(sum(abs(obj.par_err)'), obj.noise_len-1);
       obj.pos_err_sum = sum(obj.pos_err');
       [obj.pos_err_best, obj.I_best ] = mink(obj.pos_err_sum, obj.noise_len-1);
-      obj.pos_err_sum_early = sum((obj.pos_err(:, 1:obj.frame_early))');
-      [obj.pos_err_best_early, obj.I_best_early ] = mink(obj.pos_err_sum_early, obj.noise_len-1);
-      obj.par_cov_early =  (abs(obj.par_err)).*(obj.pos_err_sum_early)';
       obj.par_cov = (abs(obj.par_err)).*(obj.pos_err_sum)';
     end
     function plot_frame_error(obj, fig_in, base_color)
@@ -70,7 +62,7 @@ classdef stat_data < handle
       end
       plot(1:Frames-1, mean_err, ' -', 'Color', base_color, 'LineWidth', 2);
       plot(1:Frames-1, obj.pos_err(obj.I_best(1), :), ' -', 'Color', [0 0 0], 'LineWidth', 1);
-      plot(1:Frames-1, obj.pos_err(obj.I_best_early(1), :), ' :', 'Color', [0 0 0], 'LineWidth', 1);
+      plot(1:Frames-1, obj.pos_err(obj.I_truest(1), :), ' :', 'Color', [0 0 0], 'LineWidth', 1);
     end
     function plot_param_error(obj, fig_in, base_color)
       figure(fig_in.Number)
@@ -78,7 +70,7 @@ classdef stat_data < handle
         plot(1:obj.par_len, (obj.pars(:, 1)-obj.pars(:, i+1))./abs(obj.pars(:, 1)), ' -', 'Color', [base_color, 0.1], 'LineWidth', 1);
       end
       plot(1:obj.par_len, (obj.pars(:, 1)-obj.pars(:, obj.I_best(1)))./abs(obj.pars(:, 1)), ' -', 'Color', [0 0 0], 'LineWidth', 1);
-      plot(1:obj.par_len, (obj.pars(:, 1)-obj.pars(:, obj.I_best_early(1)))./abs(obj.pars(:, 1)), ' :', 'Color', [0 0 0], 'LineWidth', 1);
+      plot(1:obj.par_len, (obj.pars(:, 1)-obj.pars(:, obj.I_truest(1)))./abs(obj.pars(:, 1)), ' :', 'Color', [0 0 0], 'LineWidth', 1);
     end
     function plot_param_index_error(obj, fig_in, base_color)
       figure(fig_in.Number)
@@ -87,13 +79,13 @@ classdef stat_data < handle
       end
       plot(1:obj.par_len, mean(obj.par_cov), ' -', 'Color', base_color, 'LineWidth', 2);
       plot(1:obj.par_len, obj.par_cov(obj.I_best(1), :), ' -', 'Color', [0 0 0 ], 'LineWidth', 1);
-      plot(1:obj.par_len, obj.par_cov(obj.I_best_early(1), :), ' :', 'Color', [0 0 0 ], 'LineWidth', 1);
+      plot(1:obj.par_len, obj.par_cov(obj.I_truest(1), :), ' :', 'Color', [0 0 0 ], 'LineWidth', 1);
     end
     function plot_param_pos_error(obj, fig_in, base_color)
       figure(fig_in.Number)
       plot(sum(abs(obj.par_err)'), obj.pos_err_sum, ' o', 'Color', base_color, 'LineWidth', 2);
       plot(sum(abs(obj.par_err(obj.I_best(1), :))), obj.pos_err_sum(obj.I_best(1)), ' p', 'Color', [0 0 0], 'LineWidth', 2);
-      plot(sum(abs(obj.par_err(obj.I_best_early(1), :))), obj.pos_err_sum(obj.I_best_early(1)), ' h', 'Color', [0 0 0], 'LineWidth', 2);
+      plot(sum(abs(obj.par_err(obj.I_truest(1), :))), obj.pos_err_sum(obj.I_truest(1)), ' h', 'Color', [0 0 0], 'LineWidth', 2);
     end
     function make_moviei(obj, AYfig_in, i )
       obj.sw(i).make_movie(AYfig_in);

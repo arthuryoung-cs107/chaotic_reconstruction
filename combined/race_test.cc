@@ -40,7 +40,7 @@ int main() {
     wl.add_wall(&wp2);
 
     ODR_struct odr("./dat_dir/circ6_swrl.odr/pts");
-    race prace(rparam,sp_min,sp_max,sp_rnd,wl,t_phys,&odr,0);
+    race prace(rparam,sp_min,sp_max,sp_rnd,wl,t_phys,&odr);
 
     prace.setup_output_info(255,200);
 

@@ -73,22 +73,27 @@ double lcg_sze() // replaces randmax
     return (double) (RAND_MAX + 1.0);
   #endif
 }
-double boxmuller_knuth(double mean, double variance, uint64_t * carry)
+double boxmuller_knuth(double mean_, double variance_, uint64_t * carry_)
 {
   double sze = lcg_sze();
-  double rand_uni1 = ((double) lcg_uni(carry))/sze; //numerator is double, forces double arithmatic
-  double rand_uni2 = ((double) lcg_uni(carry))/sze;
+  double rand_uni1 = ((double) lcg_uni(carry_))/sze; //numerator is double, forces double arithmatic
+  double rand_uni2 = ((double) lcg_uni(carry_))/sze;
   double box1 = -2.0 * log(rand_uni1);
   double gauss = pow(box1, 0.5)* cos(2.0*M_PI*rand_uni2);
   double absg = fabs(gauss);
 
-  if (absg > 4)
-  {
-    gauss = 4.0 * gauss/absg;
-  }
+  if (absg > 4) gauss = 4.0 * gauss/absg;
+  return (gauss * pow(variance_, 0.5)) + mean_;
+}
 
-  gauss = (gauss * pow(variance, 0.5)) + mean;
-  return gauss;
+double boxmuller_2uni(double mean_, double variance_, double uni1_, double uni2_)
+{
+  double box1 = -2.0 * log(uni1_);
+  double gauss = pow(box1, 0.5)* cos(2.0*M_PI*uni2_);
+  double absg = fabs(gauss);
+
+  if (absg > 4) gauss = 4.0 * gauss/absg;
+  return (gauss * pow(variance_, 0.5)) + mean_;
 }
 
 int ** AYimatrix(int M_, int N_)

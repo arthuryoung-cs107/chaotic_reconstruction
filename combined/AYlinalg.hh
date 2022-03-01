@@ -7,6 +7,7 @@
 #include <gsl/gsl_matrix.h>
 #include <gsl/gsl_vector.h>
 #include <gsl/gsl_linalg.h>
+#include <gsl/gsl_rng.h>
 
 class AYrng
 {
@@ -20,9 +21,13 @@ class AYrng
         uint64_t jump=100;
         uint64_t carry;
 
+        gsl_rng * gsl_gen=NULL;
+
         void rng_true_init(uint64_t seed_=8.888e18, uint64_t jump_=100);
         virtual void rng_init(uint64_t seed_=0);
+        void rng_init_gsl(uint64_t seed_=1);
         virtual double rand_gen();
+        virtual double rand_gen_gsl();
         double dseed();
         double dcarry();
 };
@@ -35,6 +40,7 @@ class AYuniform : public AYrng
     AYuniform(double low_, double high_, uint64_t seed_);
     ~AYuniform();
     double rand_gen();
+    double rand_gen_gsl();
 };
 
 class AYnormal : public AYrng
@@ -45,6 +51,7 @@ class AYnormal : public AYrng
     AYnormal(double mu_, double var_, uint64_t seed_);
     ~AYnormal();
     double rand_gen();
+    double rand_gen_gsl();
 };
 
 class AYmat

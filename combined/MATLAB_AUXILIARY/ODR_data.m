@@ -60,7 +60,6 @@ classdef ODR_data < handle
       for i=1:(obj.Frames-1)
         diff_mat = obj.data(:, 1:3, i+1) - oth.data(:, 1:3, i+1);
         err_vec(i) = sum(sum((diff_mat.*diff_mat)'));
-        % err_vec(i) = norm(obj.data(:, 1:3, i+1) - oth.data(:, 1:3, i+1), 'fro')/norm(obj.data(:, 1:3, i+1), 'fro');
       end
     end
     function make_movie(obj, AYfig_in)
