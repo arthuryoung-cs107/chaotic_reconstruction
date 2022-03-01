@@ -3,16 +3,13 @@
 #define _USE_MATH_DEFINES
 #include <cmath>
 
-#include "race.hh"
+#include "particle_race.hh"
 
 int main() {
     // Physical constants
     double g_phys=9.804,                 // Gravity (m/s^2)
            d_phys=0.00635,               // Diameter (m)
            t_phys=sqrt(d_phys/g_phys);   // Time unit (s)
-
-    // Filter parameters
-    race rparam(0.002,0.1,1,0.01,0.01,0.012,3);
 
     // Minimum and maximum parameters
              //       (rad, mass, Kn  , gnb, gnf, gnw, mub, muf , muw, amp, cx , cy , cl  , sca)
@@ -40,7 +37,8 @@ int main() {
     wl.add_wall(&wp2);
 
     ODR_struct odr("./dat_dir/circ6_swrl.odr/pts");
-    race prace(rparam,sp_min,sp_max,sp_rnd,wl,t_phys,&odr);
+    referee ref(100, 1000, 0.002,3);
+    race prace(ref,sp_min,sp_max,sp_rnd,wl,t_phys,&odr);
 
     prace.setup_output_info(255,200);
 

@@ -1,4 +1,4 @@
-#include "runner.hh"
+#include "particle_race.hh"
 
 extern "C"
 {
