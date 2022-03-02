@@ -45,28 +45,33 @@ void race::init_race()
     for (int i = 0; i < npool; i++)
     {
       double *dmin=&sp_min.Kn, *dmax=&sp_max.Kn;
-      for (int j = 0; j < param_len; j++) pool[i][j] = dmin[j] + (dmax[j]- dmin[j])*(gsl_rng_uniform(uni));
+      for (int j = 0; j < param_len; j++) pool_params[i][j] = dmin[j] + (dmax[j]- dmin[j])*(gsl_rng_uniform(uni));
+      pool[i].index = i; pool[i].params = pool_params[i];
     }
   }
+
+  for (int i = 0; i < nlead; i++)
+  {leaders[i].index = i; leaders[i].params = leaders[i];}
+
   leader_count=gen_count=0;
-  min_depth_leaders=1;
-  sorting_pool = new int[npool];
+  frscore_min=1; l2score_min=DBL_MAX;
 }
 
 void race::run()
 {
-  bool race_underway;
+  bool race_underway=true;
   do
   {
+    pool_success_count = 0;
 #pragma omp parallel
     {
       runner *rt = runners[thread_num()];
-#pragma omp for
+#pragma omp for reduction(+=)
       for (int i = 0; i < npool; i++)
       {
-        rt->reset_sim(pool[i]);
+        rt->reset_sim(pool_params[i]);
         rt->run_race(ts, xs, d_ang);
-        frame_pscore[i] = rt->frame; l2_pscore[i] = rt->pos_err_acc;
+        pool_success_count += pool_ranking[i] = pool[i].check_success(rt->frame, rt->pos_err_acc, frscore_min, l2score_min);
       }
     }
     gen_count++;
@@ -79,34 +84,21 @@ void race::run()
 
 bool race::check_pool_results()
 {
-  int pool_success_count=0, max_depth_pool=0;
-  // a success is equalling or beating the lowest leader
-  for (int i = 0; i < npool; i++) if (frame_pscore[i] >= min_depth_leaders)
-  {
-    if (frame_pscore[i]==min_depth_leaders)
-    {
-      if (l2_pscore[i] < l2_score)
-    }
-    else
-    {
-      sorting_pool[pool_success_count++] = i;
-      if (frame_pscore[i] > max_depth_pool) max_depth_pool = frame_pscore[i];
-    }
-  }
+  collect_pool_leaders(); 
 
-  if (leader_count == nleaders)
+  if (leader_count == nlead)
   {
 
   }
-  else if (pool_success_count >= (nleaders-leader_count))
+  else if (pool_success_count >= (nlead-leader_count))
   {
-    int leader_gap = nleaders-leader_count;
+    int leader_gap = nlead-leader_count;
     // fill to capacity
     for (int i = 0; i < leader_gap; i++)
     {
 
     }
-    leader_count = nleaders;
+    leader_count = nlead;
 
   }
   else // just enter the results. No need to worry about overflow
@@ -120,6 +112,4 @@ bool race::check_pool_results()
     }
     rank_leaders();
   }
-
-
 }
