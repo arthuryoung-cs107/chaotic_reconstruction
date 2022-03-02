@@ -49,6 +49,7 @@ void race::init_race()
     }
   }
   leader_count=gen_count=0;
+  min_depth_leaders=1;
   sorting_pool = new int[npool];
 }
 
@@ -71,20 +72,27 @@ void race::run()
     gen_count++;
     if (check_pool_results()) race_underway=false; // we win
     else if (gen_count == gen_max) race_underway=false; // we give up
-    else resample_pool();
+    else resample_pool(); // we try again
 
   } while (race_underway);
 }
 
 bool race::check_pool_results()
 {
-  int pool_success_count = 0;
-#pragma omp parallel for reduction(+:pool_success_count)
-  for (int i = 0; i < npool; i++)
+  int pool_success_count=0, max_depth_pool=0;
+  // a success is equalling or beating the lowest leader
+  for (int i = 0; i < npool; i++) if (frame_pscore[i] >= min_depth_leaders)
   {
-
+    if (frame_pscore[i]==min_depth_leaders)
+    {
+      if (l2_pscore[i] < l2_score)
+    }
+    else
+    {
+      sorting_pool[pool_success_count++] = i;
+      if (frame_pscore[i] > max_depth_pool) max_depth_pool = frame_pscore[i];
+    }
   }
-  pool_success_count += (frame_pscore[i] > 0)?1:0;
 
   if (leader_count == nleaders)
   {
@@ -92,14 +100,26 @@ bool race::check_pool_results()
   }
   else if (pool_success_count >= (nleaders-leader_count))
   {
+    int leader_gap = nleaders-leader_count;
+    // fill to capacity
+    for (int i = 0; i < leader_gap; i++)
+    {
 
-
+    }
     leader_count = nleaders;
+
   }
   else // just enter the results. No need to worry about overflow
-  {
-
-
-    leader_count += pool_success_count;
+  { // note that this conditional also handles our startup
+    // loop over the successful entries, record their scores, enter them into the leaderboard
+    for (int i = 0; i < pool_success_count; i++)
+    {
+      for (int j = 0; j < param_len; j++) leaders[leader_count][j] = pool[sorting_pool[i]][j];
+      frame_score[leader_count] = frame_pscore[sorting_pool[i]];
+      l2_score[leader_count++] = l2_pscore[sorting_pool[i]];
+    }
+    rank_leaders();
   }
+
+
 }

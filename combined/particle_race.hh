@@ -101,6 +101,10 @@ class race : public referee {
         int leader_count;
         /** A count of the generations of tested particles */
         int gen_count;
+        /** The maximum frame reached by the best performing leader */
+        int max_depth_leaders;
+        /** The maximum frame reached by the poorest performing leader */
+        int min_depth_leaders;
 
         /** the data index we take to be the initial conditions of the experiment */
         const int ic_index;
