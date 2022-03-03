@@ -36,7 +36,7 @@ int main() {
     wl.add_wall(&wp2);
 
     ODR_struct odr("./dat_dir/circ6_swrl.odr/pts");
-    referee ref(100, 1000, sp_num_vparams, 0.002,3);
+    referee ref(100, 1000, sp_num_vparams, 0.002,1.0, 10.0);
     race prace(ref,sp_min,sp_max,wl,t_phys,&odr);
 
     prace.setup_output_info(255,200);

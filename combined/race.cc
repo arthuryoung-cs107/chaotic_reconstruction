@@ -4,7 +4,7 @@
 #include "omp.h"
 #endif
 
-race::race(referee &ref_,swirl_param &sp_min_,swirl_param &sp_max_,wall_list &wl_,double t_phys_, ODR_struct &odr_, int ic_index_): referee(ref_), sp_min(sp_min_), sp_max(sp_max_), sp_rnd(sp_rnd_), t_phys(t_phys_), odr(odr_), ic_index(ic_index_), n(odr_.P), nsnap(odr_.Frames), ts(new double[nsnap]), xs(new double[2*n*nsnap]), d_ang(new double[nsnap]),
+race::race(referee &ref_,swirl_param &sp_min_,swirl_param &sp_max_,wall_list &wl_,double t_phys_, ODR_struct &odr_, int ic_index_): referee(ref_), sp_min(sp_min_), sp_max(sp_max_), sp_rnd(sp_rnd_), t_phys(t_phys_), odr(odr_), ic_index(ic_index_), n(odr_.P), nsnap(odr_.Frames), ts(new double[nsnap]), xs(new double[2*n*nsnap]), d_ang(new double[nsnap])
 #ifdef _OPENMP
 nt(omp_get_max_threads()), // each thread is a runner
 #else
@@ -13,6 +13,7 @@ nt(1), // only one runner
 wl(wl_), pg(new proximity_grid*[nt]), rng(new gsl_rng*[nt]), runners(new runner*[nt])
 {
   alloc_records();
+  sample_weights = new double[nlead];
   odr.load_filter(ts, xs, d_ang);
 
   double *x_ic = xs + 2*n*ic_index;
@@ -84,25 +85,25 @@ bool race::check_pool_results()
 {
   int pool_candidates = collect_pool_leaders();
   // if we now have a full leader roster
-  if (leader_count + pool_candidates >= nleaders)
+  if (leader_count + pool_candidates >= nlead)
   {
     // fill up remainder of leaders
-    for (int i = 0; i < (nleaders-leader_count); i++)
+    for (int i = 0; i < (nlead-leader_count); i++)
       leader_board[leader_count++] = pool_leaders[--pool_candidates];
 
-    int worst_best = find_worst(leader_board, nleaders);
+    int worst_best = find_worst(leader_board, nlead);
 
-    for (int i = nleaders; i < nleaders + pool_candidates; i++)
+    for (int i = nlead; i < nlead + pool_candidates; i++)
       if (leader_board[worst_best]->isworse(leader_board[i]))
       {
         leader_board[worst_best] = leader_board[i];
-        worst_best = find_worst(leader_board, nleaders);
+        worst_best = find_worst(leader_board, nlead);
       }
 
     frscore_min = leader_board[worst_best]->frscore;
     l2score_min = leader_board[worst_best]->l2score;
 
-    for (int i = 0; i < nleaders; i++)
+    for (int i = 0; i < nlead; i++)
       if (leaders[i]->global_index != leader_board[i]->global_index)
         leaders[i]->take_vals(leader_board[i], param_len);
   }
@@ -113,7 +114,7 @@ bool race::check_pool_results()
     leaders[leader_count++]->take_vals(pool_leaders[i], param_len);
   }
 
-  for (int i = 0; i < nleaders; i++)
+  for (int i = 0; i < nlead; i++)
     if (leaders[i]->frscore == Frames - 1) return true;
 
   return false;
@@ -126,17 +127,54 @@ int race::collect_pool_leaders()
     if (pool[i]->success)
       pool_leaders[pool_success_count++] = pool[i];
 
-  if (pool_success_count > nleaders) // if we have lots of good candidates
+  if (pool_success_count > nlead) // if we have lots of good candidates
   {
-    // we seek to pick the nleaders best records for comparison.
-    int worst_best = find_worst(pool_leaders, nleaders);
-    for (int i = nleaders; i < pool_success_count; i++)
+    // we seek to pick the nlead best records for comparison.
+    int worst_best = find_worst(pool_leaders, nlead);
+    for (int i = nlead; i < pool_success_count; i++)
       if (pool_leaders[worst_best]->isworse(pool_leaders[i]))
       {
         pool_leaders[worst_best] = pool_leaders[i];
-        worst_best = find_worst(pool_leaders, nleaders);
+        worst_best = find_worst(pool_leaders, nlead);
       }
-    return nleaders;
+    return nlead;
   }
   else return pool_success_count;
+}
+
+void race::resample_pool()
+{
+  double acc = 0.0;
+  for (int i = 0; i < leader_count; i++) acc += sample_weights[i] = exp(lambda*((double)(leaders->frscore-Frames)));
+  if (leader_count<nlead) acc *= 2.0;
+  for (int i = 0; i < leader_count; i++) sample_weights[i] /= acc;
+
+  #pragma omp parallel
+    {
+      gsl_rng *r = rng[thread_num()];
+  #pragma omp for
+      for (int i = 0; i < npool; i++)
+      {
+        int j = 0;
+        double uni = gsl_rng_uniform(r);
+        while ( (j<leader_count-1)&&(uni>0.0) ) uni -= sample_weights[j++];
+        if (j > 0)
+        {
+          if (uni>0.0)
+          {
+            double *dmin=&sp_min.Kn, *dmax=&sp_max.Kn;
+            for (int j = 0; j < param_len; j++) pool_params[i][j] = dmin[j] + (dmax[j]- dmin[j])*(gsl_rng_uniform(r));
+          }
+          else
+          {
+            // particle duplication, gaussian disturbance
+          }
+        }
+        else // we currently have no leaders
+        {
+          double *dmin=&sp_min.Kn, *dmax=&sp_max.Kn;
+          for (int j = 0; j < param_len; j++) pool_params[i][j] = dmin[j] + (dmax[j]- dmin[j])*(gsl_rng_uniform(r));
+        }
+      }
+    }
 }

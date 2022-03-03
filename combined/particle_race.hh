@@ -59,12 +59,11 @@ struct referee
 {
     /** The maximum simulation timestep to use. */
     const double dt_sim;
-    /** The length scale of the Gaussian (in pixels) for updating the particle
-     * weights. */
-    const double gau_scale;
-    /** The coefficient that appears in the Gaussian for updating the particle
-     * weights. */
-    const double gau_coeff;
+    /** the perturbation variance for resampled particles */
+    const double gau_var;
+    // the strength of the exponential weight function for the resampling of particles
+    const double lambda;
+
 
     /** number of particles being tested in each generation */
     const int npool;
@@ -77,13 +76,13 @@ struct referee
     record **leaders, **pool, **leader_board, **pool_leaders;
 
     // memory chunks to store parameters associated with particles
-    double **pool_params, **lead_params;
+    double **pool_params, **lead_params, *sample_weights;
 
     bool alloc_flag;
 
-    referee(int n_leaders_, int npool_, int param_len_, double dt_sim_, double gau_scale_): nlead(n_leaders_), npool(npool_), param_len(param_len_), dt_sim(dt_sim_), gau_scale(gau_scale_), gau_coeff(0.5/(gau_scale*gau_scale)) {}
+    referee(int n_leaders_, int npool_, int param_len_, double dt_sim_, double gau_var_, double lambda_): nlead(n_leaders_), npool(npool_), param_len(param_len_), dt_sim(dt_sim_), gau_var(gau_var_), lambda(lambda_) {}
 
-    referee(referee &ref_): nlead(ref_.nlead), npool(ref_.npool), param_len(ref_.param_len), dt_sim(ref_.dt_sim), gau_scale(ref_.gau_scale), gau_coeff(0.5/(gau_scale*gau_scale)) {}
+    referee(referee &ref_): nlead(ref_.nlead), npool(ref_.npool), param_len(ref_.param_len), dt_sim(ref_.dt_sim), gau_var(ref_.gau_var), lambda(ref_.lambda) {}
     ~referee()
     {
       if (alloc_flag)
