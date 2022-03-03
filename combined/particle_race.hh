@@ -1,5 +1,5 @@
-#ifndef RACE_HH
-#define RACE_HH
+#ifndef PARTICLE_RACE_HH
+#define PARTICLE_RACE_HH
 
 #include <cstdio>
 #include <gsl/gsl_rng.h>
@@ -10,11 +10,6 @@
 #ifdef _OPENMP
 #include "omp.h"
 #endif
-
-extern "C"
-{
-  #include "AYaux.h"
-}
 
 struct record
 {
@@ -27,7 +22,7 @@ struct record
 
   record() {}
   record(int i_): global_index(i_) {}
-  ~record()
+  ~record() {}
 
   inline void check_success(int frscore_, double l2score_, int frmin_, double l2min_)
   {
@@ -45,7 +40,7 @@ struct record
     else return false;
   }
 
-  inline void take_vals(record * rtake_, int len_ )
+  void take_vals(record * rtake_, int len_ )
   {
     frscore = rtake_->frscore; l2score = rtake_->l2score;
     for (int i = 0; i < len_; i++) params[i] = rtake_->params[i];
@@ -55,15 +50,36 @@ struct record
   {return !(isbetter(rcomp_));}
 };
 
+class runner : public swirl
+{
+    public:
+      const int thread_id, param_len, Frames;
+      double *pvals, *x0, t0, ctheta0, pos_err_acc, tol;
+      int frame;
+
+      runner(swirl_param &sp_, proximity_grid * pg_, wall_list &wl_, int n_, int thread_id_, int param_len_, int Frames_, double tol_);
+      ~runner();
+
+      void init_ics(double *x0_, double t0_, double ctheta0_);
+      void reset_sim(double *ptest_);
+      void run_race(double t_phys_, double dt_sim_, double *ts_, double *xs_, double *d_ang_);
+
+    private:
+      bool is_lost(double *f_);
+};
+
 struct referee
 {
     /** The maximum simulation timestep to use. */
     const double dt_sim;
     /** the perturbation variance for resampled particles */
     const double gau_var;
-    // the strength of the exponential weight function for the resampling of particles
+    /* the strength of the exponential weight function for the resampling of particles */
     const double lambda;
-
+    /* the clearance we leave for uniform resampling when we HAVE NOT filled our leaderboard */
+    const double rs_fill_factor; // maybe 0.5
+    /* the clearance we leave for uniform resampling when we HAVE filled our leaderboard */
+    const double rs_full_factor; // maybe 0.99?
 
     /** number of particles being tested in each generation */
     const int npool;
@@ -78,51 +94,15 @@ struct referee
     // memory chunks to store parameters associated with particles
     double **pool_params, **lead_params, *sample_weights;
 
-    bool alloc_flag;
+    bool alloc_flag=false;
 
-    referee(int n_leaders_, int npool_, int param_len_, double dt_sim_, double gau_var_, double lambda_): nlead(n_leaders_), npool(npool_), param_len(param_len_), dt_sim(dt_sim_), gau_var(gau_var_), lambda(lambda_) {}
+    referee(int nlead_=100, int npool_=1000, int param_len_=12, double dt_sim_=0.002, double gau_var_=0.01, double lambda_=10.0, double rs_fill_factor_=0.5, double rs_full_factor_=0.99): nlead(nlead_), npool(npool_), param_len(param_len_), dt_sim(dt_sim_), gau_var(gau_var_), lambda(lambda_), rs_fill_factor(rs_fill_factor_), rs_full_factor(rs_full_factor_) {}
 
-    referee(referee &ref_): nlead(ref_.nlead), npool(ref_.npool), param_len(ref_.param_len), dt_sim(ref_.dt_sim), gau_var(ref_.gau_var), lambda(ref_.lambda) {}
-    ~referee()
-    {
-      if (alloc_flag)
-      {
-        delete leader_board;
-        for (int i = 0; i < 2*nlead; i++) delete leaders[i];
-        delete leaders;
-        free_AYdmatrix(lead_params);
-      }
-    }
-    void alloc_records()
-    {
-      leaders = new record*[nlead+npool];
-      leader_board = new record*[nlead+npool];
-      for (int i = 0; i < nlead+npool; i++) leaders[i] = new record(i);
-      pool = leaders + nlead;
-      pool_leaders = leader_board + nlead;
+    referee(referee &ref_): nlead(ref_.nlead), npool(ref_.npool), param_len(ref_.param_len), dt_sim(ref_.dt_sim), gau_var(ref_.gau_var), lambda(ref_.lambda), rs_fill_factor(ref_.rs_fill_factor), rs_full_factor(ref_.rs_full_factor) {}
 
-      params = AYdmatrix(nlead+npool, param_len);
-      pool_params = params + nlead;
+    ~referee();
 
-      alloc_flag = true;
-    }
-};
-
-class runner : public swirl
-{
-    public:
-      const int thread_id, param_len, Frames;
-      double *pvals, *x0, t0, ctheta0, pos_err_acc, tol;
-      int frame;
-
-      runner(swirl_param &sp_, proximity_grid * pg_, wall_list &wl_, int n_, int thread_id_, int param_len_, int Frames_, double tol_);
-      ~runner();
-
-    private:
-      void init_ics(double *x0_, double t0_, double ctheta0_);
-      void reset_sim(double *ptest_);
-      void run_race(int frames, double *ts_, double *xs_, double *d_ang_);
-      bool is_lost(double *f_);
+    void alloc_records();
 };
 
 class race : public referee {
@@ -136,7 +116,7 @@ class race : public referee {
         /** The total number of beads. */
         int n;
         /** The total number of snapshots. */
-        int nsnap;
+        int Frames;
         /** The total number of particles. */
         int npar;
         /** The time points of the snapshots. */
@@ -153,16 +133,17 @@ class race : public referee {
         /** frame score associated w/ poorest particle on leaderboard  */
         int frscore_min;
         /** error score associated w/ poorest particle on leaderboard  */
-        int l2score_min;
+        double l2score_min;
 
         /** the data index we take to be the initial conditions of the experiment */
         const int ic_index;
 
         ODR_struct odr;
 
-        race(referee &rparam,swirl_param &sp_min_,swirl_param &sp_max_,swirl_param &sp_rnd_,wall_list &wl_,double t_phys_,ODR_struct &odr_,int ic_index_=0);
+        race(referee &rparam,swirl_param &sp_min_,swirl_param &sp_max_,wall_list &wl_,double t_phys_,ODR_struct &odr_,int ic_index_=0);
         ~race();
-        void init_race(int npar_);
+        void init_race();
+        void start_race(int gen_max_, bool verbose_=true);
     private:
         /** The number of threads. */
         const int nt;
@@ -170,8 +151,8 @@ class race : public referee {
         AYuniform * uni;
         /** A reference to the list of walls for the swirling simulation. */
         wall_list &wl;
-        /** The array of GSL random number generators. */
-        gsl_rng** const rng;
+        /** The array of random number generators. */
+        AYrng ** rng;
         /** The array of proximity grids. */
         proximity_grid** const pg;
 
@@ -191,13 +172,6 @@ class race : public referee {
 #endif
 };
 
-int find_worst(record ** r, int ncap)
-{
-  int worst_index = 0;
-  for (int i = 1; i < ncap; i++)
-    if (r[worst_index]->isbetter(r[i]))
-      worst_index = i;
-  return worst_index;
-}
+int find_worst(record ** r, int ncap);
 
 #endif

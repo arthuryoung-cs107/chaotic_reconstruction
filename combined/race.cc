@@ -4,13 +4,13 @@
 #include "omp.h"
 #endif
 
-race::race(referee &ref_,swirl_param &sp_min_,swirl_param &sp_max_,wall_list &wl_,double t_phys_, ODR_struct &odr_, int ic_index_): referee(ref_), sp_min(sp_min_), sp_max(sp_max_), sp_rnd(sp_rnd_), t_phys(t_phys_), odr(odr_), ic_index(ic_index_), n(odr_.P), nsnap(odr_.Frames), ts(new double[nsnap]), xs(new double[2*n*nsnap]), d_ang(new double[nsnap])
+race::race(referee &ref_,swirl_param &sp_min_,swirl_param &sp_max_,wall_list &wl_,double t_phys_, ODR_struct &odr_, int ic_index_): referee(ref_), sp_min(sp_min_), sp_max(sp_max_), t_phys(t_phys_), odr(odr_), ic_index(ic_index_), n(odr_.P), Frames(odr_.Frames), ts(new double[Frames]), xs(new double[2*n*Frames]), d_ang(new double[Frames]),
 #ifdef _OPENMP
 nt(omp_get_max_threads()), // each thread is a runner
 #else
 nt(1), // only one runner
 #endif
-wl(wl_), pg(new proximity_grid*[nt]), rng(new gsl_rng*[nt]), runners(new runner*[nt])
+wl(wl_), pg(new proximity_grid*[nt]), rng(new AYrng*[nt]), runners(new runner*[nt])
 {
   alloc_records();
   sample_weights = new double[nlead];
@@ -24,9 +24,9 @@ wl(wl_), pg(new proximity_grid*[nt]), rng(new gsl_rng*[nt]), runners(new runner*
   {
       int t=thread_num();
       pg[t]=new proximity_grid();
-      rng[t]=gsl_rng_alloc(gsl_rng_taus2);
-      gsl_rng_set(rng[t], t+1);
-      runners[t]=new runner(sp_min, pg[t], wl, n, t, param_len, nsnap, sp_max.cl_im);
+      rng[t]= new AYrng();
+      rng[t]->rng_init_gsl(t+1);
+      runners[t]=new runner(sp_min, pg[t], wl, n, t, param_len, Frames, sp_max.cl_im);
       runners[t]->init_ics(x_ic, t_ic, comega_ic);
   }
 }
@@ -41,23 +41,23 @@ void race::init_race()
 // initialize the pool of testing particles
 #pragma omp parallel
   {
-    gsl_rng *uni = rng[thread_num()];
+    AYrng *r = rng[thread_num()];
 #pragma omp for
     for (int i = 0; i < npool; i++)
     {
       double *dmin=&sp_min.Kn, *dmax=&sp_max.Kn;
-      for (int j = 0; j < param_len; j++) pool_params[i][j] = dmin[j] + (dmax[j]- dmin[j])*(gsl_rng_uniform(uni));
+      for (int j = 0; j < param_len; j++) pool_params[i][j] = dmin[j] + (dmax[j]- dmin[j])*(r->rand_uni_gsl(0.0, 1.0));
       pool[i]->params = pool_params[i];
     }
   }
 
-  for (int i = 0; i < nlead; i++) leaders[i].params = leaders[i];
+  for (int i = 0; i < nlead; i++) leaders[i]->params = lead_params[i];
 
   leader_count=gen_count=0;
   frscore_min=1; l2score_min=DBL_MAX;
 }
 
-void race::run()
+void race::start_race(int gen_max_, bool verbose_)
 {
   bool race_underway=true;
   do
@@ -69,13 +69,13 @@ void race::run()
       for (int i = 0; i < npool; i++)
       {
         rt->reset_sim(pool_params[i]);
-        rt->run_race(ts, xs, d_ang);
+        rt->run_race(t_phys, dt_sim, ts, xs, d_ang);
         pool[i]->check_success(rt->frame, rt->pos_err_acc, frscore_min, l2score_min);
       }
     }
     gen_count++;
     if (check_pool_results()) race_underway=false; // we win
-    else if (gen_count == gen_max) race_underway=false; // we give up
+    else if (gen_count == gen_max_) race_underway=false; // we give up
     else resample_pool(); // we try again
 
   } while (race_underway);
@@ -145,36 +145,45 @@ int race::collect_pool_leaders()
 void race::resample_pool()
 {
   double acc = 0.0;
-  for (int i = 0; i < leader_count; i++) acc += sample_weights[i] = exp(lambda*((double)(leaders->frscore-Frames)));
-  if (leader_count<nlead) acc *= 2.0;
+  for (int i = 0; i < leader_count; i++)
+    acc += sample_weights[i] = exp(lambda*((double)(leaders[i]->frscore-Frames+1)));
+
+  acc /= (leader_count<nlead)? rs_fill_factor:rs_full_factor;
+
   for (int i = 0; i < leader_count; i++) sample_weights[i] /= acc;
 
   #pragma omp parallel
     {
-      gsl_rng *r = rng[thread_num()];
+      AYrng *r = rng[thread_num()];
   #pragma omp for
       for (int i = 0; i < npool; i++)
       {
         int j = 0;
-        double uni = gsl_rng_uniform(r);
-        while ( (j<leader_count-1)&&(uni>0.0) ) uni -= sample_weights[j++];
-        if (j > 0)
+        double uni = r->rand_uni_gsl(0.0, 1.0);
+        while ( (j<leader_count)&&(uni>0.0) ) uni -= sample_weights[j++];
+        double *dmin=&sp_min.Kn, *dmax=&sp_max.Kn;
+        if (j > 0) // if we have particles worth resampling
         {
-          if (uni>0.0)
+          // resample the particle, add gaussian noise
+          if (uni<0.0)
           {
-            double *dmin=&sp_min.Kn, *dmax=&sp_max.Kn;
-            for (int j = 0; j < param_len; j++) pool_params[i][j] = dmin[j] + (dmax[j]- dmin[j])*(gsl_rng_uniform(r));
+            j--;
+            for (int k = 0; k < param_len; k++)
+            {
+              /* should we be making this relative to the width of the gap?
+              moreover, should we be scaling the gaussian variance by depth into the frames? */
+              pool_params[i][k] = leaders[j]->params[k] + r->rand_gau_gsl(0.0, gau_var)*(dmax[k]-dmin[k]);
+              if (pool_params[i][k] > dmax[k]) pool_params[i][k] = dmax[k];
+              else if (pool_params[i][k] < dmin[k]) pool_params[i][k] = dmin[k];
+            }
           }
-          else
-          {
-            // particle duplication, gaussian disturbance
-          }
+          // we hit the resampling pool
+          else for (int k = 0; k < param_len; k++)
+            pool_params[i][k] = dmin[k] + (dmax[k]- dmin[k])*(r->rand_uni_gsl(0.0, 1.0));
         }
-        else // we currently have no leaders
-        {
-          double *dmin=&sp_min.Kn, *dmax=&sp_max.Kn;
-          for (int j = 0; j < param_len; j++) pool_params[i][j] = dmin[j] + (dmax[j]- dmin[j])*(gsl_rng_uniform(r));
-        }
+        // we currently have no leaders (particles worth resampling)
+        else for (int k = 0; k < param_len; k++)
+          pool_params[i][k] = dmin[k] + (dmax[k]- dmin[k])*(r->rand_uni_gsl(0.0, 1.0));
       }
     }
 }

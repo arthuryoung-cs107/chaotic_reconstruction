@@ -11,18 +11,12 @@ int main() {
            d_phys=0.00635,               // Diameter (m)
            t_phys=sqrt(d_phys/g_phys);   // Time unit (s)
 
-    // Minimum and maximum parameters
-             //       (rad, mass, Kn  , gnb, gnf, gnw, mub, muf , muw, amp, cx , cy , cl  , sca)
-             // sp_min(0.5, 1   , 500 , 5  , 5  , 5  , 0.1, 0.1 , 0.1, 1.8, 402, 380, 37.6, 1  ) MIN
-             // sp_max(0.5, 1   , 5000, 120, 120, 120, 1.0, 1.0 , 1.0, 1.8, 402, 380, 37.6, 1  ) MAX
-             // sptrue(0.5, 1   , 1000, 40 , 40 , 40 , 0.5, 0.25, 0.5, 1.8, 203, 178, 27.6, 1.0) TRUE
-             //       ( c , c   , *   , *  , *  , *  , *  , *   , *  , c  , ?  , ?  , ?   , c  ) KEY
+    double  sp_min_vals[] = {0.5,1.0,500.0 ,5.0  ,5.0  ,5.0  ,0.1,0.1 ,0.1,1.8,203.0,178.0,27.6,1.0},
+            sptrue_vals[] = {0.5,1.0,1000.0,40.0 ,40.0 ,40.0 ,0.5,0.25,0.5,1.8,203.0,178.0,27.6,1.0},
+            sp_max_vals[] = {0.5,1.0,5000.0,120.0,120.0,120.0,1.0,1.0 ,1.0,1.8,203.0,178.0,27.6,1.0};
 
     //original
-    swirl_param sp_min(0.5,1,500,5,5,5,0.1,0.1,0.1,1.8,402,380,37.6,1),
-                sp_max(0.5,1,5000,120,120,120,1.,1.,1.,1.8,402,380,37.6,1),
-    //true
-    swirl_param sptrue(0.5,1,1000,40,40,40,0.5,0.25,0.5,1.8,203,178,27.6,1.);
+    swirl_param sp_min(sp_min_vals), sp_max(sp_max_vals);
 
     // Create the hexagonal dish
     wall_list wl;
@@ -36,14 +30,15 @@ int main() {
     wl.add_wall(&wp2);
 
     ODR_struct odr("./dat_dir/circ6_swrl.odr/pts");
-    referee ref(100, 1000, sp_num_vparams, 0.002,1.0, 10.0);
-    race prace(ref,sp_min,sp_max,wl,t_phys,&odr);
 
-    prace.setup_output_info(255,200);
+    referee ref;
+    race prace(ref,sp_min,sp_max,wl,t_phys,odr);
+
+    // prace.setup_output_info(255,200);
 
     // Solve the system
-    prace.init(65536);
-    prace.run(1200);
+    // prace.init_race(65536);
+    // prace.run(1200);
 
     return 0;
 }
