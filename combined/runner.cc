@@ -36,7 +36,7 @@ void runner::run_race(double *ts_, double *xs_, double *d_ang_)
     double *f = xs_ + (2*n*(frame+1));
     advance(dur, ctheta, comega, dt_sim);
     if (is_lost(f, ipool_)) run_on = false;
-    else if (++frame == Frames) run_on = false;
+    else if (++frame == Frames-1) run_on = false;
   } while(run_on);
 }
 

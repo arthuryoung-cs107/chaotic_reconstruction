@@ -46,12 +46,11 @@ void race::init_race()
     {
       double *dmin=&sp_min.Kn, *dmax=&sp_max.Kn;
       for (int j = 0; j < param_len; j++) pool_params[i][j] = dmin[j] + (dmax[j]- dmin[j])*(gsl_rng_uniform(uni));
-      pool[i].index = i; pool[i].params = pool_params[i];
+      pool[i]->params = pool_params[i];
     }
   }
 
-  for (int i = 0; i < nlead; i++)
-  {leaders[i].index = i; leaders[i].params = leaders[i];}
+  for (int i = 0; i < nlead; i++) leaders[i].params = leaders[i];
 
   leader_count=gen_count=0;
   frscore_min=1; l2score_min=DBL_MAX;
@@ -62,16 +61,15 @@ void race::run()
   bool race_underway=true;
   do
   {
-    pool_success_count = 0;
 #pragma omp parallel
     {
       runner *rt = runners[thread_num()];
-#pragma omp for reduction(+=)
+#pragma omp for
       for (int i = 0; i < npool; i++)
       {
         rt->reset_sim(pool_params[i]);
         rt->run_race(ts, xs, d_ang);
-        pool_success_count += pool_ranking[i] = pool[i].check_success(rt->frame, rt->pos_err_acc, frscore_min, l2score_min);
+        pool[i]->check_success(rt->frame, rt->pos_err_acc, frscore_min, l2score_min);
       }
     }
     gen_count++;
@@ -84,32 +82,61 @@ void race::run()
 
 bool race::check_pool_results()
 {
-  collect_pool_leaders(); 
-
-  if (leader_count == nlead)
+  int pool_candidates = collect_pool_leaders();
+  // if we now have a full leader roster
+  if (leader_count + pool_candidates >= nleaders)
   {
+    // fill up remainder of leaders
+    for (int i = 0; i < (nleaders-leader_count); i++)
+      leader_board[leader_count++] = pool_leaders[--pool_candidates];
 
+    int worst_best = find_worst(leader_board, nleaders);
+
+    for (int i = nleaders; i < nleaders + pool_candidates; i++)
+      if (leader_board[worst_best]->isworse(leader_board[i]))
+      {
+        leader_board[worst_best] = leader_board[i];
+        worst_best = find_worst(leader_board, nleaders);
+      }
+
+    frscore_min = leader_board[worst_best]->frscore;
+    l2score_min = leader_board[worst_best]->l2score;
+
+    for (int i = 0; i < nleaders; i++)
+      if (leaders[i]->global_index != leader_board[i]->global_index)
+        leaders[i]->take_vals(leader_board[i], param_len);
   }
-  else if (pool_success_count >= (nlead-leader_count))
+  // otherwise, we can just fill in the leaderboard
+  else for (int i = 0; i < pool_candidates; i++)
   {
-    int leader_gap = nlead-leader_count;
-    // fill to capacity
-    for (int i = 0; i < leader_gap; i++)
-    {
-
-    }
-    leader_count = nlead;
-
+    leader_board[leader_count] = leaders[leader_count];
+    leaders[leader_count++]->take_vals(pool_leaders[i], param_len);
   }
-  else // just enter the results. No need to worry about overflow
-  { // note that this conditional also handles our startup
-    // loop over the successful entries, record their scores, enter them into the leaderboard
-    for (int i = 0; i < pool_success_count; i++)
-    {
-      for (int j = 0; j < param_len; j++) leaders[leader_count][j] = pool[sorting_pool[i]][j];
-      frame_score[leader_count] = frame_pscore[sorting_pool[i]];
-      l2_score[leader_count++] = l2_pscore[sorting_pool[i]];
-    }
-    rank_leaders();
+
+  for (int i = 0; i < nleaders; i++)
+    if (leaders[i]->frscore == Frames - 1) return true;
+
+  return false;
+}
+
+int race::collect_pool_leaders()
+{
+  pool_success_count = 0;
+  for (int i = 0; i < npool; i++)
+    if (pool[i]->success)
+      pool_leaders[pool_success_count++] = pool[i];
+
+  if (pool_success_count > nleaders) // if we have lots of good candidates
+  {
+    // we seek to pick the nleaders best records for comparison.
+    int worst_best = find_worst(pool_leaders, nleaders);
+    for (int i = nleaders; i < pool_success_count; i++)
+      if (pool_leaders[worst_best]->isworse(pool_leaders[i]))
+      {
+        pool_leaders[worst_best] = pool_leaders[i];
+        worst_best = find_worst(pool_leaders, nleaders);
+      }
+    return nleaders;
   }
+  else return pool_success_count;
 }

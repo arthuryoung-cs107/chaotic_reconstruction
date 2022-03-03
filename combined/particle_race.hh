@@ -20,22 +20,39 @@ struct record
 {
   int frscore;
   int l2score;
-  int index;
-  int rank;
+  int global_index;
+  bool success;
 
   double * params;
 
-  record();
-  ~record();
+  record() {}
+  record(int i_): global_index(i_) {}
+  ~record()
 
-  int check_success(int frscore_, double l2score_, int frmin_, double l2min_)
+  inline void check_success(int frscore_, double l2score_, int frmin_, double l2min_)
   {
     frscore = frscore_; l2score = l2score_;
-    if (frscore>frmin_) return 0; // worse then worst leader run, by frame score
-    else if (frscore<frmin_) return 1; // better than best leader run, by frame score
-    else if (l2score<l2min_) return 1; // better than best leader run, by l2 error
-    else return 0; // worse then worst leader run by l2 error
+    if (frscore>frmin_) success = false; // worse than worst leader run, by frame score
+    else if (frscore<frmin_) success = true; // better than best leader run, by frame score
+    else if (l2score<l2min_) success = true; // better than best leader run, by l2 error
+    else success = false; // worse than worst leader run by l2 error
   }
+  inline bool isbetter(record * rcomp_)
+  {
+    if (frscore>rcomp_->frscore) return false;
+    else if (frscore<rcomp_->frscore) return true;
+    else if (l2score<rcomp_->l2score) return true;
+    else return false;
+  }
+
+  inline void take_vals(record * rtake_, int len_ )
+  {
+    frscore = rtake_->frscore; l2score = rtake_->l2score;
+    for (int i = 0; i < len_; i++) params[i] = rtake_->params[i];
+  }
+
+  inline bool isworse(record * rcomp_)
+  {return !(isbetter(rcomp_));}
 };
 
 struct referee
@@ -57,13 +74,10 @@ struct referee
     const int param_len;
 
     // structure of records with which we will be using to compare particles
-    record *leaders, *pool;
+    record **leaders, **pool, **leader_board, **pool_leaders;
 
     // memory chunks to store parameters associated with particles
     double **pool_params, **lead_params;
-
-    // integer vectors indicating the relative ranking of particles
-    int *lead_ranking, *pool_ranking;
 
     bool alloc_flag;
 
@@ -74,24 +88,22 @@ struct referee
     {
       if (alloc_flag)
       {
-        delete lead_ranking;
-        delete pool_ranking;
+        delete leader_board;
+        for (int i = 0; i < 2*nlead; i++) delete leaders[i];
         delete leaders;
-        delete pool_leaders;
         free_AYdmatrix(lead_params);
-        free_AYdmatrix(pool_params);
       }
     }
     void alloc_records()
     {
-      lead_ranking = new int[nlead];
-      pool_ranking = new int[nlead];
+      leaders = new record*[nlead+npool];
+      leader_board = new record*[nlead+npool];
+      for (int i = 0; i < nlead+npool; i++) leaders[i] = new record(i);
+      pool = leaders + nlead;
+      pool_leaders = leader_board + nlead;
 
-      leaders = new record[nlead];
-      pool_leaders = new record[nlead];
-
-      lead_params = AYdmatrix(nlead, param_len);
-      pool_params = AYdmatrix(npool, param_len);
+      params = AYdmatrix(nlead+npool, param_len);
+      pool_params = params + nlead;
 
       alloc_flag = true;
     }
@@ -171,6 +183,7 @@ class race : public referee {
 
         bool check_pool_results();
         void resample_pool();
+        int collect_pool_leaders();
 
 #ifdef _OPENMP
         inline int thread_num() {return omp_get_thread_num();}
@@ -178,5 +191,14 @@ class race : public referee {
         inline int thread_num() {return 0;}
 #endif
 };
+
+int find_worst(record ** r, int ncap)
+{
+  int worst_index = 0;
+  for (int i = 1; i < ncap; i++)
+    if (r[worst_index]->isbetter(r[i]))
+      worst_index = i;
+  return worst_index;
+}
 
 #endif
