@@ -110,13 +110,13 @@ ODR_struct::~ODR_struct()
 {
   if (data!=NULL) free_AYd3tensor(data);
   if (specs!=NULL) free_AYdmatrix(specs);
-  if (rydat_loc!=NULL) delete rydat_loc;
-  if (rydat_dir!=NULL) delete rydat_dir;
-  if (proc_dir!=NULL) delete proc_dir;
-  if (file_name!=NULL) delete file_name;
-  if (filin_dir!=NULL) delete filin_dir;
-  if (in_buf!=NULL) delete in_buf;
-  if (out_buf!=NULL) delete out_buf;
+  if (rydat_loc!=NULL) delete [] rydat_loc;
+  if (rydat_dir!=NULL) delete [] rydat_dir;
+  if (proc_dir!=NULL) delete [] proc_dir;
+  if (file_name!=NULL) delete [] file_name;
+  if (filin_dir!=NULL) delete [] filin_dir;
+  if (in_buf!=NULL) delete [] in_buf;
+  if (out_buf!=NULL) delete [] out_buf;
 }
 
 void ODR_struct::set_dims()

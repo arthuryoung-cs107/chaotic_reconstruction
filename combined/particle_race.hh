@@ -48,6 +48,15 @@ struct record
 
   inline bool isworse(record * rcomp_)
   {return !(isbetter(rcomp_));}
+
+  inline double phi(int F_)
+  {return ((double) frscore)/((double) F_);}
+
+  inline double w(int F_, double lambda_)
+  {return exp(lambda_*((double) frscore)/((double) F_));}
+
+  inline double var(int F_, double var_)
+  {return var_*exp(-2.0*sqrt(var_)*((double) frscore)/((double)F_));}  
 };
 
 class runner : public swirl
@@ -96,7 +105,7 @@ struct referee
 
     bool alloc_flag=false;
 
-    referee(int nlead_=100, int npool_=1000, int param_len_=12, double dt_sim_=0.002, double gau_var_=0.01, double lambda_=10.0, double rs_fill_factor_=0.5, double rs_full_factor_=0.99): nlead(nlead_), npool(npool_), param_len(param_len_), dt_sim(dt_sim_), gau_var(gau_var_), lambda(lambda_), rs_fill_factor(rs_fill_factor_), rs_full_factor(rs_full_factor_) {}
+    referee(int nlead_=100, int npool_=1000, int param_len_=12, double dt_sim_=0.002, double gau_var_=0.01, double lambda_coeff_=1.0, double rs_fill_factor_=0.5, double rs_full_factor_=0.99): nlead(nlead_), npool(npool_), param_len(param_len_), dt_sim(dt_sim_), gau_var(gau_var_), lambda(lambda_coeff_*log(((double) 1e16-1)/((double) nlead-1))), rs_fill_factor(rs_fill_factor_), rs_full_factor(rs_full_factor_) {}
 
     referee(referee &ref_): nlead(ref_.nlead), npool(ref_.npool), param_len(ref_.param_len), dt_sim(ref_.dt_sim), gau_var(ref_.gau_var), lambda(ref_.lambda), rs_fill_factor(ref_.rs_fill_factor), rs_full_factor(ref_.rs_full_factor) {}
 
@@ -173,5 +182,6 @@ class race : public referee {
 };
 
 int find_worst(record ** r, int ncap);
+int find_best(record ** r, int ncap);
 
 #endif

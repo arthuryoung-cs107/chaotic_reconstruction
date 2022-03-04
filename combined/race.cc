@@ -4,13 +4,13 @@
 #include "omp.h"
 #endif
 
-race::race(referee &ref_,swirl_param &sp_min_,swirl_param &sp_max_,wall_list &wl_,double t_phys_, ODR_struct &odr_, int ic_index_): referee(ref_), sp_min(sp_min_), sp_max(sp_max_), t_phys(t_phys_), odr(odr_), ic_index(ic_index_), n(odr_.P), Frames(odr_.Frames), ts(new double[Frames]), xs(new double[2*n*Frames]), d_ang(new double[Frames]),
+race::race(referee &ref_,swirl_param &sp_min_,swirl_param &sp_max_,wall_list &wl_,double t_phys_, ODR_struct &odr_, int ic_index_): referee(ref_), sp_min(sp_min_), sp_max(sp_max_), t_phys(t_phys_), odr(odr_), ic_index(ic_index_), n(odr_.P), Frames(odr_.Frames), ts(new double[Frames]), xs(new double[2*n*Frames]), d_ang(new double[Frames]), wl(wl_),
 #ifdef _OPENMP
 nt(omp_get_max_threads()), // each thread is a runner
 #else
 nt(1), // only one runner
 #endif
-wl(wl_), pg(new proximity_grid*[nt]), rng(new AYrng*[nt]), runners(new runner*[nt])
+pg(new proximity_grid*[nt]), rng(new AYrng*[nt]), runners(new runner*[nt])
 {
   alloc_records();
   sample_weights = new double[nlead];
@@ -33,7 +33,19 @@ wl(wl_), pg(new proximity_grid*[nt]), rng(new AYrng*[nt]), runners(new runner*[n
 
 race::~race()
 {
-
+  delete [] ts;
+  delete [] xs;
+  delete [] d_ang;
+  delete [] sample_weights;
+  for (int i = 0; i < nt; i++)
+  {
+    delete pg[i];
+    delete rng[i];
+    delete runners[i];
+  }
+  delete [] pg;
+  delete [] rng;
+  delete [] runners;
 }
 
 void race::init_race()
@@ -146,7 +158,7 @@ void race::resample_pool()
 {
   double acc = 0.0;
   for (int i = 0; i < leader_count; i++)
-    acc += sample_weights[i] = exp(lambda*((double)(leaders[i]->frscore-Frames+1)));
+    acc += sample_weights[i] = leaders[i]->w(Frames, lambda);
 
   acc /= (leader_count<nlead)? rs_fill_factor:rs_full_factor;
 
@@ -172,7 +184,7 @@ void race::resample_pool()
             {
               /* should we be making this relative to the width of the gap?
               moreover, should we be scaling the gaussian variance by depth into the frames? */
-              pool_params[i][k] = leaders[j]->params[k] + r->rand_gau_gsl(0.0, gau_var)*(dmax[k]-dmin[k]);
+              pool_params[i][k] = leaders[j]->params[k] + r->rand_gau_gsl(0.0, leaders[j]->var(Frames, gau_var))*(dmax[k]-dmin[k]);
               if (pool_params[i][k] > dmax[k]) pool_params[i][k] = dmax[k];
               else if (pool_params[i][k] < dmin[k]) pool_params[i][k] = dmin[k];
             }

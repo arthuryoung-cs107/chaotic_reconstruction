@@ -11,8 +11,10 @@ int main() {
            d_phys=0.00635,               // Diameter (m)
            t_phys=sqrt(d_phys/g_phys);   // Time unit (s)
 
-    swirl_param sparam(0.5,1,1000,40,40,40,0.5,0.25,0.5,1.8,203,178,27.6,1.);
-    // swirl_param sparam(0.5,1,1000,40,40,40,0.5,0.25,0.5);
+    double sptrue_vals[] = {0.5,1.0,1000.0,40.0 ,40.0 ,40.0 ,0.5,0.25,0.5,1.8,203.0,178.0,27.6,1.0};
+
+    swirl_param sparam(sptrue_vals);
+
     // Create the hexagonal dish
     wall_list wl;
     const double r=5.72,fa=sqrt(0.75);
@@ -25,25 +27,16 @@ int main() {
 
     // Set the initial positions of the splines
     proximity_grid pg;
-    // swirl sw(sparam,&pg,wl,25);
     swirl sw(sparam,&pg,wl,3);
     sw.import("input_dir/input3.dat");
 
     // Solve the system
-    ODR_struct odr("./dat_dir/", "circ6_swrl.odr/", "pts");
-    odr.set_vidspecs(t_phys);
-    // sw.setup_output_dir("dat_dir/circ6.odr");
+    ODR_struct odr("./dat_dir/", "race_3beads.odr/", "pts");
+    odr.set_vidspecs(t_phys, sptrue_vals[11], sptrue_vals[12], sptrue_vals[13]);
     sw.setup_output_dir(&odr);
-    // dat_store dstore(t_phys,402,380,37.6);
-    // sw.dstore=&dstore;
 
     sw.solve(120,0.0005,1200);
 
     odr.end_writing();
     odr.print_time_rotation();
-
-    // dstore.write("synth25.dat");
-    // dstore.write("synth3.dat");
-    // dstore.print_theta_info();
-
 }

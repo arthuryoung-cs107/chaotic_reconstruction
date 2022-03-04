@@ -3,6 +3,23 @@ close all
 run AYfigprops.m
 fig_pos = AYfig.fig_pos_gen(2, 3);
 
+movie1 = AYfig(AYfig.specs_gen('playback', [fig_pos(5, 1:2), 500,500] ));
+
+race_name = 'race_3beads.odr/';
+
+ODR_name = race_name;
+dat_dir_name = '../dat_dir/';
+pov_dir = '../POV_AUXILIARY/';
+dat_name = 'pts';
+
+
+
+stat3.make_movieij(movie1, 1, stat3.I_best(1)+1);
+clear
+close all
+run AYfigprops.m
+fig_pos = AYfig.fig_pos_gen(2, 3);
+
 figs(1) = AYfig.figure(AYfig.specs_gen('position error vs frame', fig_pos(1, : )));
 xlabel('Frame', 'Interpreter', 'Latex', 'Fontsize', 14)
 ylabel('position error', 'Interpreter', 'Latex', 'Fontsize', 14)

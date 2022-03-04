@@ -9,9 +9,9 @@ referee::~referee()
 {
   if (alloc_flag)
   {
-    delete leader_board;
+    delete [] leader_board;
     for (int i = 0; i < 2*nlead; i++) delete leaders[i];
-    delete leaders;
+    delete [] leaders;
     free_AYdmatrix(lead_params);
   }
 }
@@ -64,6 +64,7 @@ void runner::run_race(double t_phys_, double dt_sim_, double *ts_, double *xs_, 
     double *f = xs_ + (2*n*(frame+1));
     advance(dur, ctheta, comega, dt_sim_);
     if (is_lost(f)) run_on = false;
+    // if the next frame is the final frame
     else if (++frame == Frames-1) run_on = false;
   } while(run_on);
 }
@@ -89,4 +90,13 @@ int find_worst(record ** r, int ncap)
     if (r[worst_index]->isbetter(r[i]))
       worst_index = i;
   return worst_index;
+}
+
+int find_best(record ** r, int ncap)
+{
+  int best_index = 0;
+  for (int i = 1; i < ncap; i++)
+    if (r[best_index]->isworse(r[i]))
+      best_index = i;
+  return best_index;
 }
