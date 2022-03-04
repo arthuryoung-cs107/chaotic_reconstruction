@@ -64,6 +64,16 @@ class swirl : public swirl_param {
         void output_state(FILE *fp);
         void accumulators(double *tdig);
         void jiggle(swirl_param &sp_min,swirl_param &sp_max,swirl_param &sp_rnd,gsl_rng *r,double v_pert,double omega_pert);
+
+    protected:
+      // we need this to be visible from runner.cc
+      inline void set_swirl(double ctheta_,double comega_)
+      {
+          ctheta=ctheta_;
+          comega=comega_;
+          set_dish_coords();
+      }
+
     private:
         /** A list of walls that make up the swirling dish. */
         wall_list &wl;
@@ -71,11 +81,6 @@ class swirl : public swirl_param {
         char *odir;
         /** A temporary buffer for assemble output filenames. */
         char *obuf;
-        inline void set_swirl(double ctheta_,double comega_) {
-            ctheta=ctheta_;
-            comega=comega_;
-            set_dish_coords();
-        }
         inline void update_swirl(double dt) {
             ctheta+=dt*comega;
             set_dish_coords();

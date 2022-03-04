@@ -17,7 +17,7 @@ hold on
 figs(3) = AYfig.figure(AYfig.specs_gen('position error vs parameter index', fig_pos(3, : )));
 xlabel('parameter index', 'Interpreter', 'Latex', 'Fontsize', 14)
 ylabel('position error', 'Interpreter', 'Latex', 'Fontsize', 14)
-set(gca, 'YScale', 'log')
+% set(gca, 'YScale', 'log')
 hold on
 
 figs(4) = AYfig.figure(AYfig.specs_gen('position error vs parameter error', fig_pos(4, : )));
@@ -31,8 +31,8 @@ movie1 = AYfig(AYfig.specs_gen('playback', [fig_pos(5, 1:2), 500,500] ));
 stat_name_maxmin = 'stat3_maxmin.odr/';
 stat_name_gauss = 'stat3_gauss.odr/';
 
-% stat_name = stat_name_gauss;
-stat_name = stat_name_maxmin;
+stat_name = stat_name_gauss;
+% stat_name = stat_name_maxmin;
 dat_dir_name = '../dat_dir/';
 pov_dir = '../POV_AUXILIARY/';
 dat_name = 'rand';

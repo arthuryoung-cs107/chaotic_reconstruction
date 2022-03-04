@@ -14,11 +14,15 @@ SWOBJS = p_grid.o swirl.o particle.o common.o swirl_io.o wall.o swirl_param.o da
 
 FIOBJS = filter_io.o filter.o
 
+RAOBJS = race.o particle_race.o race_io.o
+
 PTOBJS = $(RYOBJS) $(AYOBJS)
 
 STOBJS = $(SWOBJS) $(RYOBJS) $(AYOBJS)
 
 FTOBJS = $(FIOBJS) $(SWOBJS) $(RYOBJS) $(AYOBJS)
+
+RTOBJS = $(RAOBJS) $(SWOBJS) $(RYOBJS) $(AYOBJS)
 
 %.o:%.c
 	$(CC) $(CFLAGS) $(IDIR) -c $<
@@ -26,7 +30,7 @@ FTOBJS = $(FIOBJS) $(SWOBJS) $(RYOBJS) $(AYOBJS)
 %.o:%.cc
 	$(CXX) $(CFLAGS) $(IDIR) -c $<
 
-all: process_test swirl_test filter_test stat_test
+all: process_test swirl_test filter_test stat_test race_test
 
 process_test: process_test.cc $(PTOBJS)
 	$(CXX) $(CFLAGS) $(IDIR) -o $@ $^ $(LINK)
@@ -40,19 +44,21 @@ filter_test: filter_test.cc $(FTOBJS)
 stat_test: stat_test.cc $(STOBJS)
 	$(CXX) $(CFLAGS) $(IDIR) -o $@ $^ $(LINK)
 
+race_test: race_test.cc $(RTOBJS)
+	$(CXX) $(CFLAGS) $(IDIR) -o $@ $^ $(LINK)
+
 clean:
 	rm -f process_test
 	rm -f swirl_test
 	rm -f filter_test
 	rm -f stat_test
+	rm -f race_test
 	rm -f *.o
 clean_dat:
 	rm -f *.aysml
-	rm -f *.rysml
 	rm -f *.aydat
 clean_datdir:
 	rm -f ./dat_dir/*.aysml
-	rm -f ./dat_dir/*.rysml
 	rm -f ./dat_dir/*.aydat
 
 clean_all: clean clean_dat

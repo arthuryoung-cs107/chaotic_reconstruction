@@ -110,13 +110,13 @@ ODR_struct::~ODR_struct()
 {
   if (data!=NULL) free_AYd3tensor(data);
   if (specs!=NULL) free_AYdmatrix(specs);
-  if (rydat_loc!=NULL) delete rydat_loc;
-  if (rydat_dir!=NULL) delete rydat_dir;
-  if (proc_dir!=NULL) delete proc_dir;
-  if (file_name!=NULL) delete file_name;
-  if (filin_dir!=NULL) delete filin_dir;
-  if (in_buf!=NULL) delete in_buf;
-  if (out_buf!=NULL) delete out_buf;
+  if (rydat_loc!=NULL) delete [] rydat_loc;
+  if (rydat_dir!=NULL) delete [] rydat_dir;
+  if (proc_dir!=NULL) delete [] proc_dir;
+  if (file_name!=NULL) delete [] file_name;
+  if (filin_dir!=NULL) delete [] filin_dir;
+  if (in_buf!=NULL) delete [] in_buf;
+  if (out_buf!=NULL) delete [] out_buf;
 }
 
 void ODR_struct::set_dims()
@@ -315,7 +315,11 @@ void ODR_struct::read_filin(int offset_)
     fclose(inputs);
 
     x_tens.mat[0].print_mat();
-
   }
   else printf("ODR_struct: not staged for reading binary filter inputs\n");
+}
+
+void ODR_struct::stage_filout()
+{
+  
 }

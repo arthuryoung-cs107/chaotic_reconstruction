@@ -3,7 +3,7 @@
 #define _USE_MATH_DEFINES
 #include <cmath>
 
-#include "race.hh"
+#include "particle_race.hh"
 
 int main() {
     // Physical constants
@@ -11,22 +11,15 @@ int main() {
            d_phys=0.00635,               // Diameter (m)
            t_phys=sqrt(d_phys/g_phys);   // Time unit (s)
 
-    // Filter parameters
-    race rparam(0.002,0.1,1,0.01,0.01,0.012,3);
+    // double  sp_min_vals[] = {0.5,1.0,500.0 ,5.0  ,5.0  ,5.0  ,0.1,0.1 ,0.1,1.8,203.0,178.0,27.6,1.0},
+    //         sptrue_vals[] = {0.5,1.0,1000.0,40.0 ,40.0 ,40.0 ,0.5,0.25,0.5,1.8,203.0,178.0,27.6,1.0},
+    //         sp_max_vals[] = {0.5,1.0,5000.0,120.0,120.0,120.0,1.0,1.0 ,1.0,1.8,203.0,178.0,27.6,1.0};
+    double  sp_min_vals[] = {0.5,1.0,1000.0,40.0 ,40.0 ,40.0 ,0.5,0.25,0.5,1.8,203.0,178.0,27.6,1.0};
+    double  sptrue_vals[] = {0.5,1.0,1000.0,40.0 ,40.0 ,40.0 ,0.5,0.25,0.5,1.8,203.0,178.0,27.6,1.0};
+    double  sp_max_vals[] = {0.5,1.0,1000.0,40.0 ,40.0 ,40.0 ,0.5,0.25,0.5,1.8,203.0,178.0,27.6,1.0};
 
-    // Minimum and maximum parameters
-             //       (rad, mass, Kn  , gnb, gnf, gnw, mub, muf , muw, amp, cx , cy , cl  , sca)
-             // sp_min(0.5, 1   , 500 , 5  , 5  , 5  , 0.1, 0.1 , 0.1, 1.8, 402, 380, 37.6, 1  ) MIN
-             // sp_max(0.5, 1   , 5000, 120, 120, 120, 1.0, 1.0 , 1.0, 1.8, 402, 380, 37.6, 1  ) MAX
-             // sptrue(0.5, 1   , 1000, 40 , 40 , 40 , 0.5, 0.25, 0.5, 1.8, 203, 178, 27.6, 1.0) TRUE
-             //       ( c , c   , *   , *  , *  , *  , *  , *   , *  , c  , ?  , ?  , ?   , c  ) KEY
 
-    //original
-    swirl_param sp_min(0.5,1,500,5,5,5,0.1,0.1,0.1,1.8,402,380,37.6,1),
-                sp_max(0.5,1,5000,120,120,120,1.,1.,1.,1.8,402,380,37.6,1),
-                sp_rnd(sp_min,sp_max,0.005);
-    //true
-    swirl_param sptrue(0.5,1,1000,40,40,40,0.5,0.25,0.5,1.8,203,178,27.6,1.);
+    swirl_param sp_min(sp_min_vals), sp_max(sp_max_vals);
 
     // Create the hexagonal dish
     wall_list wl;
@@ -39,14 +32,23 @@ int main() {
     wl.add_wall(&wp1);
     wl.add_wall(&wp2);
 
-    ODR_struct odr("./dat_dir/circ6_swrl.odr/pts");
-    race prace(rparam,sp_min,sp_max,sp_rnd,wl,t_phys,&odr);
+    ODR_struct odr("./dat_dir/race_3beads.odr/pts");
+    referee ref(5, 10, 12, 0.002, 0.01, 1.0, 0.5, 0.5);
+    race prace(ref,sp_min,sp_max,wl,t_phys,&odr);
+    prace.init_race();
+    prace.start_race(1);
+    prace.make_best_swirl();
 
-    prace.setup_output_info(255,200);
 
-    // Solve the system
-    prace.init(65536);
-    prace.run(1200);
+    // ODR_struct odr("./dat_dir/race_3beads.odr/pts");
+    // referee ref(100, 1000, 12, 0.002, 0.01, 1.0, 0.5, 0.5);
+    // race prace(ref,sp_min,sp_max,wl,t_phys,&odr);
+    //
+    // // Solve the system
+    // prace.init_race();
+    // prace.start_race(1000);
+    //
+    // prace.make_best_swirl();
 
     return 0;
 }

@@ -47,13 +47,6 @@ classdef ODR_data < handle
     function load_filin(obj)
       obj.filin = filter_inputs([obj.dat_dir_name obj.exp_name obj.dat_name]);
     end
-    function verify_filin(obj)
-      t_phys = obj.filin.vidspecs(1);
-      cx_im = obj.filin.vidspecs(2);
-      cy_im = obj.filin.vidspecs(3);
-      cl_im = obj.filin.vidspecs(4);
-
-    end
     function err_vec = comp_pos_err(obj, oth)
       %% computes mean bead position error for each frame
       err_vec = zeros(1, obj.Frames-1); %% ignore first frame, assuming equivalent initial conditions
@@ -90,7 +83,7 @@ classdef ODR_data < handle
     end
     function make_movie_comp(obj, AYfig_in, oth)
       frames = obj.Frames;
-      % frames = 200;
+      % frames = 100;
 
       walld = 5.72;
       wallL = (2/sqrt(3))*walld;
@@ -122,6 +115,16 @@ classdef ODR_data < handle
         fprintf(id, '%g %g %g %g\n', obj.specs(i, :));
         fprintf(id, '%g %g %g %g %g %g %g\n', obj.data(:, :, i)');
         fclose(id);
+      end
+    end
+    function data_out = filpos2swpos(obj)
+      % data_in = obj.filin.pos;
+      data_in = obj.data(:, 1:2, :);
+      dims = size(data_in);
+      data_out = nan(dims);
+      for i=1:dims(3)
+        data_out(:, 1, i) = (data_in(:, 1, i)-obj.specs(i, 2))*obj.filin.cl_im + obj.filin.cx_im;
+        data_out(:, 2, i) = (data_in(:, 2, i)-obj.specs(i, 3))*obj.filin.cl_im + obj.filin.cy_im;
       end
     end
   end
