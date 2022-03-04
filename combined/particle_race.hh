@@ -56,7 +56,7 @@ struct record
   {return exp(lambda_*((double) frscore)/((double) F_));}
 
   inline double var(int F_, double var_)
-  {return var_*exp(-2.0*sqrt(var_)*((double) frscore)/((double)F_));}  
+  {return var_*exp(-2.0*sqrt(var_)*((double) frscore)/((double)F_));}
 };
 
 class runner : public swirl
@@ -147,9 +147,9 @@ class race : public referee {
         /** the data index we take to be the initial conditions of the experiment */
         const int ic_index;
 
-        ODR_struct odr;
+        ODR_struct * odr;
 
-        race(referee &rparam,swirl_param &sp_min_,swirl_param &sp_max_,wall_list &wl_,double t_phys_,ODR_struct &odr_,int ic_index_=0);
+        race(referee &rparam,swirl_param &sp_min_,swirl_param &sp_max_,wall_list &wl_,double t_phys_,ODR_struct * odr_,int ic_index_=0);
         ~race();
         void init_race();
         void start_race(int gen_max_, bool verbose_=true);

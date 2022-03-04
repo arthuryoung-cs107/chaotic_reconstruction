@@ -31,8 +31,7 @@ int main() {
 
     ODR_struct odr("./dat_dir/race_3beads.odr/pts");
     referee ref;
-    race prace(ref,sp_min,sp_max,wl,t_phys,odr);
-
+    race prace(ref,sp_min,sp_max,wl,t_phys,&odr);
     // prace.setup_output_info(255,200);
 
     // Solve the system

@@ -4,7 +4,7 @@
 #include "omp.h"
 #endif
 
-race::race(referee &ref_,swirl_param &sp_min_,swirl_param &sp_max_,wall_list &wl_,double t_phys_, ODR_struct &odr_, int ic_index_): referee(ref_), sp_min(sp_min_), sp_max(sp_max_), t_phys(t_phys_), odr(odr_), ic_index(ic_index_), n(odr_.P), Frames(odr_.Frames), ts(new double[Frames]), xs(new double[2*n*Frames]), d_ang(new double[Frames]), wl(wl_),
+race::race(referee &ref_,swirl_param &sp_min_,swirl_param &sp_max_,wall_list &wl_,double t_phys_, ODR_struct *odr_, int ic_index_): referee(ref_), sp_min(sp_min_), sp_max(sp_max_), t_phys(t_phys_), odr(odr_), ic_index(ic_index_), n(odr_->P), Frames(odr_->Frames), ts(new double[Frames]), xs(new double[2*n*Frames]), d_ang(new double[Frames]), wl(wl_),
 #ifdef _OPENMP
 nt(omp_get_max_threads()), // each thread is a runner
 #else
@@ -14,7 +14,7 @@ pg(new proximity_grid*[nt]), rng(new AYrng*[nt]), runners(new runner*[nt])
 {
   alloc_records();
   sample_weights = new double[nlead];
-  odr.load_filter(ts, xs, d_ang);
+  odr->load_filter(ts, xs, d_ang);
 
   double *x_ic = xs + 2*n*ic_index;
   double t_ic=ts[ic_index]/t_phys;
