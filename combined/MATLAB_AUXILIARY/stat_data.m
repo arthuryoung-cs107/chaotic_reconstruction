@@ -69,8 +69,8 @@ classdef stat_data < handle
       for i=1:obj.noise_len-1
         plot(1:obj.par_len, (obj.pars(:, 1)-obj.pars(:, i+1))./abs(obj.pars(:, 1)), ' -', 'Color', [base_color, 0.1], 'LineWidth', 1);
       end
-      plot(1:obj.par_len, (obj.pars(:, 1)-obj.pars(:, obj.I_best(1)))./abs(obj.pars(:, 1)), ' -', 'Color', [0 0 0], 'LineWidth', 1);
-      plot(1:obj.par_len, (obj.pars(:, 1)-obj.pars(:, obj.I_truest(1)))./abs(obj.pars(:, 1)), ' :', 'Color', [0 0 0], 'LineWidth', 1);
+      plot(1:obj.par_len, (obj.pars(:, 1)-obj.pars(:, obj.I_best(1)+1))./abs(obj.pars(:, 1)), ' -', 'Color', [0 0 0], 'LineWidth', 1);
+      plot(1:obj.par_len, (obj.pars(:, 1)-obj.pars(:, obj.I_truest(1)+1))./abs(obj.pars(:, 1)), ' :', 'Color', [0 0 0], 'LineWidth', 1);
     end
     function plot_param_index_error(obj, fig_in, base_color)
       figure(fig_in.Number)
