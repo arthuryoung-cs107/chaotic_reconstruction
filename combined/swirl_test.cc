@@ -29,6 +29,7 @@ int main() {
     proximity_grid pg;
     swirl sw(sparam,&pg,wl,3);
     sw.import("input_dir/input3.dat");
+    // sw.import("input_dir/input3_race.dat");
 
     // Solve the system
     ODR_struct odr("./dat_dir/", "race_3beads.odr/", "pts");

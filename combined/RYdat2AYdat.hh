@@ -45,6 +45,7 @@ class ODR_struct : public AYdata
         void print_time_rotation();
         void load_filter(double *ts_, double *xs_, double *d_ang_, int offset_=0);
         void read_filin(int offset_=0);
+        void stage_filout();        
       private:
         /** The time points of the snapshots. */
         std::vector<double> ts;

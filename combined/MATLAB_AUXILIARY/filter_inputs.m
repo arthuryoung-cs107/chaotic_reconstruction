@@ -7,6 +7,11 @@ classdef filter_inputs < handle
     pos;
     theta;
     vidspecs;
+
+    t_phys;
+    cx_im;
+    cy_im;
+    cl_im;
   end
 
   methods
@@ -23,6 +28,11 @@ classdef filter_inputs < handle
       obj.theta = (fread( id,[1, obj.fisml(4, 3)], 'float64=>float64'));
       obj.vidspecs = (fread( id,[1, obj.fisml(5, 3)], 'float64=>float64'));
       fclose(id);
+
+      obj.t_phys = obj.vidspecs(1);
+      obj.cx_im = obj.vidspecs(2);
+      obj.cy_im = obj.vidspecs(3);
+      obj.cl_im = obj.vidspecs(4);
     end
   end
 

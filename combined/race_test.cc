@@ -11,9 +11,12 @@ int main() {
            d_phys=0.00635,               // Diameter (m)
            t_phys=sqrt(d_phys/g_phys);   // Time unit (s)
 
-    double  sp_min_vals[] = {0.5,1.0,500.0 ,5.0  ,5.0  ,5.0  ,0.1,0.1 ,0.1,1.8,203.0,178.0,27.6,1.0},
-            sptrue_vals[] = {0.5,1.0,1000.0,40.0 ,40.0 ,40.0 ,0.5,0.25,0.5,1.8,203.0,178.0,27.6,1.0},
-            sp_max_vals[] = {0.5,1.0,5000.0,120.0,120.0,120.0,1.0,1.0 ,1.0,1.8,203.0,178.0,27.6,1.0};
+    // double  sp_min_vals[] = {0.5,1.0,500.0 ,5.0  ,5.0  ,5.0  ,0.1,0.1 ,0.1,1.8,203.0,178.0,27.6,1.0},
+    //         sptrue_vals[] = {0.5,1.0,1000.0,40.0 ,40.0 ,40.0 ,0.5,0.25,0.5,1.8,203.0,178.0,27.6,1.0},
+    //         sp_max_vals[] = {0.5,1.0,5000.0,120.0,120.0,120.0,1.0,1.0 ,1.0,1.8,203.0,178.0,27.6,1.0};
+    double  sp_min_vals[] = {0.5,1.0,1000.0,40.0 ,40.0 ,40.0 ,0.5,0.25,0.5,1.8,203.0,178.0,27.6,1.0};
+    double  sptrue_vals[] = {0.5,1.0,1000.0,40.0 ,40.0 ,40.0 ,0.5,0.25,0.5,1.8,203.0,178.0,27.6,1.0};
+    double  sp_max_vals[] = {0.5,1.0,1000.0,40.0 ,40.0 ,40.0 ,0.5,0.25,0.5,1.8,203.0,178.0,27.6,1.0};
 
 
     swirl_param sp_min(sp_min_vals), sp_max(sp_max_vals);
@@ -30,13 +33,22 @@ int main() {
     wl.add_wall(&wp2);
 
     ODR_struct odr("./dat_dir/race_3beads.odr/pts");
-    referee ref;
+    referee ref(5, 10, 12, 0.002, 0.01, 1.0, 0.5, 0.5);
     race prace(ref,sp_min,sp_max,wl,t_phys,&odr);
-    // prace.setup_output_info(255,200);
+    prace.init_race();
+    prace.start_race(1);
+    prace.make_best_swirl();
 
-    // Solve the system
-    // prace.init_race(65536);
-    // prace.run(1200);
+
+    // ODR_struct odr("./dat_dir/race_3beads.odr/pts");
+    // referee ref(100, 1000, 12, 0.002, 0.01, 1.0, 0.5, 0.5);
+    // race prace(ref,sp_min,sp_max,wl,t_phys,&odr);
+    //
+    // // Solve the system
+    // prace.init_race();
+    // prace.start_race(1000);
+    //
+    // prace.make_best_swirl();
 
     return 0;
 }

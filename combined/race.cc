@@ -15,9 +15,8 @@ pg(new proximity_grid*[nt]), rng(new AYrng*[nt]), runners(new runner*[nt])
   alloc_records();
   sample_weights = new double[nlead];
   odr->load_filter(ts, xs, d_ang);
-
   double *x_ic = xs + 2*n*ic_index;
-  double t_ic=ts[ic_index]/t_phys;
+  double t_ic=ts[ic_index];
   double comega_ic = d_ang[ic_index];
   // Set up each runner's personal data
 #pragma omp parallel
@@ -27,7 +26,7 @@ pg(new proximity_grid*[nt]), rng(new AYrng*[nt]), runners(new runner*[nt])
       rng[t]= new AYrng();
       rng[t]->rng_init_gsl(t+1);
       runners[t]=new runner(sp_min, pg[t], wl, n, t, param_len, Frames, sp_max.cl_im);
-      runners[t]->init_ics(x_ic, t_ic, comega_ic);
+      runners[t]->init_ics(t_phys, x_ic, t_ic, comega_ic);
   }
 }
 
@@ -74,6 +73,11 @@ void race::start_race(int gen_max_, bool verbose_)
   bool race_underway=true;
   do
   {
+    for (int i = 0; i < nt; i++)
+    {
+      runners[i]->reset_sim(pool_params[i]);
+      runners[i]->print_current_pos();
+    }
 #pragma omp parallel
     {
       runner *rt = runners[thread_num()];
@@ -81,10 +85,13 @@ void race::start_race(int gen_max_, bool verbose_)
       for (int i = 0; i < npool; i++)
       {
         rt->reset_sim(pool_params[i]);
-        rt->run_race(t_phys, dt_sim, ts, xs, d_ang);
+        rt->run_race(dt_sim, ts, xs, d_ang);
         pool[i]->check_success(rt->frame, rt->pos_err_acc, frscore_min, l2score_min);
       }
     }
+    printf("\n");
+    for (int i = 0; i < nt; i++) runners[i]->print_current_pos();
+    getchar();
     gen_count++;
     if (check_pool_results()) race_underway=false; // we win
     else if (gen_count == gen_max_) race_underway=false; // we give up
@@ -95,13 +102,17 @@ void race::start_race(int gen_max_, bool verbose_)
 
 bool race::check_pool_results()
 {
-  int pool_candidates = collect_pool_leaders();
+  pool_candidates = collect_pool_leaders();
   // if we now have a full leader roster
   if (leader_count + pool_candidates >= nlead)
   {
     // fill up remainder of leaders
-    for (int i = 0; i < (nlead-leader_count); i++)
-      leader_board[leader_count++] = pool_leaders[--pool_candidates];
+    for (int i = 0, gap = nlead-leader_count; i < gap; i++)
+    {
+      // leader_board[leader_count++] = pool_leaders[];
+      leader_board[leader_count] = leaders[leader_count];
+      leaders[leader_count++]->take_vals(pool_leaders[--pool_candidates], param_len);
+    }
 
     int worst_best = find_worst(leader_board, nlead);
 
@@ -117,7 +128,10 @@ bool race::check_pool_results()
 
     for (int i = 0; i < nlead; i++)
       if (leaders[i]->global_index != leader_board[i]->global_index)
+      {
         leaders[i]->take_vals(leader_board[i], param_len);
+        leader_board[i] = leaders[i];
+      }
   }
   // otherwise, we can just fill in the leaderboard
   else for (int i = 0; i < pool_candidates; i++)
@@ -126,9 +140,9 @@ bool race::check_pool_results()
     leaders[leader_count++]->take_vals(pool_leaders[i], param_len);
   }
 
-  for (int i = 0; i < nlead; i++)
-    if (leaders[i]->frscore == Frames - 1) return true;
-
+  int best = find_best(leaders, leader_count);
+  printf("generation %d processed (%d leaders). Best particle: (ID, frame score, l2 score) = (%d %d %e)\n", gen_count, leader_count, leaders[best]->global_index, leaders[best]->frscore, leaders[best]->l2score);
+  if (leaders[best]->frscore == Frames-1) return true;
   return false;
 }
 
@@ -138,7 +152,6 @@ int race::collect_pool_leaders()
   for (int i = 0; i < npool; i++)
     if (pool[i]->success)
       pool_leaders[pool_success_count++] = pool[i];
-
   if (pool_success_count > nlead) // if we have lots of good candidates
   {
     // we seek to pick the nlead best records for comparison.

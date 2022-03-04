@@ -13,8 +13,8 @@
 
 struct record
 {
-  int frscore;
-  int l2score;
+  int frscore=0;
+  double l2score=0.0;
   int global_index;
   bool success;
 
@@ -27,15 +27,15 @@ struct record
   inline void check_success(int frscore_, double l2score_, int frmin_, double l2min_)
   {
     frscore = frscore_; l2score = l2score_;
-    if (frscore>frmin_) success = false; // worse than worst leader run, by frame score
-    else if (frscore<frmin_) success = true; // better than best leader run, by frame score
+    if (frscore<frmin_) success = false; // worse than worst leader run, by frame score
+    else if (frscore>frmin_) success = true; // better than best leader run, by frame score
     else if (l2score<l2min_) success = true; // better than best leader run, by l2 error
     else success = false; // worse than worst leader run by l2 error
   }
   inline bool isbetter(record * rcomp_)
   {
-    if (frscore>rcomp_->frscore) return false;
-    else if (frscore<rcomp_->frscore) return true;
+    if (frscore<rcomp_->frscore) return false;
+    else if (frscore>rcomp_->frscore) return true;
     else if (l2score<rcomp_->l2score) return true;
     else return false;
   }
@@ -57,22 +57,31 @@ struct record
 
   inline double var(int F_, double var_)
   {return var_*exp(-2.0*sqrt(var_)*((double) frscore)/((double)F_));}
+
+  void print_record()
+  {
+    printf("record ID:%d, fr:%d, l2:%e, params: ", global_index, frscore, l2score);
+    for (int i = 0; i < 12; i++) printf("%e ", params[i]);
+  }
 };
 
 class runner : public swirl
 {
     public:
       const int thread_id, param_len, Frames;
-      double *pvals, *x0, t0, ctheta0, pos_err_acc, tol;
+      double *pvals, *x0, t0, ctheta0, pos_err_acc, tol, t_phys, t0_raw;
       int frame;
 
       runner(swirl_param &sp_, proximity_grid * pg_, wall_list &wl_, int n_, int thread_id_, int param_len_, int Frames_, double tol_);
       ~runner();
 
-      void init_ics(double *x0_, double t0_, double ctheta0_);
+      void init_ics(double t_phys_ , double *x0_, double t0_raw_, double ctheta0_);
       void reset_sim(double *ptest_);
-      void run_race(double t_phys_, double dt_sim_, double *ts_, double *xs_, double *d_ang_);
+      void run_race(double dt_sim_, double *ts_, double *xs_, double *d_ang_);
 
+      void print_raw_ics();
+      void print_params();
+      void print_current_pos(); 
     private:
       bool is_lost(double *f_);
 };
@@ -153,6 +162,8 @@ class race : public referee {
         ~race();
         void init_race();
         void start_race(int gen_max_, bool verbose_=true);
+
+        void make_best_swirl();
     private:
         /** The number of threads. */
         const int nt;
@@ -169,11 +180,20 @@ class race : public referee {
         runner ** runners;
         /** count of particles in current pool beating worst leader particles */
         int pool_success_count;
+        int pool_candidates;
 
         bool check_pool_results();
         void resample_pool();
         int collect_pool_leaders();
 
+        void print_pool_leaders();
+        void print_leaders();
+        void print_leader_candidates();
+        void print_best();
+        void print_worst_leader();
+        void print_reference_positions(int len_=10);
+        void print_pool_params();
+        void print_pool_records();
 #ifdef _OPENMP
         inline int thread_num() {return omp_get_thread_num();}
 #else

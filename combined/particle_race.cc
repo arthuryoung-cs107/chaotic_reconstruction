@@ -36,10 +36,10 @@ runner::runner(swirl_param &sp_, proximity_grid * pg_, wall_list &wl_, int n_, i
 runner::~runner()
 {delete x0;}
 
-void runner::init_ics(double *x0_, double t0_, double ctheta0_)
+void runner::init_ics(double t_phys_ , double *x0_, double t0_raw_, double ctheta0_)
 // sets the initial conditions that we will return to for each simulation startup
 {
-  t0=t0_, ctheta0=ctheta0_; // t0 is given normalized by t_phys
+  t_phys = t_phys_, t0_raw=t0_raw_, t0=t0_raw_/t_phys_, ctheta0=ctheta0_; // t0 is given normalized by t_phys
   for (int i=0; i < 2*n; i++) x0[i] = x0_[i]; // read directly from training data
 }
 
@@ -50,15 +50,16 @@ void runner::reset_sim(double *ptest_)
   time=t0;
   set_swirl(ctheta0, 0.0);
   for (int i=0,j=0; i < n; i++,j+=2) q[i].set_pos(((x0[j]-cx_im)/cl_im)+cx, ((x0[j+1]-cy_im)/cl_im)+cy, rad);
+  // set translational and angular vel here. Only the 6
 }
 
-void runner::run_race(double t_phys_, double dt_sim_, double *ts_, double *xs_, double *d_ang_)
+void runner::run_race(double dt_sim_, double *ts_, double *xs_, double *d_ang_)
 {
   bool run_on=true;
   frame = 0; pos_err_acc=0.0;
   do
   {
-    double dur=(ts_[frame+1]-ts_[frame])/t_phys_, ctheta=d_ang_[frame],comega=d_ang_[frame+1]-d_ang_[frame];
+    double dur=(ts_[frame+1]-ts_[frame])/t_phys, ctheta=d_ang_[frame],comega=d_ang_[frame+1]-d_ang_[frame];
     if(comega>M_PI) comega-=2*M_PI;else if(comega<-M_PI) comega+=2*M_PI;
     comega/=dur;
     double *f = xs_ + (2*n*(frame+1));

@@ -14,7 +14,7 @@ SWOBJS = p_grid.o swirl.o particle.o common.o swirl_io.o wall.o swirl_param.o da
 
 FIOBJS = filter_io.o filter.o
 
-RAOBJS = race.o particle_race.o
+RAOBJS = race.o particle_race.o race_io.o
 
 PTOBJS = $(RYOBJS) $(AYOBJS)
 

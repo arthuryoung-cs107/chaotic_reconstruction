@@ -315,7 +315,11 @@ void ODR_struct::read_filin(int offset_)
     fclose(inputs);
 
     x_tens.mat[0].print_mat();
-
   }
   else printf("ODR_struct: not staged for reading binary filter inputs\n");
+}
+
+void ODR_struct::stage_filout()
+{
+  
 }
