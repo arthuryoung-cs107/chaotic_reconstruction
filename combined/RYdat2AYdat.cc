@@ -11,8 +11,13 @@ extern "C"
   #include "AYaux.h"
 }
 
-ODR_struct::ODR_struct(char *rydat_loc_, char *rydat_dir_, char *file_name_, int Frames_): AYdata(Frames_, 2), rydat_loc(string_gen_pruned(rydat_loc_)), rydat_dir(string_gen_pruned(rydat_dir_)), file_name(string_gen_pruned(file_name_))
+void ODR_struct::init_process(char *rydat_loc_, char *rydat_dir_, char *file_name_, int Frames_)
 {
+    Frames=Frames_; depth=2; dims=AYimatrix(2, 3);
+    rydat_loc=string_gen_pruned(rydat_loc_);
+    rydat_dir=string_gen_pruned(rydat_dir_);
+    file_name=string_gen_pruned(file_name_);
+
     size_t in_buf_len = (size_t)(strlen(rydat_loc)+strlen(rydat_dir)+strlen(file_name) + 50);
     in_buf = new char[in_buf_len]; sprintf(in_buf, "%s%s%s", rydat_loc, rydat_dir, file_name);
     ibuf_end = strlen(in_buf);
@@ -68,8 +73,12 @@ ODR_struct::ODR_struct(char *rydat_loc_, char *rydat_dir_, char *file_name_, int
     }
 }
 
-ODR_struct::ODR_struct( char * proc_loc_, char * rydat_dir_, char * file_name_, bool write_split_flag_): AYdata(), rydat_dir(string_gen_pruned(rydat_dir_)), file_name(string_gen_pruned(file_name_)), write_split_flag(write_split_flag_)
+void ODR_struct::init_swirl( char * proc_loc_, char * rydat_dir_, char * file_name_, bool write_split_flag_)
 {
+  rydat_dir=string_gen_pruned(rydat_dir_);
+  file_name=string_gen_pruned(file_name_);
+  write_split_flag=write_split_flag_;
+
   size_t proc_len = (size_t)(strlen(proc_loc_)+strlen(rydat_dir)+1);
   proc_dir = new char[proc_len]; sprintf(proc_dir, "%s%s", proc_loc_, rydat_dir); mkdir(proc_dir, S_IRWXU);
 
@@ -83,11 +92,41 @@ ODR_struct::ODR_struct( char * proc_loc_, char * rydat_dir_, char * file_name_, 
     strcpy( out_buf+obuf_end, ".rydat");
     file_ptr = fopen(out_buf, "wb");
   }
-
 }
 
-ODR_struct::ODR_struct( char * filin_dir_): AYdata(), filin_dir(string_gen_pruned(filin_dir_)), reading_flag(true)
+void ODR_struct::init_filter( char * filin_dir_)
 {
+  filin_dir=string_gen_pruned(filin_dir_);
+  reading_flag=true;
+
+  size_t filin_dir_len = (size_t)(strlen(filin_dir) + 50);
+  in_buf = new char[filin_dir_len]; strcpy(in_buf, filin_dir);
+  ibuf_end = strlen(in_buf);
+
+  char * file_it = in_buf + ibuf_end;
+  sprintf(file_it, ".fisml");
+  int val1, val2, val3;
+  std::ifstream sml_stream; std::string line; sml_stream.open(in_buf);
+  std::getline(sml_stream, line); std::istringstream dimline0(line);
+  dimline0 >> val1 >> depth >> val3;
+  std::getline(sml_stream, line); std::istringstream dimline1(line);
+  dimline1 >> val1 >> val2 >> Frames;
+  std::getline(sml_stream, line); std::istringstream dimline2(line);
+  dimline2 >> val1 >> P >> val3;
+
+  sml_stream.close();
+}
+
+void ODR_struct::init_race( char * proc_loc_, char * rydat_dir_, char * file_name_)
+{
+  reading_flag=true;
+  rydat_dir=string_gen_pruned(rydat_dir_); file_name=string_gen_pruned(file_name_);
+  size_t len_loc = strlen(proc_loc_) + strlen(rydat_dir);
+  out_buf = new char[len_loc+100]; filin_dir= new char[len_loc+strlen(file_name)+1];
+
+  sprintf(out_buf, "%s%s", proc_loc_, rydat_dir_); obuf_end = strlen(out_buf);
+  sprintf(filin_dir, "%s%s%s", proc_loc_, rydat_dir_, file_name_);
+
   size_t filin_dir_len = (size_t)(strlen(filin_dir) + 50);
   in_buf = new char[filin_dir_len]; strcpy(in_buf, filin_dir);
   ibuf_end = strlen(in_buf);
@@ -254,13 +293,6 @@ void ODR_struct::end_writing(bool verbose_)
   writing_flag = false;
 }
 
-void ODR_struct::set_vidspecs(double t_phys_, double cx_im_, double cy_im_, double cl_im_)
-{
-  t_phys = t_phys_;
-  cx_im = cx_im_;
-  cy_im = cy_im_;
-  cl_im = cl_im_;
-}
 
 void ODR_struct::print_time_rotation()
 {for(int i=0;i<Frames;i++) printf("%f %f\n",ts[i],d_ang[i]);}
@@ -320,6 +352,22 @@ void ODR_struct::read_filin(int offset_)
 }
 
 void ODR_struct::stage_filout()
+{}
+
+ODR_struct * ODR_struct::spawn_swrlbest(char * name_)
 {
-  
+  ODR_struct * odr_out = new ODR_struct();
+  odr_out->init_swirl(out_buf, name_, file_name);
+  return odr_out;
+}
+
+void ODR_struct::write_sparam(swirl_param * sparam_, char * name_)
+{
+  AYvec out_vec(14);
+  out_vec.A_ptr[0] = sparam_->rad;
+  out_vec.A_ptr[1] = sparam_->mass;
+  // ignoring moment of inertia
+  double * pars = &(sparam_->Kn);
+  for (int i = 0; i < 12; i++) out_vec.A_ptr[i+2] = pars[i];
+  out_vec.fprintf_vec(name_);
 }

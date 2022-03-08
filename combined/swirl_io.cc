@@ -81,7 +81,17 @@ void swirl::import(const char* filename) {
     }
     fclose(fp);
 }
-
+void swirl::import_true(const char* filename) {
+    FILE *fp=fopen(filename,"r");
+    double icl=1./cl_im,x,y;
+    int id;
+    for(int i=0;i<n;i++) {
+        if(fscanf(fp,"%d %lf %lf\n",&id,&x,&y)!=3)
+            fatal_error("Can't read particle information\n",1);
+        q[i].set_pos(x,y,rad);
+    }
+    fclose(fp);
+}
 /** Saves the simulation parameters as single-precision doubleing point numbers
  * in binary format.
  * \param[in] fp the file hand to write to. */

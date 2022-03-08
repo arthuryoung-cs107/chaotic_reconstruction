@@ -24,13 +24,14 @@ struct record
   record(int i_): global_index(i_) {}
   ~record() {}
 
-  inline void check_success(int frscore_, double l2score_, int frmin_, double l2min_)
+  inline bool check_success(int frscore_, double l2score_, int frmin_, double l2min_)
   {
     frscore = frscore_; l2score = l2score_;
     if (frscore<frmin_) success = false; // worse than worst leader run, by frame score
     else if (frscore>frmin_) success = true; // better than best leader run, by frame score
     else if (l2score<l2min_) success = true; // better than best leader run, by l2 error
     else success = false; // worse than worst leader run by l2 error
+    return success;
   }
   inline bool isbetter(record * rcomp_)
   {
@@ -81,7 +82,7 @@ class runner : public swirl
 
       void print_raw_ics();
       void print_params();
-      void print_current_pos(); 
+      void print_current_pos();
     private:
       bool is_lost(double *f_);
 };
@@ -163,7 +164,9 @@ class race : public referee {
         void init_race();
         void start_race(int gen_max_, bool verbose_=true);
 
-        void make_best_swirl();
+        void make_best_swirl(char * name_);
+          void make_best_swirl(const char *name_)
+            {make_best_swirl((char*)name_);}
     private:
         /** The number of threads. */
         const int nt;

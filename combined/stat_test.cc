@@ -58,7 +58,7 @@ int main()
     }
 
     char proc_loc[] = "./dat_dir/";
-    #pragma omp parallel for
+#pragma omp parallel for schedule(dynamic)
       for (int i = 0; i < noise_len; i++)
       {
         char file_name[10]; sprintf(file_name, "rand.%d", i);
@@ -82,11 +82,12 @@ int main()
         // Set the initial positions of the splines
         proximity_grid pg;
         swirl sw(sparam,&pg,wl,3);
-        sw.import("input_dir/input3.dat");
+        sw.import_true("input_dir/input3_race.dat");
 
         // Solve the system
-        ODR_struct odr(proc_loc, rydat_dir, file_name, false);
-        odr.set_vidspecs(t_phys);
+        ODR_struct odr;
+        odr.init_swirl(proc_loc, rydat_dir, file_name, false);
+        odr.set_vidspecs(t_phys, sparam.cx_im, sparam.cy_im, sparam.cl_im);
         sw.setup_output_dir(&odr, false, false);
 
         sw.solve(120,0.0005,1200);

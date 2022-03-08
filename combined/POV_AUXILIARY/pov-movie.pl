@@ -9,7 +9,7 @@ getopts("de:hn:q:rs:vw");
 ## FOR ME: the usage is:
 ## ./pov-movie <switches> <odr directory w txt files> <file prefix> <1 or 2>
 ## make sure ffmpeg and povray are installed, make sure pov_headers is level with this
-## e.g. ./pov-movie -v circ6.odr pts 1 
+## e.g. ./pov-movie -v circ6.odr pts 1
 
 # Print help message if -h option is specified
 if($opt_h) {
@@ -73,88 +73,88 @@ while(<B>) {
 }
 close B;$gpn--;
 # Loop over the available frames
-while(-e "$dr/$ARGV[1].$a") {
-    # Assemble output filename and check for skipping/termination conditions
-    $fn=sprintf "fr_%04d.png",$a;
-    last if defined $opt_n && $a>$opt_n;
-    $a++,next if defined $opt_d && -e "$dr/$fn";
-
-    # Assemble the POV file
-    $tf="rtemp$h.pov";
-    open A,$opt_r?"| bzip2 -9 -c >$dr/$tf.bz2":">$dr/$tf" or die "Can't open temporary POV file\n";
-    open B,"$dr/$ARGV[1].$a" or die "Can't open data file\n";
-    ($t,$cx,$cy,$wall_sca)=split " ",<B>;
-    foreach $i (0..$gpn) {
-        $_=$gp[$i];
-        s/DISHX/$cx/g;
-        s/DISHY/$cy/g;
-        s/WALL_SCA/$wall_sca/g;
-
-        if(/^#include "sph\.pov"/) {
-            while(<B>) {
-                ($x,$y,$z,$q0,$q1,$q2,$q3)=split;
-                print A "sphere{<$x,$y,$z>,0.5}\n" unless $x eq "nan";
-            }
-        } elsif(/^#include "ref.pov"/) {
-            ($ef=$ARGV[1])=~s/^p/e/;
-            if(open C,"$dr/$ef.$a") {
-                <C>;
-                while(<C>) {
-                    ($x,$y,$z,$q0,$q1,$q2,$q3)=split;$z+=100;
-                    print A "sphere{<$x,$y,$z>,0.05}\n" unless $x eq "nan";
-                }
-                close C;
-            }
-        } elsif(/^#include "rsph\.pov"/) {
-            $q=$qq=0;
-            while(<B>) {
-                $q=1 if ++$q==45;
-                $qq+=4;
-                ($x,$y,$z,$q0,$q1,$q2,$q3)=split;
-                $rx=$rc*atan2(2*($q0*$q1+$q2*$q3),1-2*($q1*$q1+$q2*$q2));
-                $ry=$rc*asin(2*($q0*$q2-$q3*$q1));
-                $rz=$rc*atan2(2*($q0*$q3+$q1*$q2),1-2*($q2*$q2+$q3*$q3));
-                printf A "sphere{<0,0,0>,0.5 texture{T_Stone$q translate <$qq,0,0>} matrix<%.5g,%.5g,%.5g,%.5g,%.5g,%.5g,%.5g,%.5g,%.5g,$x,$y,$z>}\n",
-                    1-2*($q2*$q2+$q3*$q3),2*($q1*$q2+$q3*$q0),2*($q1*$q3-$q2*$q0),
-                    2*($q1*$q2-$q3*$q0),1-2*($q1*$q1+$q3*$q3),2*($q2*$q3+$q1*$q0),
-                    2*($q1*$q3+$q2*$q0),2*($q2*$q3-$q1*$q0),1-2*($q1*$q1+$q2*$q2) ## conversion of quaternion to rotation matrix
-                    unless $x eq "nan";
-            }
-        } else {
-            print A;
-        }
-    }
-    close A;
-    close B;
-
-    # Render the frame, forking jobs to remote processors if the "-r" option is
-    # given
-    $pov_cmd="nice -n 19 povray $tf -D +O$fn $pov_opts";
-    if($opt_r) {
-
-        # Send the POV-Ray file to a node for processing
-        $hst=$nlist[$h];
-        print "Frame $a to $hst\n";
-        exec "rsync -q $dr/$tf.bz2 $hst:$rdir; ".
-             "ssh $hst \"cd $rdir; bunzip2 -f $tf.bz2 ; $pov_cmd +WT$nthr[$h] \" $verb ; ".
-             "rsync -q $hst:$rdir/$fn $dr ; ssh $hst \"rm $rdir/$fn $rdir/$tf\" " if ($pid[$h]=fork)==0;
-
-        # Wait for one of the forked jobs to finish
-        if ($queue) {
-            $piddone=wait;$h=0;
-            $h++ while $piddone!=$pid[$h]&&$h<$nodes;
-            die "PID return error!\n" if $h>=$nodes;
-        } else {
-            $h++;$queue=1 if $h>=$nodes-1;
-        }
-    } else {
-
-        # Run POV-Ray locally
-        print "Frame $a\n";
-        die if system "cd $dr; $pov_cmd $verb";
-    }
-    $a+=$every;
-}
+# while(-e "$dr/$ARGV[1].$a") {
+#     # Assemble output filename and check for skipping/termination conditions
+#     $fn=sprintf "fr_%04d.png",$a;
+#     last if defined $opt_n && $a>$opt_n;
+#     $a++,next if defined $opt_d && -e "$dr/$fn";
+#
+#     # Assemble the POV file
+#     $tf="rtemp$h.pov";
+#     open A,$opt_r?"| bzip2 -9 -c >$dr/$tf.bz2":">$dr/$tf" or die "Can't open temporary POV file\n";
+#     open B,"$dr/$ARGV[1].$a" or die "Can't open data file\n";
+#     ($t,$cx,$cy,$wall_sca)=split " ",<B>;
+#     foreach $i (0..$gpn) {
+#         $_=$gp[$i];
+#         s/DISHX/$cx/g;
+#         s/DISHY/$cy/g;
+#         s/WALL_SCA/$wall_sca/g;
+#
+#         if(/^#include "sph\.pov"/) {
+#             while(<B>) {
+#                 ($x,$y,$z,$q0,$q1,$q2,$q3)=split;
+#                 print A "sphere{<$x,$y,$z>,0.5}\n" unless $x eq "nan";
+#             }
+#         } elsif(/^#include "ref.pov"/) {
+#             ($ef=$ARGV[1])=~s/^p/e/;
+#             if(open C,"$dr/$ef.$a") {
+#                 <C>;
+#                 while(<C>) {
+#                     ($x,$y,$z,$q0,$q1,$q2,$q3)=split;$z+=100;
+#                     print A "sphere{<$x,$y,$z>,0.05}\n" unless $x eq "nan";
+#                 }
+#                 close C;
+#             }
+#         } elsif(/^#include "rsph\.pov"/) {
+#             $q=$qq=0;
+#             while(<B>) {
+#                 $q=1 if ++$q==45;
+#                 $qq+=4;
+#                 ($x,$y,$z,$q0,$q1,$q2,$q3)=split;
+#                 $rx=$rc*atan2(2*($q0*$q1+$q2*$q3),1-2*($q1*$q1+$q2*$q2));
+#                 $ry=$rc*asin(2*($q0*$q2-$q3*$q1));
+#                 $rz=$rc*atan2(2*($q0*$q3+$q1*$q2),1-2*($q2*$q2+$q3*$q3));
+#                 printf A "sphere{<0,0,0>,0.5 texture{T_Stone$q translate <$qq,0,0>} matrix<%.5g,%.5g,%.5g,%.5g,%.5g,%.5g,%.5g,%.5g,%.5g,$x,$y,$z>}\n",
+#                     1-2*($q2*$q2+$q3*$q3),2*($q1*$q2+$q3*$q0),2*($q1*$q3-$q2*$q0),
+#                     2*($q1*$q2-$q3*$q0),1-2*($q1*$q1+$q3*$q3),2*($q2*$q3+$q1*$q0),
+#                     2*($q1*$q3+$q2*$q0),2*($q2*$q3-$q1*$q0),1-2*($q1*$q1+$q2*$q2) ## conversion of quaternion to rotation matrix
+#                     unless $x eq "nan";
+#             }
+#         } else {
+#             print A;
+#         }
+#     }
+#     close A;
+#     close B;
+#
+#     # Render the frame, forking jobs to remote processors if the "-r" option is
+#     # given
+#     $pov_cmd="nice -n 19 povray $tf -D +O$fn $pov_opts";
+#     if($opt_r) {
+#
+#         # Send the POV-Ray file to a node for processing
+#         $hst=$nlist[$h];
+#         print "Frame $a to $hst\n";
+#         exec "rsync -q $dr/$tf.bz2 $hst:$rdir; ".
+#              "ssh $hst \"cd $rdir; bunzip2 -f $tf.bz2 ; $pov_cmd +WT$nthr[$h] \" $verb ; ".
+#              "rsync -q $hst:$rdir/$fn $dr ; ssh $hst \"rm $rdir/$fn $rdir/$tf\" " if ($pid[$h]=fork)==0;
+#
+#         # Wait for one of the forked jobs to finish
+#         if ($queue) {
+#             $piddone=wait;$h=0;
+#             $h++ while $piddone!=$pid[$h]&&$h<$nodes;
+#             die "PID return error!\n" if $h>=$nodes;
+#         } else {
+#             $h++;$queue=1 if $h>=$nodes-1;
+#         }
+#     } else {
+#
+#         # Run POV-Ray locally
+#         print "Frame $a\n";
+#         die if system "cd $dr; $pov_cmd $verb";
+#     }
+#     $a+=$every;
+# }
 
 if($opt_r) {wait foreach 0..($queue?$nodes-1:$h);}
 

@@ -43,7 +43,8 @@ int main() {
     wl.add_wall(&wp1);
     wl.add_wall(&wp2);
 
-    ODR_struct odr("./dat_dir/circ6_swrl.odr/pts");
+    ODR_struct odr;
+    odr.init_filter("./dat_dir/circ6_swrl.odr/pts");
     filter fi(fparam,sp_min,sp_max,sp_rnd,wl,t_phys,&odr,0);
 
     fi.setup_output_info(255,200);

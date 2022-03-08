@@ -27,6 +27,7 @@ pg(new proximity_grid*[nt]), rng(new AYrng*[nt]), runners(new runner*[nt])
       rng[t]->rng_init_gsl(t+1);
       runners[t]=new runner(sp_min, pg[t], wl, n, t, param_len, Frames, sp_max.cl_im);
       runners[t]->init_ics(t_phys, x_ic, t_ic, comega_ic);
+      runners[t]->print_raw_ics();
   }
 }
 
@@ -73,26 +74,20 @@ void race::start_race(int gen_max_, bool verbose_)
   bool race_underway=true;
   do
   {
-    for (int i = 0; i < nt; i++)
-    {
-      runners[i]->reset_sim(pool_params[i]);
-      runners[i]->print_current_pos();
-    }
+    int success_local=0;
 #pragma omp parallel
     {
       runner *rt = runners[thread_num()];
-#pragma omp for
+#pragma omp for schedule(dynamic) reduction(+:success_local)
       for (int i = 0; i < npool; i++)
       {
         rt->reset_sim(pool_params[i]);
         rt->run_race(dt_sim, ts, xs, d_ang);
-        pool[i]->check_success(rt->frame, rt->pos_err_acc, frscore_min, l2score_min);
+        success_local+= (int) pool[i]->check_success(rt->frame, rt->pos_err_acc, frscore_min, l2score_min);
       }
     }
-    printf("\n");
-    for (int i = 0; i < nt; i++) runners[i]->print_current_pos();
-    getchar();
     gen_count++;
+    printf("generation %d run, %d candidates. Processing... ", gen_count, success_local);
     if (check_pool_results()) race_underway=false; // we win
     else if (gen_count == gen_max_) race_underway=false; // we give up
     else resample_pool(); // we try again
@@ -141,7 +136,7 @@ bool race::check_pool_results()
   }
 
   int best = find_best(leaders, leader_count);
-  printf("generation %d processed (%d leaders). Best particle: (ID, frame score, l2 score) = (%d %d %e)\n", gen_count, leader_count, leaders[best]->global_index, leaders[best]->frscore, leaders[best]->l2score);
+  printf("done. Best particle: (ID, frame score, l2 score) = (%d %d %e)\n", leaders[best]->global_index, leaders[best]->frscore, leaders[best]->l2score);
   if (leaders[best]->frscore == Frames-1) return true;
   return false;
 }

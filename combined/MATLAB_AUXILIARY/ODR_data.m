@@ -77,7 +77,7 @@ classdef ODR_data < handle
         hold(AYfig_in.ax, 'off');
         axis(AYfig_in.ax, lims);
         drawnow
-
+        % pause
         AYfig_in.movie_gen(i) = getframe(AYfig_in.ax);
       end
     end
@@ -148,13 +148,15 @@ classdef ODR_data < handle
       end
     end
     function data_out = filpos2swpos(obj)
-      % data_in = obj.filin.pos;
-      data_in = obj.data(:, 1:2, :);
+      data_in = obj.filin.pos;
+      % data_in = obj.data(:, 1:2, :);
       dims = size(data_in);
       data_out = nan(dims);
       for i=1:dims(3)
-        data_out(:, 1, i) = (data_in(:, 1, i)-obj.specs(i, 2))*obj.filin.cl_im + obj.filin.cx_im;
-        data_out(:, 2, i) = (data_in(:, 2, i)-obj.specs(i, 3))*obj.filin.cl_im + obj.filin.cy_im;
+        % data_out(:, 1, i) = (data_in(:, 1, i)-)*obj.filin.cl_im + obj.filin.cx_im;
+        % data_out(:, 2, i) = (data_in(:, 2, i)-)*obj.filin.cl_im + obj.filin.cy_im;
+        data_out(:, 1, i) = (data_in(:, 1, i)-obj.filin.cx_im)/obj.filin.cl_im + obj.specs(i, 2);
+        data_out(:, 2, i) = (data_in(:, 2, i)-obj.filin.cy_im)/obj.filin.cl_im + obj.specs(i, 3);
       end
     end
   end

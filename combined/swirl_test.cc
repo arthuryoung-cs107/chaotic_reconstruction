@@ -28,21 +28,22 @@ int main() {
 
     // Set the initial positions of the splines
     proximity_grid pg;
-    // swirl sw(sparam,&pg,wl,3);
+    swirl sw(sparam,&pg,wl,3);
     // swirl sw(sparam,&pg,wl,10);
-    swirl sw(sparam,&pg,wl,30);
+    // swirl sw(sparam,&pg,wl,30);
 
     // sw.import("input_dir/input3.dat");
-    // sw.import("input_dir/input3_race.dat");
     // sw.import("input_dir/input10.dat");
-    sw.import("input_dir/input30.dat");
+    // sw.import("input_dir/input30.dat");
+    sw.import_true("input_dir/input3_race.dat");
 
     // Solve the system
-    // ODR_struct odr("./dat_dir/", "race_3beads.odr/", "pts");
+    ODR_struct odr;
+    odr.init_swirl("./dat_dir/", "race_3beads.odr/", "pts");
     // ODR_struct odr("./dat_dir/", "race_10beads.odr/", "pts");
-    ODR_struct odr("./dat_dir/", "race2_30beads.odr/", "pts");
+    // ODR_struct odr("./dat_dir/", "race2_30beads.odr/", "pts");
 
-    odr.set_vidspecs(t_phys, sptrue_vals[11], sptrue_vals[12], sptrue_vals[13]);
+    odr.set_vidspecs(t_phys, sptrue_vals[10], sptrue_vals[11], sptrue_vals[12]);
     sw.setup_output_dir(&odr);
 
     sw.solve(120,0.0005,1200);

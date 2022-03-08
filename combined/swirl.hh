@@ -51,6 +51,7 @@ class swirl : public swirl_param {
         ~swirl();
         void copy(swirl &sw);
         void import(const char* filename);
+        void import_true(const char* filename);        
         void solve(double dur,double dt,int frames);
         void advance(double dur,double ctheta_,double comega_,double dt);
         void step_forward(double dt);

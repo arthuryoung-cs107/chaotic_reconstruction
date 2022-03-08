@@ -10,7 +10,8 @@ void process_circ6()
   char rydat_dir[] = "circ6.odr/";
   char proc_loc[] = "dat_dir/";
   char file_name[] = "pts";
-  ODR_struct circ6odr(rydat_loc, rydat_dir, file_name, 1201);
+  ODR_struct circ6odr;
+  circ6odr.init_process(rydat_loc, rydat_dir, file_name, 1201);
 
   circ6odr.prepare_datdir(proc_loc);
   circ6odr.fprintf_split();

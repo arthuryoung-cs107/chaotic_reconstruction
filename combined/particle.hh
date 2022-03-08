@@ -25,7 +25,7 @@ class particle {
         /** The new particle torque. */
         double ntx,nty,ntz;
         particle() : co(0), mem(particle_init_shear_records),
-            sj(new int[mem]), sr(new double[3*mem]) {}
+            sj(new int[mem]), sr(new double[3*mem]) {zero(); zero_rest();}
         ~particle() {
             delete [] sr;
             delete [] sj;
@@ -37,6 +37,10 @@ class particle {
         void purge_shear();
         inline void zero() {
             x=y=z=q0=q1=q2=q3=0;
+        }
+        inline void zero_rest()
+        {
+          vx=vy=vz=omegax=omegay=omegaz=ax=ay=az=tx=ty=tz=0.0;
         }
         inline void add(particle &p,double gw) {
             x+=gw*p.x;

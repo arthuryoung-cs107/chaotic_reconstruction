@@ -49,8 +49,11 @@ void runner::reset_sim(double *ptest_)
   for (int i = 0; i < param_len; i++) pvals[i] = ptest_[i];
   time=t0;
   set_swirl(ctheta0, 0.0);
-  for (int i=0,j=0; i < n; i++,j+=2) q[i].set_pos(((x0[j]-cx_im)/cl_im)+cx, ((x0[j+1]-cy_im)/cl_im)+cy, rad);
-  // set translational and angular vel here. Only the 6
+  for (int i=0,j=0; i < n; i++,j+=2)
+  {
+    q[i].set_pos(((x0[j]-cx_im)/cl_im)+cx, ((x0[j+1]-cy_im)/cl_im)+cy, rad);
+    q[i].zero_rest();
+  }
 }
 
 void runner::run_race(double dt_sim_, double *ts_, double *xs_, double *d_ang_)

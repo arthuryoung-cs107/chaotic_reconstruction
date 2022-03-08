@@ -3,6 +3,7 @@
 
 #include "AYlinalg.hh"
 #include "particle.hh"
+#include "swirl_param.hh"
 #include <vector>
 
 class ODR_struct : public AYdata
@@ -28,12 +29,17 @@ class ODR_struct : public AYdata
         double cy_im;
         /** The bead diameter in the images. */
         double cl_im;
-
-        ODR_struct(char *rydat_loc_, char *rydat_dir_, char *file_name_, int Frames_);
-        ODR_struct(char * proc_loc_, char * rydat_dir_, char * file_name_, bool write_split_flag_=true);
-          ODR_struct(const char * proc_loc_, const char * rydat_dir_, const char * file_name_, bool write_split_flag_=true): ODR_struct((char*)proc_loc_, (char*)rydat_dir_, (char*)file_name_, write_split_flag_) {}
-        ODR_struct(char * filin_dir_);
-          ODR_struct(const char * filin_dir_): ODR_struct((char*)filin_dir_) {}
+        ODR_struct(): AYdata() {}
+        void init_process(char *rydat_loc_, char *rydat_dir_, char *file_name_, int Frames_);
+        void init_swirl(char * proc_loc_, char * rydat_dir_, char * file_name_, bool write_split_flag_=true);
+          void init_swirl(const char * proc_loc_, const char * rydat_dir_, const char * file_name_, bool write_split_flag_=true)
+            {init_swirl((char*)proc_loc_,(char*)rydat_dir_,(char*)file_name_, write_split_flag_);}
+        void init_filter(char * filin_dir_);
+          void init_filter(const char * filin_dir_)
+            {init_filter((char*) filin_dir_);}
+        void init_race(char * proc_loc_, char * rydat_dir_, char * file_name_);
+          void init_race(const char *proc_loc_, const char *rydat_dir_, const char *file_name_)
+            {init_race((char*)proc_loc_,(char*)rydat_dir_,(char*)file_name_);}
         ~ODR_struct();
         void set_dims();
         void prepare_datdir(char name_[]);
@@ -41,11 +47,15 @@ class ODR_struct : public AYdata
         void write(int k_, double * specs_, particle * q_);
         void write(int k_, double * specs_, particle * q_, double ctheta_);
         void end_writing(bool verbose_=false);
-        void set_vidspecs(double t_phys_, double cx_im_=402.0, double cy_im_ = 380.0, double cl_im_= 37.6);
+        inline void set_vidspecs(double t_phys_, double cx_im_, double cy_im_, double cl_im_) {t_phys=t_phys_, cx_im=cx_im_, cy_im=cy_im_,cl_im=cl_im_;}
         void print_time_rotation();
         void load_filter(double *ts_, double *xs_, double *d_ang_, int offset_=0);
         void read_filin(int offset_=0);
-        void stage_filout();        
+        void stage_filout();
+        ODR_struct * spawn_swrlbest(char * name_);
+        void write_sparam(swirl_param * sparam_, char * name_);
+          void write_sparam(swirl_param * sparam_, const char * name_)
+            {write_sparam(sparam_,(char*)name_);}
       private:
         /** The time points of the snapshots. */
         std::vector<double> ts;

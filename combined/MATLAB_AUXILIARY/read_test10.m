@@ -17,9 +17,10 @@ dat_name = 'pts';
 odr = ODR_data(dat_dir_name, exp_name, dat_name);
 % odr.load_filin();
 
-odr.make_movie(movie1);
-movie1.play_movie(10, 60);
+odr.make_POVray_inputs(pov_dir, dat_name); 
 
+% odr.make_movie(movie1);
+% movie1.play_movie(10, 60);
 
 % swbest = ODR_data(dat_dir_name, racebest_name, dat_name);
 % odr.make_movie_comp(movie1, swbest);
