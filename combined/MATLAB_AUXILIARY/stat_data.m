@@ -93,6 +93,9 @@ classdef stat_data < handle
     function make_movieij(obj, AYfig_in, i, j)
       obj.sw(i).make_movie_comp(AYfig_in, obj.sw(j));
     end
+    function make_movieijk(obj, AYfig_in, i, j, k)
+      obj.sw(i).make_movie_comp2(AYfig_in, obj.sw(j), obj.sw(k));
+    end
     function make_POVray_inputsi(obj, i_, pov_dir_)
       obj.sw(i_).make_POVray_inputs(pov_dir_, obj.dat_name);
     end
