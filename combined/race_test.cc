@@ -34,21 +34,11 @@ int main() {
 
     ODR_struct odr;
     odr.init_race("./dat_dir/", "race_3beads.odr/", "pts");
-    referee ref(100, 1000, 12, 0.002, 0.01, 1.0, 0.5, 0.75);
+    referee ref(100, 500, 12, 0.002, 0.01, 1.0, 0.5, 0.75);
     race prace(ref,sp_min,sp_max,wl,t_phys,&odr);
     prace.init_race();
-    prace.start_race(1000);
+    prace.start_race(50);
     prace.make_best_swirl("swirl_best.odr/");
-
-    // ODR_struct odr("./dat_dir/race_3beads.odr/pts");
-    // referee ref(100, 1000, 12, 0.002, 0.01, 1.0, 0.5, 0.5);
-    // race prace(ref,sp_min,sp_max,wl,t_phys,&odr);
-    //
-    // // Solve the system
-    // prace.init_race();
-    // prace.start_race(1000);
-    //
-    // prace.make_best_swirl();
 
     return 0;
 }

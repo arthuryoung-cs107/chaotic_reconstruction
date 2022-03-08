@@ -85,8 +85,8 @@ classdef ODR_data < handle
       frames = obj.Frames;
       % frames = 100;
 
-      % walld = 5.72;
-      walld = 6;
+      walld = 5.72;
+      % walld = 6;
       wallL = (2/sqrt(3))*walld;
       wallv = [-wallL/2 -walld; -walld 0; -wallL/2 walld ; wallL/2 walld; walld 0; wallL/2 -walld; -wallL/2 -walld];
       AYfig_in.init_movie(frames);

@@ -14,6 +14,7 @@ pg(new proximity_grid*[nt]), rng(new AYrng*[nt]), runners(new runner*[nt])
 {
   alloc_records();
   sample_weights = new double[nlead];
+  dup_vec = new int[nlead];
   odr->load_filter(ts, xs, d_ang);
   double *x_ic = xs + 2*n*ic_index;
   double t_ic=ts[ic_index];
@@ -27,12 +28,13 @@ pg(new proximity_grid*[nt]), rng(new AYrng*[nt]), runners(new runner*[nt])
       rng[t]->rng_init_gsl(t+1);
       runners[t]=new runner(sp_min, pg[t], wl, n, t, param_len, Frames, sp_max.cl_im);
       runners[t]->init_ics(t_phys, x_ic, t_ic, comega_ic);
-      runners[t]->print_raw_ics();
   }
 }
 
 race::~race()
 {
+  delete [] dup_vec;
+
   delete [] ts;
   delete [] xs;
   delete [] d_ang;
@@ -87,12 +89,13 @@ void race::start_race(int gen_max_, bool verbose_)
       }
     }
     gen_count++;
-    printf("generation %d run, %d candidates. Processing... ", gen_count, success_local);
+    printf("generation %d run, %d candidates. ", gen_count, success_local);
     if (check_pool_results()) race_underway=false; // we win
     else if (gen_count == gen_max_) race_underway=false; // we give up
     else resample_pool(); // we try again
 
   } while (race_underway);
+  printf("\n");
 }
 
 bool race::check_pool_results()
@@ -136,7 +139,7 @@ bool race::check_pool_results()
   }
 
   int best = find_best(leaders, leader_count);
-  printf("done. Best particle: (ID, frame score, l2 score) = (%d %d %e)\n", leaders[best]->global_index, leaders[best]->frscore, leaders[best]->l2score);
+  printf("Best: (ID, frame score, l2 score) = (%d %d %e). ", leaders[best]->global_index, leaders[best]->frscore, leaders[best]->l2score);
   if (leaders[best]->frscore == Frames-1) return true;
   return false;
 }
@@ -170,12 +173,14 @@ void race::resample_pool()
 
   acc /= (leader_count<nlead)? rs_fill_factor:rs_full_factor;
 
-  for (int i = 0; i < leader_count; i++) sample_weights[i] /= acc;
+  for (int i = 0; i < leader_count; i++)
+    {sample_weights[i] /= acc; dup_vec[i] = 0;}
 
+  int dup_count=0, res_count=0;
   #pragma omp parallel
     {
       AYrng *r = rng[thread_num()];
-  #pragma omp for
+  #pragma omp for reduction(+:dup_count) reduction(+:res_count)
       for (int i = 0; i < npool; i++)
       {
         int j = 0;
@@ -187,7 +192,7 @@ void race::resample_pool()
           // resample the particle, add gaussian noise
           if (uni<0.0)
           {
-            j--;
+            j--; dup_count++; dup_vec[j]++;
             for (int k = 0; k < param_len; k++)
             {
               /* should we be making this relative to the width of the gap?
@@ -199,11 +204,14 @@ void race::resample_pool()
           }
           // we hit the resampling pool
           else for (int k = 0; k < param_len; k++)
-            pool_params[i][k] = dmin[k] + (dmax[k]- dmin[k])*(r->rand_uni_gsl(0.0, 1.0));
+            {pool_params[i][k] = dmin[k] + (dmax[k]- dmin[k])*(r->rand_uni_gsl(0.0, 1.0)); res_count++;}
         }
         // we currently have no leaders (particles worth resampling)
         else for (int k = 0; k < param_len; k++)
-          pool_params[i][k] = dmin[k] + (dmax[k]- dmin[k])*(r->rand_uni_gsl(0.0, 1.0));
+          {pool_params[i][k] = dmin[k] + (dmax[k]- dmin[k])*(r->rand_uni_gsl(0.0, 1.0)); res_count++;}
       }
     }
+    int dup_unique=0;
+    for (int i = 0; i < leader_count; i++) if (dup_vec[i]) dup_unique++;
+    printf("%d duplicates (%d unique), %d resamples\n", dup_count, dup_unique, res_count);
 }

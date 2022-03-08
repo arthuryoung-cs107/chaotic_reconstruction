@@ -117,6 +117,8 @@ void runner::print_params()
      runner0->solve(120,0.0005,1200);
 
      odr_swbest->end_writing();
+
+     delete odr_swbest; 
    }
    else
    {
