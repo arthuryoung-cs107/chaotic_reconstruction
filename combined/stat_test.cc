@@ -6,17 +6,19 @@
 
 #include "swirl.hh"
 
-char test[]="gauss";
+char test[]="maxmin";
 const int nbeads=3;
 const int ran_id=0;
 char proc_loc[] = "./dat_dir/";
 int main()
 {
     assert(nbeads<=30);
-    char rydat_dir[20]; sprintf(rydat_dir, "stat%d_%s%d.odr/", nbeads, test, ran_id);
+    char rydat_dir[30]; sprintf(rydat_dir, "stat%d_%s%d.odr/", nbeads, test, ran_id);
     int par_len = 14, noise_len = 100+1;
     double sp_min[14], sptrue[14], sp_max[14];
-    int idtrue=set_special_params("true", sptrue), idmin=set_special_params("min", sp_min), idmax=set_special_params("max", sp_max);
+    int idtrue=set_special_params("true", sptrue),
+        idmin=set_special_params("min", sp_min),
+        idmax=set_special_params("max", sp_max);
 
     AYvec sp_del(par_len);
     AYmat par_mat(par_len, noise_len); memcpy(par_mat.AT[0], sptrue, (size_t)(par_mat.M*sizeof(double)));

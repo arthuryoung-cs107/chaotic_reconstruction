@@ -2,18 +2,27 @@
 #include <sys/stat.h>
 #define _USE_MATH_DEFINES
 #include <cmath>
+#include <assert.h>
 
 #include "particle_race.hh"
 
-int main() {
+const int nbeads=3;
+const int param_id=0;
+char proc_loc[] = "./dat_dir/";
+int main()
+{
+  assert(nbeads<=30);
+  char rydat_dir[30]; sprintf(rydat_dir, "swirl%d.odr/", nbeads);
+  char file_name[10]; sprintf(file_name, "pts.%d", param_id);
+
     // Physical constants
     double g_phys=9.804,                 // Gravity (m/s^2)
            d_phys=0.00635,               // Diameter (m)
            t_phys=sqrt(d_phys/g_phys);   // Time unit (s)
 
-    double  sp_min_vals[] = {0.5,1.0,500.0 ,5.0  ,5.0  ,5.0  ,0.1,0.1 ,0.1,1.8,203.0,178.0,27.6,1.0},
-            sptrue_vals[] = {0.5,1.0,1000.0,40.0 ,40.0 ,40.0 ,0.5,0.25,0.5,1.8,203.0,178.0,27.6,1.0},
-            sp_max_vals[] = {0.5,1.0,5000.0,120.0,120.0,120.0,1.0,1.0 ,1.0,1.8,203.0,178.0,27.6,1.0};
+    double  sp_min_vals[14], sp_max_vals[14];
+    int idmin=set_special_params("min", sp_min_vals),
+    idmax=set_special_params("max", sp_max_vals);
 
     swirl_param sp_min(sp_min_vals), sp_max(sp_max_vals);
 
@@ -29,7 +38,7 @@ int main() {
     wl.add_wall(&wp2);
 
     ODR_struct odr;
-    odr.init_race("./dat_dir/", "race_3beads.odr/", "pts");
+    odr.init_race(proc_loc, rydat_dir, file_name);
     referee ref(100, 500, 12, 0.002, 0.01, 1.0, 0.5, 0.75);
     race prace(ref,sp_min,sp_max,wl,t_phys,&odr);
     prace.init_race();

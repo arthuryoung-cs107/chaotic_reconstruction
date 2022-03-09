@@ -30,7 +30,7 @@ movie1 = AYfig(AYfig.specs_gen('playback', [fig_pos(5, 1:2), 500,500] ));
 
 nbeads = 3;
 par_id = 0;
-test = 'gauss';
+test = 'maxmin';
 ran_id = 0;
 dat_dir_name = '../dat_dir/';
 pov_dir = '../POV_AUXILIARY/';

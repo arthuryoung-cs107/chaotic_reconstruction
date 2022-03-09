@@ -11,11 +11,11 @@ proc_name = '../dat_dir/';
 pov_dir = '../POV_AUXILIARY/';
 dat_name = 'pts';
 
-exp_name = ['swirl' num2str(nbeads) '.odr/']
-file_name = [dat_name '.' num2str(par_id)]
+exp_name = ['swirl' num2str(nbeads) '.odr/'];
+file_name = [dat_name '.' num2str(par_id)];
 
-sw3 = ODR_data(proc_name, exp_name, file_name);
-sw3.load_filin();
+sw = ODR_data(proc_name, exp_name, file_name);
+sw.load_filin();
 
-sw3.make_movie(movie1);
+sw.make_movie(movie1);
 movie1.play_movie(10, 30);

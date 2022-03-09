@@ -76,8 +76,6 @@ void race::start_race(int gen_max_, bool verbose_)
   bool race_underway=true;
   do
   {
-    for (int i = 0; i < nt; i++) runners[i]->print_reset_pos();
-    getchar();
     int success_local=0;
 #pragma omp parallel
     {
