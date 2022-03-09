@@ -41,6 +41,7 @@ class particle {
         inline void zero_rest()
         {
           vx=vy=vz=omegax=omegay=omegaz=ax=ay=az=tx=ty=tz=0.0;
+          co=0; 
         }
         inline void add(particle &p,double gw) {
             x+=gw*p.x;
