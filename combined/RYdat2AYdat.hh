@@ -6,6 +6,9 @@
 #include "swirl_param.hh"
 #include <vector>
 
+int set_special_params(int id_, double *vec_);
+int set_special_params(const char *id_, double *vec_);
+
 class ODR_struct : public AYdata
 {
     public:
@@ -51,7 +54,7 @@ class ODR_struct : public AYdata
         void print_time_rotation();
         void load_filter(double *ts_, double *xs_, double *d_ang_, int offset_=0);
         void read_filin(int offset_=0);
-        void stage_filout();
+        void stage_filout() {}
         ODR_struct * spawn_swrlbest(char * name_);
         void write_sparam(swirl_param * sparam_, char * name_);
           void write_sparam(swirl_param * sparam_, const char * name_)

@@ -112,13 +112,13 @@ void runner::print_params()
      // Solve the system
      ODR_struct * odr_swbest = odr->spawn_swrlbest(name_);
      odr_swbest->set_vidspecs(t_phys, runner0->cx_im, runner0->cy_im, runner0->cl_im);
-     runner0->setup_output_dir(odr_swbest);
+     runner0->setup_output_dir(odr_swbest, false, false);
 
      runner0->solve(120,0.0005,1200);
 
      odr_swbest->end_writing();
 
-     delete odr_swbest; 
+     delete odr_swbest;
    }
    else
    {

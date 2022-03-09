@@ -1,67 +1,48 @@
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <cmath>
+#include <assert.h>
 #include <omp.h>
 
 #include "swirl.hh"
 
-const int test = 2;
-
+char test[]="gauss";
+const int nbeads=3;
+const int ran_id=0;
+char proc_loc[] = "./dat_dir/";
 int main()
 {
+    assert(nbeads<=30);
+    char rydat_dir[20]; sprintf(rydat_dir, "stat%d_%s%d.odr/", nbeads, test, ran_id);
     int par_len = 14, noise_len = 100+1;
-    // indices         0   1   2      3     4     5     6   7    8   9   10    11    12   13
-    double sp_min[] = {0.5,1.0,500.0 ,5.0  ,5.0  ,5.0  ,0.1,0.1 ,0.1,1.8,203.0,178.0,27.6,1.0};
-    double sptrue[] = {0.5,1.0,1000.0,40.0 ,40.0 ,40.0 ,0.5,0.25,0.5,1.8,203.0,178.0,27.6,1.0};
-    double sp_max[] = {0.5,1.0,5000.0,120.0,120.0,120.0,1.0,1.0 ,1.0,1.8,203.0,178.0,27.6,1.0};
-    // double sp_min[] = {0.5,1.0,500.0 ,5.0  ,5.0  ,5.0  ,0.1,0.1 ,0.1,1.7,203.0,178.0,27.6,1.0};
-    // double sptrue[] = {0.5,1.0,1000.0,40.0 ,40.0 ,40.0 ,0.5,0.25,0.5,1.8,203.0,178.0,27.6,1.0};
-    // double sp_max[] = {0.5,1.0,5000.0,120.0,120.0,120.0,1.0,1.0 ,1.0,1.9,203.0,178.0,27.6,1.0};
+    double sp_min[14], sptrue[14], sp_max[14];
+    int idtrue=set_special_params("true", sptrue), idmin=set_special_params("min", sp_min), idmax=set_special_params("max", sp_max);
+
     AYvec sp_del(par_len);
     AYmat par_mat(par_len, noise_len); memcpy(par_mat.AT[0], sptrue, (size_t)(par_mat.M*sizeof(double)));
 
-    char rydat_dir[20];
-    switch(test)
-    {
-      case 1:
-      {
-        for (int i = 0; i < par_len; i++)
-        {
-          sp_del.A_ptr[i] = sp_max[i]-sptrue[i];
-          if ((sptrue[i]-sp_min[i]) < sp_del.A_ptr[i]) sp_del.A_ptr[i] = sptrue[i]-sp_min[i];
-        }
-        strcpy(rydat_dir, "stat3_maxmin.odr/");
-        AYuniform uni(-1.0, 1.0);
-        for (int i = 1; i < noise_len; i++) for (int j = 0; j < par_len; j++) par_mat.AT[i][j] = sptrue[j] + (sp_del.A_ptr[j]*uni.rand_gen());
-      }
-      break;
-      case 2:
-      {
-        sp_del.init_0();
-        for (int i = 2; i < 9; i++) sp_del.A_ptr[i] = fabs(sptrue[i]);
-        strcpy(rydat_dir, "stat3_gauss.odr/");
-        AYnormal norm(0.0, 1e-5);
-        for (int i = 1; i < noise_len; i++) for (int j = 0; j < par_len; j++) par_mat.AT[i][j] = sptrue[j] + (sp_del.A_ptr[j]*norm.rand_gen());
-      }
-      break;
-      default:
-      {
-        for (int i = 0; i < par_len; i++)
-        {
-          sp_del.A_ptr[i] = sp_max[i]-sptrue[i];
-          if ((sptrue[i]-sp_min[i]) < sp_del.A_ptr[i]) sp_del.A_ptr[i] = sptrue[i]-sp_min[i];
-        }
-        strcpy(rydat_dir, "stat3_maxmin.odr/");
-        AYuniform uni(-1.0, 1.0);
-        for (int i = 1; i < noise_len; i++) for (int j = 0; j < par_len; j++) par_mat.AT[i][j] = sptrue[j] + (sp_del.A_ptr[j]*uni.rand_gen());
-      }
-    }
+    for (int i = 0; i < par_len; i++)
+      sp_del.A_ptr[i] = sp_max[i]-sp_min[i];
 
-    char proc_loc[] = "./dat_dir/";
+    AYrng gen; gen.rng_init_gsl();
+
+    if (strcmp(test, "maxmin")==0)
+      for (int i = 1; i < noise_len; i++) for (int j = 0; j < par_len; j++)
+        par_mat.AT[i][j] = sp_min[j] + (sp_del.A_ptr[j]*gen.rand_uni_gsl(0.0, 1.0));
+    else if (strcmp(test, "gauss")==0)
+      for (int i = 1; i < noise_len; i++) for (int j = 0; j < par_len; j++)
+      {par_mat.AT[i][j] = sptrue[j]*gen.rand_gau_gsl(1.0,1e-4);
+        if (par_mat.AT[i][j] > sp_max[j]) par_mat.AT[i][j] = sp_max[j];
+        else if (par_mat.AT[i][j] < sp_min[j]) par_mat.AT[i][j] = sp_min[j];}
+    else
+      for (int i = 1; i < noise_len; i++) for (int j = 0; j < par_len; j++)
+        par_mat.AT[i][j] = sp_min[j] + (sp_del.A_ptr[j]*gen.rand_uni_gsl(0.0, 1.0));
+
 #pragma omp parallel for schedule(dynamic)
       for (int i = 0; i < noise_len; i++)
       {
         char file_name[10]; sprintf(file_name, "rand.%d", i);
+
         // Physical constants
         double g_phys=9.804,                 // Gravity (m/s^2)
                d_phys=0.00635,               // Diameter (m)
@@ -81,8 +62,8 @@ int main()
 
         // Set the initial positions of the splines
         proximity_grid pg;
-        swirl sw(sparam,&pg,wl,3);
-        sw.import_true("input_dir/input3_race.dat");
+        swirl sw(sparam,&pg,wl,nbeads);
+        sw.import("input_dir/input30.dat");
 
         // Solve the system
         ODR_struct odr;

@@ -10,6 +10,48 @@ extern "C"
 {
   #include "AYaux.h"
 }
+int set_special_params(int id_, double *vec_)
+{
+  int id;
+  switch(id_)
+  {
+    case 0:
+      {double p_use[]={0.5,1.0,1000.0,40.0 ,40.0 ,40.0 ,0.5,0.25,0.5,1.8,203.0,178.0,27.6,1.0};
+      for (int i = 0; i < 14; i++) vec_[i]=p_use[i];id=0;} break;
+    case 1: // min parameters
+      {double p_use[]={0.5,1.0,500.0 ,5.0  ,5.0  ,5.0  ,0.1,0.1 ,0.1,1.8,203.0,178.0,27.6,1.0};
+      for (int i = 0; i < 14; i++) vec_[i]=p_use[i];id=1;} break;
+    case 2: // max parameters
+      {double p_use[]={0.5,1.0,5000.0,120.0,120.0,120.0,1.0,1.0 ,1.0,1.8,203.0,178.0,27.6,1.0};
+      for (int i = 0; i < 14; i++) vec_[i]=p_use[i];id=2;} break;
+    case 3: // perturbed parameters
+      {double p_use[]={0.5,1.0,900.0,35.0 ,45.0 ,40.0 ,0.4,0.20,0.4,1.8,203.0,178.0,27.6,1.0};
+      for (int i = 0; i < 14; i++) vec_[i]=p_use[i];id=3;} break;
+    default: // initial swirl parameters from Rycroft
+      {double p_use[]={0.5,1.0,1000.0,40.0 ,40.0 ,40.0 ,0.5,0.25,0.5,1.8,203.0,178.0,27.6,1.0};
+      for (int i = 0; i < 14; i++) vec_[i]=p_use[i];id=0;}
+  }
+  return id;
+}
+
+int set_special_params(const char *id_, double *vec_)
+{
+  if (strcmp(id_, "true")==0)
+    {double p_use[]={0.5,1.0,1000.0,40.0 ,40.0 ,40.0 ,0.5,0.25,0.5,1.8,203.0,178.0,27.6,1.0};
+    for (int i = 0; i < 14; i++) vec_[i]=p_use[i];return 0;}
+  else if (strcmp(id_, "min")==0)
+    {double p_use[]={0.5,1.0,500.0 ,5.0  ,5.0  ,5.0  ,0.1,0.1 ,0.1,1.8,203.0,178.0,27.6,1.0};
+    for (int i = 0; i < 14; i++) vec_[i]=p_use[i];return 1;}
+  else if (strcmp(id_, "max")==0)
+    {double p_use[]={0.5,1.0,5000.0,120.0,120.0,120.0,1.0,1.0 ,1.0,1.8,203.0,178.0,27.6,1.0};
+    for (int i = 0; i < 14; i++) vec_[i]=p_use[i];return 2;}
+  else if (strcmp(id_, "pert")==0)
+    {double p_use[]={0.5,1.0,900.0,35.0 ,45.0 ,40.0 ,0.4,0.20,0.4,1.8,203.0,178.0,27.6,1.0};
+    for (int i = 0; i < 14; i++) vec_[i]=p_use[i];return 3;}
+  else // default to true values
+    {double p_use[]={0.5,1.0,1000.0,40.0 ,40.0 ,40.0 ,0.5,0.25,0.5,1.8,203.0,178.0,27.6,1.0};
+    for (int i = 0; i < 14; i++) vec_[i]=p_use[i];return 0;}
+}
 
 void ODR_struct::init_process(char *rydat_loc_, char *rydat_dir_, char *file_name_, int Frames_)
 {
@@ -199,49 +241,30 @@ void ODR_struct::prepare_datdir(char *proc_loc_)
 
 void ODR_struct::write(int k_, double * specs_vec_, particle * q_)
 {
-  char * file_it = out_buf + obuf_end;
-
+  char * file_it = out_buf + obuf_end; sprintf(file_it, ".%d.aydat", k_);
   if (writing_flag)
   {
-    if (write_split_flag)
+    FILE * data_out = (!write_split_flag)? file_ptr : fopen(out_buf, "wb");
+    fwrite(specs_vec_, sizeof(double), (size_t)len_specs, data_out);
+    for (int i = 0; i < P; i++)
     {
-      sprintf(file_it, ".%d.aydat", k_);
-      FILE * data_out = fopen(out_buf, "wb");
-      fwrite(specs_vec_, sizeof(double), (size_t)len_specs, data_out);
-      for (int i = 0; i < P; i++)
-      {
-        q_[i].normalize_q();
-        double data_vector[] = {q_[i].x, q_[i].y, q_[i].z, q_[i].q0, q_[i].q1, q_[i].q2, q_[i].q3};
-        fwrite(data_vector, sizeof(double), (size_t)len_dat, data_out);
-      }
-      fclose(data_out);
+      q_[i].normalize_q();
+      double data_vector[] = {q_[i].x, q_[i].y, q_[i].z, q_[i].q0, q_[i].q1, q_[i].q2, q_[i].q3};
+      fwrite(data_vector, sizeof(double), (size_t)len_dat, data_out);
     }
-    else
-    {
-      fwrite(specs_vec_, sizeof(double), (size_t)len_specs, file_ptr);
-      for (int i = 0; i < P; i++)
-      {
-        q_[i].normalize_q();
-        double data_vector[] = {q_[i].x, q_[i].y, q_[i].z, q_[i].q0, q_[i].q1, q_[i].q2, q_[i].q3};
-        fwrite(data_vector, sizeof(double), (size_t)len_dat, file_ptr);
-      }
-    }
+    if (write_split_flag) fclose(data_out);
     Frames++;
   }
 }
 
 void ODR_struct::write(int k_, double * specs_vec_, particle * q_, double ctheta_)
 {
-  char * file_it = out_buf + obuf_end;
-
+  char * file_it = out_buf + obuf_end; sprintf(file_it, ".%d.aydat", k_);
   if (writing_flag)
   {
-    sprintf(file_it, ".%d.aydat", k_);
-    FILE * data_out = fopen(out_buf, "wb");
+    FILE * data_out = (!write_split_flag)? file_ptr : fopen(out_buf, "wb");
     fwrite(specs_vec_, sizeof(double), (size_t)len_specs, data_out);
-
     double cx_loc = specs_vec_[1]; double cy_loc = specs_vec_[2];
-
     for (int i = 0; i < P; i++)
     {
       q_[i].normalize_q();
@@ -250,10 +273,9 @@ void ODR_struct::write(int k_, double * specs_vec_, particle * q_, double ctheta
       xs.push_back(cx_im+cl_im*(q_[i].x-cx_loc));
       xs.push_back(cy_im+cl_im*(q_[i].y-cy_loc));
     }
-    fclose(data_out);
+    if (write_split_flag) fclose(data_out);
     ts.push_back(specs_vec_[0]*t_phys);
     d_ang.push_back(ctheta_);
-
     Frames++;
   }
 }
@@ -351,13 +373,10 @@ void ODR_struct::read_filin(int offset_)
   else printf("ODR_struct: not staged for reading binary filter inputs\n");
 }
 
-void ODR_struct::stage_filout()
-{}
-
 ODR_struct * ODR_struct::spawn_swrlbest(char * name_)
 {
   ODR_struct * odr_out = new ODR_struct();
-  odr_out->init_swirl(out_buf, name_, file_name);
+  odr_out->init_swirl(out_buf, name_, file_name, false);
   return odr_out;
 }
 

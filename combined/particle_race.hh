@@ -83,6 +83,7 @@ class runner : public swirl
       void print_raw_ics();
       void print_params();
       void print_current_pos();
+      void print_reset_pos() {reset_sim(pvals); print_current_pos();}
     private:
       bool is_lost(double *f_);
 };
@@ -112,7 +113,7 @@ struct referee
 
     // memory chunks to store parameters associated with particles
     double **pool_params, **lead_params, *sample_weights;
-    int * dup_vec; 
+    int * dup_vec;
 
     bool alloc_flag=false;
 
