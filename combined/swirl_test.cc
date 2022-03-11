@@ -5,7 +5,7 @@
 
 #include "swirl.hh"
 
-const int nbeads=3;
+const int nbeads=5;
 const int param_id=0;
 const bool write_split = false;
 char proc_loc[] = "./dat_dir/";
@@ -46,10 +46,9 @@ int main()
     odr.init_swirl(proc_loc, rydat_dir, file_name, write_split);
 
     odr.set_vidspecs(t_phys, sparam.cx_im, sparam.cy_im, sparam.cl_im);
-    sw.setup_output_dir(&odr);
+    sw.setup_output_dir(&odr, true, true);
 
     sw.solve(120,0.0005,1200);
 
     odr.end_writing();
-    odr.print_time_rotation();
 }

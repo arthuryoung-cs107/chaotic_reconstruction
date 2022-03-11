@@ -53,6 +53,9 @@ classdef stat_data < handle
       [obj.pos_err_best, obj.I_best ] = mink(obj.pos_err_sum, obj.noise_len-1);
       obj.par_cov = (abs(obj.par_err)).*(obj.pos_err_sum)';
     end
+    function swout = spawn_swrlindex(obj, id_)
+      swout = ODR_data(obj.dat_dir_name, obj.exp_name, [obj.dat_name '.' num2str(i)]);
+    end
     function plot_frame_error(obj, fig_in, base_color)
       mean_err = mean(obj.pos_err);
       Frames = length(mean_err)+1;

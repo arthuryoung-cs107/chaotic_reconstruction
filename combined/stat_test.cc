@@ -6,7 +6,7 @@
 
 #include "swirl.hh"
 
-char test[]="maxmin";
+char test[]="gauss";
 const int nbeads=3;
 const int ran_id=0;
 char proc_loc[] = "./dat_dir/";

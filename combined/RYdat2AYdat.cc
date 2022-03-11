@@ -16,6 +16,8 @@ int set_special_params(int id_, double *vec_)
   switch(id_)
   {
     case 0:
+                  /*   0   1   2      3     4     5     6   7    8   9   10    11    12    13
+                      {rad,m  ,Kn    ,gb   ,gf   ,gw   ,mb ,mf  ,mw ,ds ,cx_im,cy_im,cl_im,wallsca} */
       {double p_use[]={0.5,1.0,1000.0,40.0 ,40.0 ,40.0 ,0.5,0.25,0.5,1.8,203.0,178.0,27.6,1.0};
       for (int i = 0; i < 14; i++) vec_[i]=p_use[i];id=0;} break;
     case 1: // min parameters
@@ -46,6 +48,9 @@ int set_special_params(const char *id_, double *vec_)
     {double p_use[]={0.5,1.0,5000.0,120.0,120.0,120.0,1.0,1.0 ,1.0,1.8,203.0,178.0,27.6,1.0};
     for (int i = 0; i < 14; i++) vec_[i]=p_use[i];return 2;}
   else if (strcmp(id_, "pert")==0)
+    {double p_use[]={0.5,1.0,900.0,35.0 ,45.0 ,40.0 ,0.4,0.20,0.4,1.8,203.0,178.0,27.6,1.0};
+    for (int i = 0; i < 14; i++) vec_[i]=p_use[i];return 3;}
+  else if (strcmp(id_, "stiff")==0)
     {double p_use[]={0.5,1.0,900.0,35.0 ,45.0 ,40.0 ,0.4,0.20,0.4,1.8,203.0,178.0,27.6,1.0};
     for (int i = 0; i < 14; i++) vec_[i]=p_use[i];return 3;}
   else // default to true values
@@ -388,5 +393,6 @@ void ODR_struct::write_sparam(swirl_param * sparam_, char * name_)
   // ignoring moment of inertia
   double * pars = &(sparam_->Kn);
   for (int i = 0; i < 12; i++) out_vec.A_ptr[i+2] = pars[i];
-  out_vec.fprintf_vec(name_);
+  strcpy(out_buf+obuf_end, name_);
+  out_vec.fprintf_vec(out_buf);
 }

@@ -113,7 +113,7 @@ struct referee
 
     // memory chunks to store parameters associated with particles
     double **pool_params, **lead_params, *sample_weights;
-    int * dup_vec;
+    int *dup_vec, **dup_mat;
 
     bool alloc_flag=false;
 
