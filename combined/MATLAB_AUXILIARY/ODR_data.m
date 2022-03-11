@@ -48,6 +48,12 @@ classdef ODR_data < handle
     function load_filin(obj)
       obj.filin = filter_inputs([obj.dat_dir_name obj.exp_name obj.dat_name]);
     end
+    function gen_out = read_geni(obj, gen_count_)
+      gen_out = generation(obj.dat_dir_name, obj.exp_name, obj.dat_name, gen_count_);
+    end
+    function gen_out = read_race_data(obj)
+      gen_out = race_data(obj.dat_dir_name, obj.exp_name, obj.dat_name);
+    end
     function err_vec = comp_pos_err(obj, oth)
       %% computes mean bead position error for each frame
       err_vec = zeros(1, obj.Frames-1); %% ignore first frame, assuming equivalent initial conditions

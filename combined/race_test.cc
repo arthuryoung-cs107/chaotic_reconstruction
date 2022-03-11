@@ -37,12 +37,12 @@ int main()
     wl.add_wall(&wp1);
     wl.add_wall(&wp2);
 
-    ODR_struct odr;
-    odr.init_race(proc_loc, rydat_dir, file_name);
-    referee ref(100, 500, 12, 0.002, 1e-2, 1e-3, 1.0, 0.5, 0.9);
-    race prace(ref,sp_min,sp_max,wl,t_phys,&odr);
+    reporter rep;
+    rep.init_race(proc_loc, rydat_dir, file_name);
+    referee ref(100, 1000, 12, 0.002, 1e-2, 1e-3, 1.0, 0.5, 0.8);
+    race prace(ref,sp_min,sp_max,wl,t_phys,&rep);
     prace.init_race();
-    prace.start_race(100);
+    prace.start_race(50);
     prace.make_best_swirl("swirl_best.odr/");
 
     return 0;

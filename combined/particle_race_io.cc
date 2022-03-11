@@ -1,5 +1,15 @@
 #include "particle_race.hh"
 
+void race::stage_diagnostics()
+{
+  odr->nlead = nlead;
+  odr->npool = npool;
+  odr->len = param_len;
+  odr->dup_vec = dup_vec;
+  odr->leaders = leaders;
+  odr->staged_flag = true;
+}
+
 void race::print_pool_leaders()
 {
   for (int i = 0; i < pool_success_count; i++)
@@ -109,7 +119,7 @@ void runner::print_params()
      runner0->reset_sim(sbest);
 
      // Solve the system
-     ODR_struct * odr_swbest = odr->spawn_swrlbest(name_);
+     ODR_struct * odr_swbest = odr->spawn_swirlODR(name_);
      odr_swbest->set_vidspecs(t_phys, runner0->cx_im, runner0->cy_im, runner0->cl_im);
      runner0->setup_output_dir(odr_swbest, false, false);
      odr_swbest->write_sparam(runner0, ".sparam_best");

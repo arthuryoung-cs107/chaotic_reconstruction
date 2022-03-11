@@ -11,7 +11,8 @@ ran_id = 0;
 
 sw = read_swirl(nbeads, par_id);
 sb = sw.spawn_best();
-stat = read_stat(nbeads, 'gauss', ran_id);
+race = sw.read_race_data();
+stat = read_stat(nbeads, 'maxmin', ran_id);
 stat_best = stat.sw(stat.I_best(1)+1);
 stat_true = stat.sw(stat.I_truest(1)+1);
 

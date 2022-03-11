@@ -40,9 +40,6 @@ class ODR_struct : public AYdata
         void init_filter(char * filin_dir_);
           void init_filter(const char * filin_dir_)
             {init_filter((char*) filin_dir_);}
-        void init_race(char * proc_loc_, char * rydat_dir_, char * file_name_);
-          void init_race(const char *proc_loc_, const char *rydat_dir_, const char *file_name_)
-            {init_race((char*)proc_loc_,(char*)rydat_dir_,(char*)file_name_);}
         ~ODR_struct();
         void set_dims();
         void prepare_datdir(char name_[]);
@@ -55,7 +52,6 @@ class ODR_struct : public AYdata
         void load_filter(double *ts_, double *xs_, double *d_ang_, int offset_=0);
         void read_filin(int offset_=0);
         void stage_filout() {}
-        ODR_struct * spawn_swrlbest(char * name_);
         void write_sparam(swirl_param * sparam_, char * name_);
           void write_sparam(swirl_param * sparam_, const char * name_)
             {write_sparam(sparam_,(char*)name_);}

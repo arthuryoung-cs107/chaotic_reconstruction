@@ -13,16 +13,47 @@
 
 struct record
 {
-  int frscore=0;
-  double l2score=0.0;
-  int global_index;
   bool success;
+  int len;
+  int Frames;
+
+  int global_index;
+  int frscore;
+  int gen; // generation in which this particle was generated
+  int parent_gen; // generation this particle comes from
+  int parent_count; // number of particle ancestors
+
+  double l2score;
+  double gau_h;
+  double gau_lambda;
 
   double * params;
 
   record() {}
   record(int i_): global_index(i_) {}
   ~record() {}
+
+  void init(double * params_, int len_, int Frames_, double gau_h_, double gau_lambda_)
+  {frscore=0; l2score=0.0; gen=0; parent_gen=0; parent_count=0;
+    params=params_; len=len_; Frames=Frames_; gau_h=gau_h_; gau_lambda=gau_lambda_;}
+
+  void resample(int gen_, double * dmin_, double *dmax_, AYrng * r_)
+  {
+    gen = gen_; parent_gen = 0; parent_count = 0;
+    for (int i = 0; i < len; i++)
+      params[i] = dmin_[i]+(dmax_[i]-dmin_[i])*(r_->rand_uni_gsl(0.0,1.0));
+  }
+
+  void duplicate(record *parent_, int gen_, double *dmin_, double *dmax_, AYrng * r_)
+  {
+    gen=gen_; parent_gen=parent_->gen; parent_count=parent_->parent_count+1;
+    for (int i = 0; i < len; i++)
+    {
+      params[i] = parent_->params[i]*(r_->rand_gau_gsl(1.0, parent_->var()));
+      if (params[i] > dmax_[i]) params[i]=dmax_[i];
+      else if (params[i] < dmin_[i]) params[i]=dmin_[i];
+    }
+  }
 
   inline bool check_success(int frscore_, double l2score_, int frmin_, double l2min_)
   {
@@ -41,10 +72,11 @@ struct record
     else return false;
   }
 
-  void take_vals(record * rtake_, int len_ )
+  void take_vals(record * rtake_)
   {
     frscore = rtake_->frscore; l2score = rtake_->l2score;
-    for (int i = 0; i < len_; i++) params[i] = rtake_->params[i];
+    gen=rtake_->gen; parent_gen=rtake_->parent_gen; parent_count=rtake_->parent_count;
+    for (int i = 0; i < len; i++) params[i] = rtake_->params[i];
   }
 
   inline bool isworse(record * rcomp_)
@@ -56,8 +88,8 @@ struct record
   inline double w(int F_, double lambda_)
   {return exp(lambda_*((double) frscore)/((double) F_));}
 
-  inline double var(int F_, double var_, double lambda_)
-  {return var_*exp(-2.0*lambda_*((double) frscore)/((double)F_));}
+  inline double var()
+  {return gau_h*exp(-2.0*gau_lambda*((double) frscore)/((double)Frames));}
 
   void print_record()
   {
@@ -129,7 +161,29 @@ struct referee
     void alloc_records();
 };
 
-class race : public referee {
+class reporter : public ODR_struct
+{
+  public:
+    bool staged_flag = false;
+    int nlead, npool, len;
+
+    int * dup_vec;
+
+    record ** leaders;
+
+    reporter(): ODR_struct() {}
+    ~reporter() {}
+    void init_race(char * proc_loc_, char * rydat_dir_, char * file_name_);
+      void init_race(const char *proc_loc_, const char *rydat_dir_, const char *file_name_)
+        {init_race((char*)proc_loc_,(char*)rydat_dir_,(char*)file_name_);}
+    void write_gen_diagnostics(int gen_count_, int leader_count_, int worst_leader_, int best_leader_);
+    void close_diagnostics(int gen_count_, int leader_count_, int worst_leader_, int best_leader_);
+    ODR_struct * spawn_swirlODR(char *name_);
+
+};
+
+class race : public referee
+{
     public:
         /** The minimum parameters. */
         swirl_param sp_min;
@@ -158,13 +212,17 @@ class race : public referee {
         int frscore_min;
         /** error score associated w/ poorest particle on leaderboard  */
         double l2score_min;
+        /** frame score associated w/ best particle on leaderboard  */
+        int frscore_best;
+        /** error score associated w/ best particle on leaderboard  */
+        double l2score_best;
 
         /** the data index we take to be the initial conditions of the experiment */
         const int ic_index;
 
-        ODR_struct * odr;
+        reporter * odr;
 
-        race(referee &rparam,swirl_param &sp_min_,swirl_param &sp_max_,wall_list &wl_,double t_phys_,ODR_struct * odr_,int ic_index_=0);
+        race(referee &rparam,swirl_param &sp_min_,swirl_param &sp_max_,wall_list &wl_,double t_phys_,reporter * odr_,int ic_index_=0);
         ~race();
         void init_race();
         void start_race(int gen_max_, bool verbose_=true);
@@ -175,8 +233,6 @@ class race : public referee {
     private:
         /** The number of threads. */
         const int nt;
-        /** The array AYuniform generators. */
-        AYuniform * uni;
         /** A reference to the list of walls for the swirling simulation. */
         wall_list &wl;
         /** The array of random number generators. */
@@ -191,6 +247,11 @@ class race : public referee {
         /** count of particles in current pool beating worst leader particles */
         int pool_success_count;
         int pool_candidates;
+        int best_leader, worst_leader;
+
+        bool debugging_flag=true;
+
+        void stage_diagnostics();
 
         bool check_pool_results();
         void resample_pool();

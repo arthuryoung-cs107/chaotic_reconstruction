@@ -164,34 +164,6 @@ void ODR_struct::init_filter( char * filin_dir_)
   sml_stream.close();
 }
 
-void ODR_struct::init_race( char * proc_loc_, char * rydat_dir_, char * file_name_)
-{
-  reading_flag=true;
-  rydat_dir=string_gen_pruned(rydat_dir_); file_name=string_gen_pruned(file_name_);
-  size_t len_loc = strlen(proc_loc_) + strlen(rydat_dir);
-  out_buf = new char[len_loc+100]; filin_dir= new char[len_loc+strlen(file_name)+1];
-
-  sprintf(out_buf, "%s%s", proc_loc_, rydat_dir_); obuf_end = strlen(out_buf);
-  sprintf(filin_dir, "%s%s%s", proc_loc_, rydat_dir_, file_name_);
-
-  size_t filin_dir_len = (size_t)(strlen(filin_dir) + 50);
-  in_buf = new char[filin_dir_len]; strcpy(in_buf, filin_dir);
-  ibuf_end = strlen(in_buf);
-
-  char * file_it = in_buf + ibuf_end;
-  sprintf(file_it, ".fisml");
-  int val1, val2, val3;
-  std::ifstream sml_stream; std::string line; sml_stream.open(in_buf);
-  std::getline(sml_stream, line); std::istringstream dimline0(line);
-  dimline0 >> val1 >> depth >> val3;
-  std::getline(sml_stream, line); std::istringstream dimline1(line);
-  dimline1 >> val1 >> val2 >> Frames;
-  std::getline(sml_stream, line); std::istringstream dimline2(line);
-  dimline2 >> val1 >> P >> val3;
-
-  sml_stream.close();
-}
-
 ODR_struct::~ODR_struct()
 {
   if (data!=NULL) free_AYd3tensor(data);
@@ -376,13 +348,6 @@ void ODR_struct::read_filin(int offset_)
     x_tens.mat[0].print_mat();
   }
   else printf("ODR_struct: not staged for reading binary filter inputs\n");
-}
-
-ODR_struct * ODR_struct::spawn_swrlbest(char * name_)
-{
-  ODR_struct * odr_out = new ODR_struct();
-  odr_out->init_swirl(out_buf, name_, file_name, false);
-  return odr_out;
 }
 
 void ODR_struct::write_sparam(swirl_param * sparam_, char * name_)

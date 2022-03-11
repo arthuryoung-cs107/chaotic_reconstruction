@@ -9,7 +9,7 @@ extern "C"
   #include "AYaux.h"
 }
 
-race::race(referee &ref_,swirl_param &sp_min_,swirl_param &sp_max_,wall_list &wl_,double t_phys_, ODR_struct *odr_, int ic_index_): referee(ref_), sp_min(sp_min_), sp_max(sp_max_), t_phys(t_phys_), odr(odr_), ic_index(ic_index_), n(odr_->P), Frames(odr_->Frames), ts(new double[Frames]), xs(new double[2*n*Frames]), d_ang(new double[Frames]), wl(wl_),
+race::race(referee &ref_,swirl_param &sp_min_,swirl_param &sp_max_,wall_list &wl_,double t_phys_, reporter *odr_, int ic_index_): referee(ref_), sp_min(sp_min_), sp_max(sp_max_), t_phys(t_phys_), odr(odr_), ic_index(ic_index_), n(odr_->P), Frames(odr_->Frames), ts(new double[Frames]), xs(new double[2*n*Frames]), d_ang(new double[Frames]), wl(wl_),
 #ifdef _OPENMP
 nt(omp_get_max_threads()), // each thread is a runner
 #else
@@ -60,6 +60,8 @@ race::~race()
 void race::init_race()
 {
 // initialize the pool of testing particles
+  leader_count=gen_count=0;
+  frscore_min=1; l2score_min=DBL_MAX;
 #pragma omp parallel
   {
     AYrng *r = rng[thread_num()];
@@ -67,19 +69,18 @@ void race::init_race()
     for (int i = 0; i < npool; i++)
     {
       double *dmin=&sp_min.Kn, *dmax=&sp_max.Kn;
-      for (int j = 0; j < param_len; j++) pool_params[i][j] = dmin[j] + (dmax[j]- dmin[j])*(r->rand_uni_gsl(0.0, 1.0));
-      pool[i]->params = pool_params[i];
+      pool[i]->params=pool_params[i];
+      pool[i]->init(pool_params[i], param_len, Frames, gau_var_high, gau_lambda);
+      pool[i]->resample(gen_count, dmin, dmax, r);
     }
   }
-
-  for (int i = 0; i < nlead; i++) leaders[i]->params = lead_params[i];
-
-  leader_count=gen_count=0;
-  frscore_min=1; l2score_min=DBL_MAX;
+  for (int i = 0; i < nlead; i++)
+    leaders[i]->init(lead_params[i], param_len, Frames, gau_var_high, gau_lambda);
 }
 
 void race::start_race(int gen_max_, bool verbose_)
 {
+  if (debugging_flag) stage_diagnostics();
   bool race_underway=true;
   do
   {
@@ -96,12 +97,13 @@ void race::start_race(int gen_max_, bool verbose_)
       }
     }
     gen_count++;
-    printf("generation %d run, %d candidates. ", gen_count, success_local);
+    printf("gen %d: %d candidates. ", gen_count, success_local);
     if (check_pool_results()) race_underway=false; // we win
     else if (gen_count == gen_max_) race_underway=false; // we give up
     else resample_pool(); // we try again
-
+    if (debugging_flag) odr->write_gen_diagnostics(gen_count, leader_count, worst_leader, best_leader);
   } while (race_underway);
+  if (debugging_flag) odr->close_diagnostics(gen_count, leader_count, worst_leader, best_leader);
   printf("\n");
 }
 
@@ -115,7 +117,7 @@ bool race::check_pool_results()
     for (int i = 0, gap = nlead-leader_count; i < gap; i++)
     {
       leader_board[leader_count] = leaders[leader_count];
-      leaders[leader_count++]->take_vals(pool_leaders[--pool_candidates], param_len);
+      leaders[leader_count++]->take_vals(pool_leaders[--pool_candidates]);
     }
 
     int worst_best = find_worst(leader_board, nlead);
@@ -127,13 +129,14 @@ bool race::check_pool_results()
         worst_best = find_worst(leader_board, nlead);
       }
 
+    worst_leader = worst_best; // this will be the worst leader
     frscore_min = leader_board[worst_best]->frscore;
     l2score_min = leader_board[worst_best]->l2score;
 
     for (int i = 0; i < nlead; i++)
       if (leaders[i]->global_index != leader_board[i]->global_index)
       {
-        leaders[i]->take_vals(leader_board[i], param_len);
+        leaders[i]->take_vals(leader_board[i]);
         leader_board[i] = leaders[i];
       }
   }
@@ -141,12 +144,14 @@ bool race::check_pool_results()
   else for (int i = 0; i < pool_candidates; i++)
   {
     leader_board[leader_count] = leaders[leader_count];
-    leaders[leader_count++]->take_vals(pool_leaders[i], param_len);
+    leaders[leader_count++]->take_vals(pool_leaders[i]);
   }
 
-  int best = find_best(leaders, leader_count);
-  printf("Best: (ID, frame score, l2 score) = (%d %d %e). ", leaders[best]->global_index, leaders[best]->frscore, leaders[best]->l2score);
-  if (leaders[best]->frscore == Frames-1) return true;
+  best_leader = find_best(leaders, leader_count);
+  l2score_best = leaders[best_leader]->l2score;
+  frscore_best = leaders[best_leader]->frscore;
+  printf("Best: (ID, gen, parents, frsc, l2sc) = (%d %d %d %d %e). ", best_leader, leaders[best_leader]->gen, leaders[best_leader]->parent_count, frscore_best, l2score_best);
+  if (frscore_best == Frames-1) return true;
   return false;
 }
 
@@ -200,27 +205,15 @@ void race::resample_pool()
         {
           // resample the particle, add gaussian noise
           if (uni<0.0)
-          {
-            dup_count++; dup_t[--j]++;
-            for (int k = 0; k < param_len; k++)
-            {
-              /* should we be making this relative to the width of the gap?
-              moreover, should we be scaling the gaussian variance by depth into the frames? */
-              pool_params[i][k] = (leaders[j]->params[k])*(r->rand_gau_gsl(1.0, leaders[j]->var(Frames, gau_var_low, gau_lambda)));
-              if (pool_params[i][k] > dmax[k]) pool_params[i][k] = dmax[k];
-              else if (pool_params[i][k] < dmin[k]) pool_params[i][k] = dmin[k];
-            }
-          }
+          {dup_count++; dup_t[--j]++; pool[i]->duplicate(leaders[j], gen_count, dmin, dmax,r);}
           // we hit the resampling pool
           else
-            {res_count++; for (int k = 0; k < param_len; k++)
-              pool_params[i][k] = dmin[k] + (dmax[k]- dmin[k])*(r->rand_uni_gsl(0.0, 1.0));}
+            {res_count++; pool[i]->resample(gen_count, dmin, dmax, r);}
 
         }
         // we currently have no leaders (particles worth resampling)
         else
-          {res_count++; for (int k = 0; k < param_len; k++)
-            pool_params[i][k] = dmin[k] + (dmax[k]- dmin[k])*(r->rand_uni_gsl(0.0, 1.0));}
+          {res_count++; pool[i]->resample(gen_count, dmin, dmax, r);}
       }
     }
     for (int i = 0; i < nt; i++) for (int j = 0; j < leader_count; j++)
