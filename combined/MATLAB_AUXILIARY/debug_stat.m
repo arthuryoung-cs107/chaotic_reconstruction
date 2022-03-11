@@ -29,22 +29,13 @@ hold on
 movie1 = AYfig(AYfig.specs_gen('playback', [fig_pos(5, 1:2), 500,500] ));
 
 nbeads = 3;
-par_id = 0;
-test = 'maxmin';
+test = 'gauss';
 ran_id = 0;
-dat_dir_name = '../dat_dir/';
-pov_dir = '../POV_AUXILIARY/';
-dat_name = 'rand';
 
-exp_name = ['stat', num2str(nbeads), '_' test num2str(ran_id) '.odr/'];
-
-stat = stat_data(dat_dir_name, exp_name, dat_name, 0);
+stat = read_stat(nbeads, test, ran_id);
 stat.plot_frame_error(figs(1), blue5);
 stat.plot_param_error(figs(2), green4);
 stat.plot_param_index_error(figs(3), orange1)
 stat.plot_param_pos_error(figs(4), red5);
 
 stat.make_movieijk(movie1, 1, stat.I_best(1)+1, stat.I_truest(1)+1);
-% movie1.play_movie(10, 45)
-
-% stat3.make_POVray_inputsi(1, pov_dir);

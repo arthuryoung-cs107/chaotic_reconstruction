@@ -114,7 +114,6 @@ bool race::check_pool_results()
     // fill up remainder of leaders
     for (int i = 0, gap = nlead-leader_count; i < gap; i++)
     {
-      // leader_board[leader_count++] = pool_leaders[];
       leader_board[leader_count] = leaders[leader_count];
       leaders[leader_count++]->take_vals(pool_leaders[--pool_candidates], param_len);
     }
@@ -207,7 +206,7 @@ void race::resample_pool()
             {
               /* should we be making this relative to the width of the gap?
               moreover, should we be scaling the gaussian variance by depth into the frames? */
-              pool_params[i][k] = (leaders[j]->params[k])*(r->rand_gau_gsl(1.0, leaders[j]->var(Frames, gau_var)));
+              pool_params[i][k] = (leaders[j]->params[k])*(r->rand_gau_gsl(1.0, leaders[j]->var(Frames, gau_var_low, gau_lambda)));
               if (pool_params[i][k] > dmax[k]) pool_params[i][k] = dmax[k];
               else if (pool_params[i][k] < dmin[k]) pool_params[i][k] = dmin[k];
             }

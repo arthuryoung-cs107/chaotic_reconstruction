@@ -155,6 +155,37 @@ classdef ODR_data < handle
         delete(txtbx);
       end
     end
+    function make_movie_comp3(obj, AYfig_in, oth, odd, awk)
+      frames = obj.Frames;
+      run AYfigprops.m
+      walld = 5.72;
+      wallL = (2/sqrt(3))*walld;
+      wallv = [-wallL/2 -walld; -wallL 0; -wallL/2 walld ; wallL/2 walld; wallL 0; wallL/2 -walld; -wallL/2 -walld];
+      AYfig_in.init_movie(frames);
+      wsca = max([abs(walld) abs(wallL)]);
+      lims = [-wsca, wsca, -wsca, wsca];
+
+      rads = 0.5*ones(obj.P,1);
+      figdims = AYfig_in.get_dims();
+      MS = figdims(4)/(4*wsca); %% radius in pixels
+      SS = pi*MS*MS; %% area in pixels
+      for i=1:frames
+        plot(AYfig_in.ax, wallv(:, 1), wallv(:, 2), 'k -')
+        hold(AYfig_in.ax, 'on');
+        objdots = scatter(AYfig_in.ax, obj.data(:,1,i)-obj.specs(i, 2), obj.data(:,2,i)-obj.specs(i, 3), 'o', 'LineWidth', 1, 'SizeData', SS, 'MarkerEdgeColor', [0 0 0], 'MarkerFaceColor', green4, 'MarkerFaceAlpha', 0.5);
+        othdots = scatter(AYfig_in.ax, oth.data(:,1,i)-oth.specs(i, 2), oth.data(:,2,i)-oth.specs(i, 3), 'o', 'LineWidth', 1, 'SizeData', SS, 'MarkerEdgeColor', [0 0 0], 'MarkerFaceColor', red5, 'MarkerFaceAlpha', 0.5);
+        odddots = scatter(AYfig_in.ax, odd.data(:,1,i)-odd.specs(i, 2), odd.data(:,2,i)-odd.specs(i, 3), 'o', 'LineWidth', 1, 'SizeData', SS, 'MarkerEdgeColor', [0 0 0], 'MarkerFaceColor', blue4, 'MarkerFaceAlpha', 0.5);
+        awkdots = scatter(AYfig_in.ax, awk.data(:,1,i)-awk.specs(i, 2), awk.data(:,2,i)-awk.specs(i, 3), 'o', 'LineWidth', 1, 'SizeData', SS, 'MarkerEdgeColor', [0 0 0], 'MarkerFaceColor', orange1, 'MarkerFaceAlpha', 0.5);
+        txtbx = annotation(AYfig_in.fig, 'textbox', [0.8 0.9 0.1 0.1], 'String', num2str(i-1), 'LineStyle', 'none');
+        txtbx.FontSize = 16;
+        hold(AYfig_in.ax, 'off');
+        axis(AYfig_in.ax, lims);
+
+        drawnow
+        AYfig_in.movie_gen(i) = getframe(AYfig_in.ax);
+        delete(txtbx);
+      end
+    end
     function make_POVray_inputs(obj, pov_dir_, dat_name_)
       save_dir = [pov_dir_ obj.exp_name];
       status = mkdir(save_dir);

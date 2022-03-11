@@ -56,8 +56,8 @@ struct record
   inline double w(int F_, double lambda_)
   {return exp(lambda_*((double) frscore)/((double) F_));}
 
-  inline double var(int F_, double var_)
-  {return var_*exp(-2.0*sqrt(var_)*((double) frscore)/((double)F_));}
+  inline double var(int F_, double var_, double lambda_)
+  {return var_*exp(-2.0*lambda_*((double) frscore)/((double)F_));}
 
   void print_record()
   {
@@ -92,8 +92,12 @@ struct referee
 {
     /** The maximum simulation timestep to use. */
     const double dt_sim;
-    /** the perturbation variance for resampled particles */
-    const double gau_var;
+    /** the max perturbation variance for duplicated particles */
+    const double gau_var_high;
+    /** the lowest perturbation variance for duplicated particles */
+    const double gau_var_low;
+    /** the commensurate exponential factor for the above two */
+    const double gau_lambda;
     /* the strength of the exponential weight function for the resampling of particles */
     const double lambda;
     /* the clearance we leave for uniform resampling when we HAVE NOT filled our leaderboard */
@@ -113,13 +117,12 @@ struct referee
 
     // memory chunks to store parameters associated with particles
     double **pool_params, **lead_params, *sample_weights;
-    int *dup_vec, **dup_mat;
 
     bool alloc_flag=false;
 
-    referee(int nlead_=100, int npool_=1000, int param_len_=12, double dt_sim_=0.002, double gau_var_=0.01, double lambda_coeff_=1.0, double rs_fill_factor_=0.5, double rs_full_factor_=0.99): nlead(nlead_), npool(npool_), param_len(param_len_), dt_sim(dt_sim_), gau_var(gau_var_), lambda(lambda_coeff_*log(((double) 1e16-1)/((double) nlead-1))), rs_fill_factor(rs_fill_factor_), rs_full_factor(rs_full_factor_) {}
+    referee(int nlead_, int npool_, int param_len_, double dt_sim_, double gau_var_high_, double gau_var_low_, double lambda_coeff_, double rs_fill_factor_, double rs_full_factor_): nlead(nlead_), npool(npool_), param_len(param_len_), dt_sim(dt_sim_), gau_var_high(gau_var_high_), gau_var_low(gau_var_low_), gau_lambda(log(gau_var_high_/gau_var_low_)), lambda(lambda_coeff_*log(((double) 1e16-1)/((double) nlead-1))), rs_fill_factor(rs_fill_factor_), rs_full_factor(rs_full_factor_) {}
 
-    referee(referee &ref_): nlead(ref_.nlead), npool(ref_.npool), param_len(ref_.param_len), dt_sim(ref_.dt_sim), gau_var(ref_.gau_var), lambda(ref_.lambda), rs_fill_factor(ref_.rs_fill_factor), rs_full_factor(ref_.rs_full_factor) {}
+    referee(referee &ref_): nlead(ref_.nlead), npool(ref_.npool), param_len(ref_.param_len), dt_sim(ref_.dt_sim), gau_var_high(ref_.gau_var_high), gau_var_low(ref_.gau_var_low), gau_lambda(ref_.gau_lambda), lambda(ref_.lambda), rs_fill_factor(ref_.rs_fill_factor), rs_full_factor(ref_.rs_full_factor) {}
 
     ~referee();
 
@@ -180,6 +183,8 @@ class race : public referee {
         AYrng ** rng;
         /** The array of proximity grids. */
         proximity_grid** const pg;
+
+        int *dup_vec, **dup_mat;
 
         /** Array of swirl simulations used by each thread to test particles */
         runner ** runners;

@@ -33,7 +33,7 @@ int main()
         par_mat.AT[i][j] = sp_min[j] + (sp_del.A_ptr[j]*gen.rand_uni_gsl(0.0, 1.0));
     else if (strcmp(test, "gauss")==0)
       for (int i = 1; i < noise_len; i++) for (int j = 0; j < par_len; j++)
-      {par_mat.AT[i][j] = sptrue[j]*gen.rand_gau_gsl(1.0,1e-4);
+      {par_mat.AT[i][j] = sptrue[j]*gen.rand_gau_gsl(1.0,1e-8);
         if (par_mat.AT[i][j] > sp_max[j]) par_mat.AT[i][j] = sp_max[j];
         else if (par_mat.AT[i][j] < sp_min[j]) par_mat.AT[i][j] = sp_min[j];}
     else
