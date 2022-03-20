@@ -25,5 +25,11 @@ classdef race_data < handle
         obj.gen(i) = generation(obj.dat_dir_name, obj.exp_name, obj.dat_name, i);
       end
     end
+    function frscore_histogrami(obj, AYfig_in, i_)
+      obj.gen(i_).frscore_histogram(AYfig_in);
+    end
+    function sigmas_ploti(obj, AYfig_in, i_)
+      obj.gen(i_).sigmas_plot(AYfig_in);
+    end
   end
 end

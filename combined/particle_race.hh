@@ -22,6 +22,7 @@ struct record
   int gen; // generation in which this particle was generated
   int parent_gen; // generation this particle comes from
   int parent_count; // number of particle ancestors
+  int parent_global_index; // number of particle ancestors
 
   double l2score;
   double gau_h;
@@ -39,14 +40,14 @@ struct record
 
   void resample(int gen_, double * dmin_, double *dmax_, AYrng * r_)
   {
-    gen = gen_; parent_gen = 0; parent_count = 0;
+    gen = gen_; parent_gen = 0; parent_count = 0; parent_global_index = global_index;
     for (int i = 0; i < len; i++)
       params[i] = dmin_[i]+(dmax_[i]-dmin_[i])*(r_->rand_uni_gsl(0.0,1.0));
   }
 
   void duplicate(record *parent_, int gen_, double *dmin_, double *dmax_, AYrng * r_)
   {
-    gen=gen_; parent_gen=parent_->gen; parent_count=parent_->parent_count+1;
+    gen=gen_; parent_gen=parent_->gen; parent_count=parent_->parent_count+1; parent_global_index = parent_->global_index; 
     for (int i = 0; i < len; i++)
     {
       params[i] = parent_->params[i]*(r_->rand_gau_gsl(1.0, parent_->var()));

@@ -14,6 +14,9 @@ classdef generation < handle
     bleader_index;
 
     records;
+
+    frscores;
+    param_mat;
   end
   methods
     function obj = generation(dat_dir_name_, exp_name_, dat_name_, gen_count_)
@@ -31,14 +34,25 @@ classdef generation < handle
       obj.bleader_index = obj.specs(7);
 
       obj.records = record.empty(obj.leader_count, 0);
-
+      obj.frscores = nan(obj.leader_count, 1);
+      obj.param_mat = nan(obj.leader_count, obj.par_len);
       for i=1:obj.leader_count
         int_vec = fread( dat,[1, obj.specs(3)], 'int=>int');
         double_vec = fread( dat,[1, obj.specs(4)], 'double=>double');
         param_it = fread( dat,[1, obj.par_len], 'double=>double');
         obj.records(i) = record(int_vec, double_vec, param_it);
+        obj.frscores(i) = obj.records(i).frscore;
+        obj.param_mat(i, :) = param_it;
       end
       fclose(dat);
+    end
+    function frscore_histogram(obj, AYfig_in)
+      histogram(AYfig_in.ax, obj.frscores, max(obj.frscores)-min(obj.frscores)+1);
+    end
+    function sigmas_plot(obj, AYfig_in)
+      s = svd(obj.param_mat(:, 1:8));
+      plot(AYfig_in.ax, 1:8, s/s(1), ' o -', 'Color', [0 0 0], 'LineWidth', 2);
+      AYfig_in.ax.YScale = 'log';
     end
   end
 end
