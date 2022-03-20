@@ -14,7 +14,6 @@ sw = read_swirl(nbeads, par_id);
 sb = sw.spawn_best();
 race = sw.read_race_data();
 
-
 for i=1:race.gen_count
   race.frscore_histogrami(figs(1), i)
   race.sigmas_ploti(figs(2), i)
