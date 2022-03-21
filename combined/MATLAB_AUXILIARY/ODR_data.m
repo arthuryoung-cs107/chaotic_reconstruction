@@ -75,6 +75,7 @@ classdef ODR_data < handle
       end
     end
     function make_movie(obj, AYfig_in)
+      pause;      
       frames = obj.Frames;
 
       walld = 5.72;

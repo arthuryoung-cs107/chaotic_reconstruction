@@ -29,8 +29,10 @@ hold on
 movie1 = AYfig(AYfig.specs_gen('playback', [fig_pos(5, 1:2), 500,500] ));
 
 nbeads = 3;
-test = 'maxmin';
+test = 'gauss'; %% parameter perturbation
 ran_id = 0;
+
+%% this effort is to produce a learned quantity that is FULLY PHYSICALLY INTERPRETABLE
 
 stat = read_stat(nbeads, test, ran_id);
 stat.plot_frame_error(figs(1), blue5);
@@ -38,4 +40,6 @@ stat.plot_param_error(figs(2), green4);
 stat.plot_param_index_error(figs(3), orange1)
 stat.plot_param_pos_error(figs(4), red5);
 
-% stat.make_movieijk(movie1, 1, stat.I_best(1)+1, stat.I_truest(1)+1);
+%* NOTE: in pursuit of a fully interpretable model, we need to make a few mathematical connections between what we are plotting between tests. One thing that is worth seeing is how the singular value profile varies with the behaviour of the covariance approximation. If we can make any connection between the values of these graphs, we should be able to gain access to a ton of tools in both linear algebra and statistics/probability/Markov chains.
+
+stat.make_movieijk(movie1, 1, stat.I_best(1)+1, stat.I_truest(1)+1);

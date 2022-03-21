@@ -4,8 +4,6 @@ run AYfigprops.m
 fig_pos = AYfig.fig_pos_gen(2, 3);
 pos_bottom_row = [1 1 1440 345];
 
-figs(1) = AYfig(AYfig.specs_gen('frscores', fig_pos(6, :) ));
-figs(2) = AYfig(AYfig.specs_gen('sigmas', fig_pos(4, :) ));
 diagnostics_fig = AYfig(AYfig.specs_gen('generation diagnostics',pos_bottom_row));
 diagnostics_fig.init_tiles([1, 3]);
 

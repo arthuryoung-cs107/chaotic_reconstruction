@@ -8,13 +8,13 @@
 
 char test[]="gauss";
 const int nbeads=3;
-const int ran_id=0;
+const int ran_id=1;
 char proc_loc[] = "./dat_dir/";
 int main()
 {
     assert(nbeads<=30);
     char rydat_dir[30]; sprintf(rydat_dir, "stat%d_%s%d.odr/", nbeads, test, ran_id);
-    int par_len = 14, noise_len = 100+1;
+    int par_len = 14, noise_len = 1000+1;
     double sp_min[14], sptrue[14], sp_max[14];
     int idtrue=set_special_params("true", sptrue),
         idmin=set_special_params("min", sp_min),
