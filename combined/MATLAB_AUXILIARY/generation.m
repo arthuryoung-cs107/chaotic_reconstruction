@@ -46,13 +46,35 @@ classdef generation < handle
       end
       fclose(dat);
     end
-    function frscore_histogram(obj, AYfig_in)
-      histogram(AYfig_in.ax, obj.frscores, max(obj.frscores)-min(obj.frscores)+1);
-    end
-    function sigmas_plot(obj, AYfig_in)
-      s = svd(obj.param_mat(:, 1:8));
-      plot(AYfig_in.ax, 1:8, s/s(1), ' o -', 'Color', [0 0 0], 'LineWidth', 2);
-      AYfig_in.ax.YScale = 'log';
+    function plot_diagnostics(obj, AYfig_, F_, lambda_)
+      s = svd(obj.param_mat(:, 1:8)); %% hard coded for now, these are the varying parameters
+
+      fbest = max(obj.frscores);
+      fworst = min(obj.frscores);
+
+      [fhat, ij] = mink(obj.frscores-fworst, obj.leader_count);
+      lambda_pi = 1/(mean(fhat));
+      pi_fhat = lambda_pi*exp(-lambda_pi*fhat);
+
+      [f, ik] = mink(obj.frscores, obj.leader_count);
+      w = exp(lambda_*obj.frscores/F_);
+      w = w(ik)/sum(w);
+
+      w_old = @(f) (lambda_*exp(lambda_*f/F_))/(F_*(exp(lambda_/F_*fbest)-exp(lambda_/F_*fworst)));
+      w_new = @(f) (lambda_pi*exp(lambda_pi*(f-0.5*(fbest+fworst))))/(exp(0.5*lambda_pi*(fbest-fworst))-exp(0.5*lambda_pi*(fworst-fbest)));
+
+      yyaxis(AYfig_.ax_tile(1), 'left');
+      histogram(AYfig_.ax_tile(1), obj.frscores, max(obj.frscores)-min(obj.frscores)+1);
+      yyaxis(AYfig_.ax_tile(1), 'right');
+      plot(AYfig_.ax_tile(1), obj.frscores(ij), pi_fhat,' o -', 'Color', [1 0 0], 'LineWidth', 2);
+
+      plot(AYfig_.ax_tile(2), 1:8, s/s(1), ' o -', 'Color', [0 0 0], 'LineWidth', 2);
+      set(AYfig_.ax_tile(2), 'YScale', 'log')
+
+      fplot(@(f) w_old(f), [fworst, fbest], '-', 'Color', [1 0 0], 'LineWidth', 2);
+      hold(AYfig_.ax_tile(3), 'on');
+      fplot(@(f) w_new(f), [fworst, fbest], '-', 'Color', [0 0 1], 'LineWidth', 2);
+      hold(AYfig_.ax_tile(3), 'off');
     end
   end
 end

@@ -39,6 +39,7 @@ int main()
 
     reporter rep;
     rep.init_race(proc_loc, rydat_dir, file_name);
+    //          nl, np, par_len, dt_sim, gau_var_h, gau_var_l, lambda_coeff, rs_fill_factor_, rs_full_factor
     referee ref(100, 1000, 12, 0.002, 1e-2, 1e-3, 1.0, 0.5, 0.8);
     race prace(ref,sp_min,sp_max,wl,t_phys,&rep);
     prace.init_race();
