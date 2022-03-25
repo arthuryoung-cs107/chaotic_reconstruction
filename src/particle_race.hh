@@ -11,6 +11,9 @@
 #include "omp.h"
 #endif
 
+const int record_int_len=6;
+const int record_double_len=1;
+
 struct record
 {
   bool success;
@@ -47,7 +50,7 @@ struct record
 
   void duplicate(record *parent_, int gen_, double *dmin_, double *dmax_, AYrng * r_)
   {
-    gen=gen_; parent_gen=parent_->gen; parent_count=parent_->parent_count+1; parent_global_index = parent_->global_index; 
+    gen=gen_; parent_gen=parent_->gen; parent_count=parent_->parent_count+1; parent_global_index=parent_->global_index;
     for (int i = 0; i < len; i++)
     {
       params[i] = parent_->params[i]*(r_->rand_gau_gsl(1.0, parent_->var()));
@@ -76,7 +79,7 @@ struct record
   void take_vals(record * rtake_)
   {
     frscore = rtake_->frscore; l2score = rtake_->l2score;
-    gen=rtake_->gen; parent_gen=rtake_->parent_gen; parent_count=rtake_->parent_count;
+    gen=rtake_->gen; parent_gen=rtake_->parent_gen; parent_count=rtake_->parent_count; parent_global_index=rtake_->parent_global_index;
     for (int i = 0; i < len; i++) params[i] = rtake_->params[i];
   }
 

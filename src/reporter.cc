@@ -37,7 +37,6 @@ void reporter::init_race( char * proc_loc_, char * rydat_dir_, char * file_name_
 
 void reporter::write_gen_diagnostics(int gen_count_, int leader_count_, int worst_leader_, int best_leader_)
 {
-  int record_int_len=5,record_double_len=1;
   int int_params[] = {gen_count_, leader_count_, record_int_len, record_double_len, len, worst_leader_, best_leader_};
 
   char * buf_it = out_buf+obuf_end;
@@ -58,7 +57,6 @@ void reporter::write_gen_diagnostics(int gen_count_, int leader_count_, int wors
 
 void reporter::close_diagnostics(int gen_count_, int leader_count_, int worst_leader_, int best_leader_)
 {
-  int record_int_len=5,record_double_len=1;
   int int_params[] = {gen_count_, leader_count_, record_int_len, record_double_len, len, worst_leader_, best_leader_};
 
   char * buf_it = out_buf+obuf_end;
