@@ -1,0 +1,18 @@
+CXX=g++-11
+CC=gcc-11
+OS=OSX
+CFLAGS= -O3 -fopenmp -DGSL -DKNUTH
+
+IDIR:=-Isrc/ -IAYlinalg/src/ -I/usr/local/include/
+LINK:=-L/usr/local/lib/
+LIBS:=-lm -lgsl -lgslcblas -lfftw3 -lblas
+
+AYLINALG= AYaux AYlinalg AYmat AYvec AYrng AYtens AYdecomps AYdata
+
+RYOBJS=RYdat2AYdat
+
+SWOBJS=p_grid swirl particle common swirl_io wall swirl_param dat_store
+
+FIOBJS=filter_io filter
+
+RAOBJS=race particle_race particle_race_io reporter
