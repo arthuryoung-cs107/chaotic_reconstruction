@@ -3,16 +3,32 @@ CC:=gcc-11
 OS:=OSX
 CFLAGS:= -O3 -fopenmp -DGSL -DKNUTH
 
-IDIR:=-Isrc/ -IAYlinalg/src/ -I/usr/local/include/
+IBASIC:=-I/usr/local/include/
 LINK:=-L/usr/local/lib/
 LIBS:=-lm -lgsl -lgslcblas -lfftw3 -lblas
 
+# file names
+
 AYLINALG:= AYaux AYlinalg AYmat AYvec AYrng AYtens AYdecomps AYdata
 
-RYOBJS:=RYdat2AYdat
+SWIRL:= p_grid swirl particle common swirl_io wall swirl_param dat_store RYdat2AYdat
 
-SWOBJS:=p_grid swirl particle common swirl_io wall swirl_param dat_store
+FILTER:= filter_io filter
 
-FIOBJS:=filter_io filter
+RACE:= race particle_race particle_race_io reporter
 
-RAOBJS:=race particle_race particle_race_io reporter
+# directories
+AY_SRC:= AYlinalg/linalg/
+AY_DIR:= AYlinalg/linalg_objs/
+
+SW_SRC:= swirl/
+FI_SRC:= filter/
+RA_SRC:= race/
+
+SW_DIR:=$(addsuffix objs/, $(SW_SRC))
+FI_DIR:=$(addsuffix objs/, $(FI_SRC))
+RA_DIR:=$(addsuffix objs/, $(RA_SRC))
+
+TEST_SRC:=tests/
+
+IDIR:=$(IBASIC) -I$(AY_SRC) -I$(SW_SRC) -I$(FI_SRC) -I$(RA_SRC)
