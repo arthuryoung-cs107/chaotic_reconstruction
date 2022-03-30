@@ -29,10 +29,9 @@ classdef filter_inputs < handle
       obj.vidspecs = (fread( id,[1, obj.fisml(5, 3)], 'float64=>float64'));
       fclose(id);
 
-      obj.t_phys = obj.vidspecs(1);
-      obj.cx_im = obj.vidspecs(2);
-      obj.cy_im = obj.vidspecs(3);
-      obj.cl_im = obj.vidspecs(4);
+      [obj.t_phys, obj.cx_im, obj.cy_im, obj.cl_im] = deal(obj.vidspecs(1), obj.vidspecs(2), obj.vidspecs(3), obj.vidspecs(4));
+
+
     end
   end
 

@@ -15,7 +15,7 @@ SWIRL:= p_grid swirl particle common swirl_io wall swirl_param dat_store RYdat2A
 
 FILTER:= filter_io filter
 
-RACE:= race particle_race particle_race_io reporter
+RACE:= race particle_race particle_race_io reporter runner
 
 # directories
 AY_SRC:= AYlinalg/linalg/

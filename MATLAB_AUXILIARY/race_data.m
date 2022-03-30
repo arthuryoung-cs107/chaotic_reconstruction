@@ -15,10 +15,7 @@ classdef race_data < handle
   end
   methods
     function obj = race_data(dat_dir_name_, exp_name_, dat_name_)
-      obj.dat_dir_name = dat_dir_name_;
-      obj.exp_name = exp_name_;
-      obj.dat_name = dat_name_;
-
+      [obj.dat_dir_name obj.exp_name obj.dat_name] = deal(dat_dir_name_,exp_name_,dat_name_);
       dat = fopen([obj.dat_dir_name obj.exp_name obj.dat_name '.end.rcdat']);
       obj.specs = fread( dat,[1, obj.specs_len], 'int=>int');
       fclose(dat);
