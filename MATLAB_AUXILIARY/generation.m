@@ -47,58 +47,40 @@ classdef generation < handle
       fclose(dat);
     end
     function plot_diagnostics(obj, AYfig_, F_, lambda_)
-      s = svd(obj.param_mat(:, 1:8)); %% hard coded for now, these are the varying parameters
-
       fbest = max(obj.frscores);
       fworst = min(obj.frscores);
       fmu = mean(obj.frscores);
+      frame_bins = fworst:fbest;
 
-      [fhat, ij] = mink(obj.frscores-fworst, obj.leader_count);
-      lambda_pi = 1/(mean(fhat));
-      pi_fhat = lambda_pi*exp(-lambda_pi*fhat);
-      lambda_poi = mean(fhat);
-      pi_fhat_poi = poisspdf(fhat, lambda_poi);
-
-
-      [f, ik] = mink(obj.frscores, obj.leader_count);
+      f = mink(obj.frscores, obj.leader_count);
       w = exp(lambda_*obj.frscores/F_); %% raw frame score weights
       w = w/sum(w);
-      frame_bins = fworst:fbest;
-      w2 = exp(lambda_pi*(obj.frscores-fmu));
-      w2 = w2/sum(w2);
 
-      w_acc = nan(size(frame_bins));
-      wnew_acc = nan(size(frame_bins));
-      for i=1:length(frame_bins)
-        w_acc(i) = sum(w(obj.frscores == frame_bins(i)));
-        wnew_acc(i) = sum(w2(obj.frscores == frame_bins(i)));
-      end
-      w_acc = w_acc/sum(w_acc);
-      wnew_acc = wnew_acc/sum(wnew_acc);
+      fcount = histcounts(obj.frscores, max(obj.frscores)-min(obj.frscores)+1);
+      lambda = dot(fcount, fworst:fbest)/(length(obj.frscores)) - fworst;
 
-      w_old = @(f) (lambda_*exp(lambda_*f/F_))/(F_*(exp(lambda_/F_*fbest)-exp(lambda_/F_*fworst)));
-      w_new = @(f) (lambda_pi*exp(lambda_pi*(f-fmu)))/(exp(lambda_pi*(fbest-fmu))-exp(lambda_pi*(fworst-fmu)));
+      w_old = @(f) exp(lambda_*f/F_);
+      w_new = @(f) (poisspdf(f-fworst, lambda)).^-1;
+
+      pi_old = double(fcount).*w_old(frame_bins)/sum(w_old(frame_bins));
+      pi_new = double(fcount).*w_new(frame_bins)/sum(w_new(frame_bins));
 
       yyaxis(AYfig_.ax_tile(1), 'left');
       histogram(AYfig_.ax_tile(1), obj.frscores, max(obj.frscores)-min(obj.frscores)+1);
       yyaxis(AYfig_.ax_tile(1), 'right');
-      % plot(AYfig_.ax_tile(1), obj.frscores(ij), pi_fhat,' o -', 'Color', [1 0 0], 'LineWidth', 2);
-      plot(AYfig_.ax_tile(1), obj.frscores(ij), pi_fhat_poi,' o -', 'Color', [1 0 0], 'LineWidth', 2);
+      plot(AYfig_.ax_tile(1), frame_bins, poisspdf(frame_bins-fworst, lambda),' o -', 'Color', [1 0 0], 'LineWidth', 2);
 
-      plot(AYfig_.ax_tile(2), 1:8, s/s(1), ' o -', 'Color', [0 0 0], 'LineWidth', 2);
+      plot(AYfig_.ax_tile(2), frame_bins, w_old(frame_bins)/sum(w_old(frame_bins)), ' o -', 'Color', [0 0 1], 'LineWidth', 2);
+      hold(AYfig_.ax_tile(2), 'on');
+      plot(AYfig_.ax_tile(2), frame_bins, w_new(frame_bins)/sum(w_new(frame_bins)), ' o -', 'Color', [1 0 0], 'LineWidth', 2);
+      hold(AYfig_.ax_tile(2), 'off');
       set(AYfig_.ax_tile(2), 'YScale', 'log')
 
-      yyaxis(AYfig_.ax_tile(3), 'left');
-      fplot(@(f) w_old(f), [fworst, fbest], '-', 'Color', [1 0 0], 'LineWidth', 2);
+      plot(AYfig_.ax_tile(3), frame_bins, pi_new, ' o -', 'Color', [1 0 0], 'LineWidth', 2);
       hold(AYfig_.ax_tile(3), 'on');
-      fplot(@(f) w_new(f), [fworst, fbest], ':', 'Color', [1 0 0], 'LineWidth', 2);
+      % plot(AYfig_.ax_tile(3), frame_bins, pi_old, ' o -', 'Color', [0 0 1], 'LineWidth', 2);
       hold(AYfig_.ax_tile(3), 'off');
 
-      yyaxis(AYfig_.ax_tile(3), 'right');
-      % plot(AYfig_.ax_tile(3), frame_bins, w_acc,' o -', 'Color', [0 0 1], 'LineWidth', 2);
-      hold(AYfig_.ax_tile(3), 'on');
-      plot(AYfig_.ax_tile(3), frame_bins, wnew_acc,'. :', 'Color', [0 0 1], 'LineWidth', 2);
-      hold(AYfig_.ax_tile(3), 'off');
 
     end
   end
