@@ -98,5 +98,35 @@ classdef AYfig < handle
         end
       end
     end
+    function save_fig(fig_in, save_type, save_dir_)
+      if (nargin==2)
+        save_dir = [getenv('HOME') '/Desktop/MATLAB_OUTPUT/'];
+      else
+        save_dir = save_dir_;
+      end
+      if (strcmp(save_type, 'pdf'))
+        exportgraphics(fig_in, [save_dir fig_in.Name '.pdf'], 'ContentType', 'vector')
+      else
+        saveas(fig_it, [save_dir fig_it.Name], save_type);
+      end
+    end
+    function save_figs(figs, figs_to_write, save_type, save_dir_)
+      if (nargin==2)
+        save_dir = [getenv('HOME') '/Desktop/MATLAB_OUTPUT/'];
+      else
+        save_dir = save_dir_;
+      end
+      if (strcmp(save_type, 'pdf'))
+        for i=reshape(figs_to_write, 1, [])
+          fig_it = figs(i);
+          exportgraphics(fig_it, [save_dir fig_it.Name '.pdf'], 'ContentType', 'vector');
+        end
+      else
+        for i=reshape(figs_to_write, 1, [])
+          fig_it = figs(i);
+          saveas(fig_it, [save_dir fig_it.Name], save_type);
+        end
+      end
+    end
   end
 end

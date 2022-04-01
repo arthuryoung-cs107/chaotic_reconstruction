@@ -1,7 +1,7 @@
-function odr = read_swirl(nbeads, par_id)
+function odr = read_race(nbeads, par_id)
   proc_name = '../dat_dir/';
-  dat_subfix ='pts';
+  dat_name = 'pts';
   exp_name = ['swirl' num2str(nbeads) '.odr/'];
-  file_name = [dat_subfix '.' num2str(par_id)];
+  file_name = [dat_name '.' num2str(par_id)];
   odr = ODR_data(proc_name, exp_name, file_name);
 end

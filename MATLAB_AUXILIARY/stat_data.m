@@ -1,5 +1,9 @@
 classdef stat_data < handle
   properties
+  % friend class
+    sgp; % swirl_group.m;
+
+
     dat_dir_name;
     exp_name;
     dat_name;
@@ -55,6 +59,12 @@ classdef stat_data < handle
     end
     function swout = spawn_swrlindex(obj, id_)
       swout = ODR_data(obj.dat_dir_name, obj.exp_name, [obj.dat_name '.' num2str(i)]);
+    end
+    function swgp_out = spawn_swirl_group(obj, )
+
+    end
+    function get_swirl_group(obj, )
+
     end
     function plot_frame_error(obj, fig_in, base_color)
       mean_err = mean(obj.pos_err);
