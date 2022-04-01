@@ -1,22 +1,48 @@
 classdef ODR_data < handle
   properties
-  % friend class:
+  % little brother:
     % swirl.m
 
     dat_dir_name;
     exp_name;
     dat_name;
-    len_dat;
-
     rysml;
-    Frames;
-    len_specs;
-    P;
-
     filin;
-    specs;
-    data;
+
+    %% data shared with swirl
+    data; % (x y z q1 q2 q3 q4) for each bead, each frame
+    specs; % (t cx cy wall_sca) for each frame
+    Frames; % number of frames in swirl
+    len_specs; % length of specs vector in each frame
+    len_dat; % row length of data matrix; (position, quaternion)
+    beads; % number of beads
+
     contact_frames;
+  end
+  methods(static)
+    function sw = construct_swirl(dat_dir_name_, exp_name_, dat_name_)
+      rysml = dlmread([dat_dir_name_ exp_name_ dat_name_ '.rysml']);
+      [Frames len_specs len_dat beads] = deal(rysml(1, 2) rysml(2, 3) rysml(3, 3) rysml(3, 2));
+
+      specs = nan(Frames, len_specs);
+      data = nan(beads, len_dat, Frames);
+      if (rysml(1,1)==1)
+        for f=0:(Frames-1)
+          id = fopen([dat_dir_name_ exp_name_ dat_name_ '.' num2str(f) '.aydat']);
+          specs(f+1, :) = (fread( id,[1, len_specs], 'float64=>float64'));
+          data(:, :, f+1) = (fread( id,[len_dat, beads], 'float64=>float64'))';
+          fclose(id);
+        end
+      elseif (rysml(1,1)==0)
+        id = fopen([dat_dir_name_ exp_name_ dat_name_ '.rydat']);
+        for f=0:(Frames-1)
+          specs(f+1, :) = (fread( id,[1, len_specs], 'float64=>float64'));
+          data(:, :, f+1) = (fread( id,[len_dat, beads], 'float64=>float64'))';
+        end
+        fclose(id);
+      end
+      sw = swirl(data, specs, Frames, len_specs, len_dat, beads);
+    end
   end
 
   methods
@@ -28,29 +54,28 @@ classdef ODR_data < handle
       obj.Frames = obj.rysml(1, 2);
       obj.len_specs = obj.rysml(2, 3);
       obj.len_dat = obj.rysml(3, 3);
-      obj.P = obj.rysml(3, 2);
+      obj.beads = obj.rysml(3, 2);
 
       obj.specs = nan(obj.Frames, obj.len_specs);
-      obj.data = nan(obj.P, obj.len_dat, obj.Frames);
+      obj.data = nan(obj.beads, obj.len_dat, obj.Frames);
       if (obj.rysml(1,1)==1)
         for f=0:(obj.Frames-1)
           id = fopen([obj.dat_dir_name obj.exp_name obj.dat_name '.' num2str(f) '.aydat']);
           obj.specs(f+1, :) = (fread( id,[1, obj.len_specs], 'float64=>float64'));
-          obj.data(:, :, f+1) = (fread( id,[obj.len_dat, obj.P], 'float64=>float64'))';
+          obj.data(:, :, f+1) = (fread( id,[obj.len_dat, obj.beads], 'float64=>float64'))';
           fclose(id);
         end
       elseif (obj.rysml(1,1)==0)
         id = fopen([obj.dat_dir_name obj.exp_name obj.dat_name '.rydat']);
         for f=0:(obj.Frames-1)
           obj.specs(f+1, :) = (fread( id,[1, obj.len_specs], 'float64=>float64'));
-          obj.data(:, :, f+1) = (fread( id,[obj.len_dat, obj.P], 'float64=>float64'))';
+          obj.data(:, :, f+1) = (fread( id,[obj.len_dat, obj.beads], 'float64=>float64'))';
         end
         fclose(id);
       end
     end
     function sw = spawn_swirl(obj)
-      sw = swirl();
-      sw.init_ODR(obj);
+      sw = swirl(obj.data, obj.specs, obj.Frames, obj.len_specs, obj.len_dat, obj.beads);
     end
     function load_filin(obj)
       obj.filin = filter_inputs([obj.dat_dir_name obj.exp_name obj.dat_name]);
@@ -105,7 +130,7 @@ classdef ODR_data < handle
       wsca = max(abs([min(obj.specs(:, 2))-wallL, max(obj.specs(:, 2))+walld, min(obj.specs(:, 3))-wallL, max(obj.specs(:, 3))+walld]));
       lims = [-wsca, wsca, -wsca, wsca];
 
-      rads = 0.5*ones(obj.P,1);
+      rads = 0.5*ones(obj.beads,1);
       figdims = AYfig_in.get_dims();
       MS = figdims(4)/(4*wsca); %% radius in pixels
       SS = pi*MS*MS; %% area in pixels
@@ -133,7 +158,7 @@ classdef ODR_data < handle
       wsca = max(abs([min(obj.specs(:, 2))-wallL, max(obj.specs(:, 2))+walld, min(obj.specs(:, 3))-wallL, max(obj.specs(:, 3))+walld]));
       lims = [-wsca, wsca, -wsca, wsca];
 
-      rads = 0.5*ones(obj.P,1);
+      rads = 0.5*ones(obj.beads,1);
       figdims = AYfig_in.get_dims();
       MS = figdims(4)/(4*wsca); %% radius in pixels
       SS = pi*MS*MS; %% area in pixels
@@ -162,7 +187,7 @@ classdef ODR_data < handle
       wsca = max([abs(walld) abs(wallL)]);
       lims = [-wsca, wsca, -wsca, wsca];
 
-      rads = 0.5*ones(obj.P,1);
+      rads = 0.5*ones(obj.beads,1);
       figdims = AYfig_in.get_dims();
       MS = figdims(4)/(4*wsca); %% radius in pixels
       SS = pi*MS*MS; %% area in pixels
@@ -193,7 +218,7 @@ classdef ODR_data < handle
       % wsca = max([abs(walld) abs(wallL)]);
       lims = [-wsca, wsca, -wsca, wsca];
 
-      rads = 0.5*ones(obj.P,1);
+      rads = 0.5*ones(obj.beads,1);
       figdims = AYfig_in.get_dims();
       MS = figdims(4)/(4*wsca); %% radius in pixels
       SS = pi*MS*MS; %% area in pixels

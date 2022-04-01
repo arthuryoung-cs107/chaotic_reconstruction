@@ -1,39 +1,53 @@
-classdef swirl < handle
+classdef swirl < double
   properties
-  % friend class
-    odr; % ODR_data.m;
+  % big brother
+    % ODR_data.m;
 
-    data;
+    %% this class holds the double precision data of a simulation. It IS ODR_data.data. Note that it is NOT a handle
 
+    %% data shared with swirl and
+    specs=0; % (t cx cy wall_sca) for each frame
+    Frames=0; % number of frames in swirl
+    len_specs=0; % length of specs vector in each frame
+    len_dat=0; % row length of data matrix; (position, quaternion)
+    beads=0; % number of beads
+
+    initialized = false;
+  end
+  methods(Static)
+    function cell_out = tens2cell(tens_);
+      dims = size(tens_);
+      cell_out =
+    end
   end
   methods
-    function obj = swirl(sub)
-
-    end
-    function init_ODR(obj, odr_)
-      obj.odr = odr_;
-
-
-
+    function data = swirl(data_, specs_, Frames_, len_specs_, len_dat_, beads_)
+      if (nargin==0)
+        data = data@double(0);
+      elseif(nargin==1)
+        data=data@double(data_);
+      elseif (nargin==6)
+        data = data@double(data_(:,:,1:Frames_));
+        data.specs = specs_(:,:,1:Frames_);
+        [data.Frames, data.len_specs, data.len_dat, data.beads] = deal(Frames_, len_specs_, len_dat_, beads_);
+        data.initialized=true; 
+      end
     end
     function [out, valid_sub_swirl] = spawn_sub_swirl(obj, oth)
       %% on output, we want to give the sub swirl of the input that matches THIS swirl
       out = 0;
       valid_sub_swirl = false;
       [f,not_lost,fcap,tol] = deal(0, true, min(obj.Frames, oth.Frames), 1);
-      while ((f<=fcap)&&(not_lost))
+      diff_full = obj(:, 1:2, :)-oth(:, 1:2, :);
+      while ((f<fcap)&&(not_lost))
         f=f+1;
-        diff = obj.data(:, 1:2, f)-oth.data(:, 1:2, f);
+        diff = diff_full(:, :, f);
         not_lost = max(sqrt(sum((diff.*diff)')))<tol;
       end
       f_final = f;
       if (f_final > 1)
         valid_sub_swirl = true;
-        out = swirl();
-        out.Frames = f_final;
-        out.len_specs = oth.len_specs;
-        out.data = oth.data(:, :, 1:f_final);
-        out.P = oth.P;
+        out = swirl(oth, oth.specs, f_final, oth.len_specs, oth.len_dat, oth.beads);
       end
     end
   end

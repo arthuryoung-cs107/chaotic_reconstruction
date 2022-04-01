@@ -1,8 +1,9 @@
 classdef stat_data < handle
   properties
   % friend class
-    sgp; % swirl_group.m;
+  % swirl_group.m;
 
+    sw_gp;
 
     dat_dir_name;
     exp_name;
@@ -13,8 +14,6 @@ classdef stat_data < handle
 
     par_len;
     noise_len;
-
-    sw;
 
     par_err;
     pos_err;
@@ -41,10 +40,11 @@ classdef stat_data < handle
       obj.par_len = size(obj.pars, 1);
       obj.noise_len = size(obj.pars, 2);
 
-      obj.sw = ODR_data.empty(obj.noise_len, 0);
-      for i=0:(obj.noise_len-1)
-        obj.sw(i+1) = ODR_data(obj.dat_dir_name, obj.exp_name, [obj.dat_name '.' num2str(i)]);
-      end
+      swtrue = ODR_data.construct_swirl(obj.dat_dir_name, obj.exp_name, [obj.dat_name '.' num2str(i)]);
+      obj.sw_gp = swirl_group(swtrue, obj.noise_len);
+
+      
+
 
       obj.par_err = nan(obj.noise_len-1, obj.par_len);
       obj.pos_err = nan(obj.noise_len-1, obj.sw(1).Frames-1);
@@ -57,14 +57,15 @@ classdef stat_data < handle
       [obj.pos_err_best, obj.I_best ] = mink(obj.pos_err_sum, obj.noise_len-1);
       obj.par_cov = (abs(obj.par_err)).*(obj.pos_err_sum)';
     end
+    function swirl_group_out = spawn_swirlgroup(obj)
+      swgp_out = swirl_group();
+
+      swgp_out.sw = obj.sw;
+      swgp_out.sw_len = obj.noise_len;
+      swgp_out.pars = obj.pars;
+    end
     function swout = spawn_swrlindex(obj, id_)
       swout = ODR_data(obj.dat_dir_name, obj.exp_name, [obj.dat_name '.' num2str(i)]);
-    end
-    function swgp_out = spawn_swirl_group(obj, )
-
-    end
-    function get_swirl_group(obj, )
-
     end
     function plot_frame_error(obj, fig_in, base_color)
       mean_err = mean(obj.pos_err);
