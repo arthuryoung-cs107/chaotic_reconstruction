@@ -2,79 +2,77 @@ classdef ODR_data < handle
   properties
   % little brother:
     % swirl.m
-
     dat_dir_name;
     exp_name;
     dat_name;
-    rysml;
+
     filin;
 
     %% data shared with swirl
-    data; % (x y z q1 q2 q3 q4) for each bead, each frame
-    specs; % (t cx cy wall_sca) for each frame
-    Frames; % number of frames in swirl
-    len_specs; % length of specs vector in each frame
-    len_dat; % row length of data matrix; (position, quaternion)
-    beads; % number of beads
+    Frames=0; % number of frames in swirl
+    beads=0; % number of beads
+    len_pos=0; % row length of position matrix; (position, quaternion)
+    len_dish=0; % length of dish data in each frame
+    len_params=14; % length of swirl params, all inclusive
+    pos=0 ; % Note that a swirl IS this tensor
+    dish=0; % (t cx cy wall_sca) for each frame
+    params; % the parameters associated with the swirl (swirl_params)
 
     contact_frames;
   end
   methods(static)
     function sw = construct_swirl(dat_dir_name_, exp_name_, dat_name_)
+      rysml = ODR_data.get_rysml(dat_dir_name_, exp_name_, dat_name_);
+      rydat = ODR_data.get_rydat(rysml);
+      sw = swirl(rydat.pos, rydat.dish, rysml.Frames, rysml.len_dish, rysml.len_pos, rysml.beads);
+    end
+    function rysml_out = get_rysml(dat_dir_name_,exp_name_,dat_name_)
       rysml = dlmread([dat_dir_name_ exp_name_ dat_name_ '.rysml']);
-      [Frames len_specs len_dat beads] = deal(rysml(1, 2) rysml(2, 3) rysml(3, 3) rysml(3, 2));
-
-      specs = nan(Frames, len_specs);
-      data = nan(beads, len_dat, Frames);
-      if (rysml(1,1)==1)
-        for f=0:(Frames-1)
-          id = fopen([dat_dir_name_ exp_name_ dat_name_ '.' num2str(f) '.aydat']);
-          specs(f+1, :) = (fread( id,[1, len_specs], 'float64=>float64'));
-          data(:, :, f+1) = (fread( id,[len_dat, beads], 'float64=>float64'))';
+      rysml_out = struct('dat_dir', dat_dir_name_, 'exp_name',exp_name_,'dat_name',dat_name_,'split',rysml(1,1),'Frames',rysml(1,2),'beads',rysml(3,2),'len_dish',rysml(2, 3),'len_pos',rysml(3,3));
+    end
+    function rydat_out = get_rydat(rysml, flatten_)
+      dish = nan(rysml.Frames, rysml.len_dish);
+      pos = nan(rysml.beads, rysml.len_pos, rysml.Frames);
+      if (rysml.split==1) %% if the data is stored across many binary files
+        for f=0:(rysml.Frames-1)
+          id = fopen([rysml.dat_dir_name rysml.exp_name rysml.dat_name '.' num2str(f) '.aydat']);
+          dish(f+1, :) = (fread( id,[1, rysml.len_dish], 'float64=>float64'));
+          pos(:, :, f+1) = (fread( id,[rysml.len_pos, rysml.beads], 'float64=>float64'))';
           fclose(id);
         end
-      elseif (rysml(1,1)==0)
-        id = fopen([dat_dir_name_ exp_name_ dat_name_ '.rydat']);
-        for f=0:(Frames-1)
-          specs(f+1, :) = (fread( id,[1, len_specs], 'float64=>float64'));
-          data(:, :, f+1) = (fread( id,[len_dat, beads], 'float64=>float64'))';
+      elseif (split==0) %% if the data is consolidated into one binary file
+        id = fopen([rysml.dat_dir_name rysml.exp_name rysml.dat_name '.rydat']);
+        for f=0:(rysml.Frames-1)
+          dish(f+1, :) = (fread( id,[1, rysml.len_dish], 'float64=>float64'));
+          pos(:, :, f+1) = (fread( id,[rysml.len_pos, rysml.beads], 'float64=>float64'))';
         end
         fclose(id);
       end
-      sw = swirl(data, specs, Frames, len_specs, len_dat, beads);
+      rydat_out = struct('pos', pos, 'dish', dish);
     end
   end
   methods
     function obj = ODR_data(dat_dir_name_, exp_name_, dat_name_)
-      obj.dat_dir_name = dat_dir_name_;
-      obj.exp_name = exp_name_;
-      obj.dat_name = dat_name_;
-      obj.rysml = dlmread([obj.dat_dir_name obj.exp_name obj.dat_name '.rysml']);
-      obj.Frames = obj.rysml(1, 2);
-      obj.len_specs = obj.rysml(2, 3);
-      obj.len_dat = obj.rysml(3, 3);
-      obj.beads = obj.rysml(3, 2);
+      %% first, construct the swirl that represents this data simulation outputs
+      rysml = ODR_data.get_rysml(dat_dir_name_, exp_name_, dat_name_);
+      rcdat = ODR_data.get_rydat(rysml);
 
-      obj.specs = nan(obj.Frames, obj.len_specs);
-      obj.data = nan(obj.beads, obj.len_dat, obj.Frames);
-      if (obj.rysml(1,1)==1)
-        for f=0:(obj.Frames-1)
-          id = fopen([obj.dat_dir_name obj.exp_name obj.dat_name '.' num2str(f) '.aydat']);
-          obj.specs(f+1, :) = (fread( id,[1, obj.len_specs], 'float64=>float64'));
-          obj.data(:, :, f+1) = (fread( id,[obj.len_dat, obj.beads], 'float64=>float64'))';
-          fclose(id);
-        end
-      elseif (obj.rysml(1,1)==0)
-        id = fopen([obj.dat_dir_name obj.exp_name obj.dat_name '.rydat']);
-        for f=0:(obj.Frames-1)
-          obj.specs(f+1, :) = (fread( id,[1, obj.len_specs], 'float64=>float64'));
-          obj.data(:, :, f+1) = (fread( id,[obj.len_dat, obj.beads], 'float64=>float64'))';
-        end
-        fclose(id);
-      end
+      %% ODR member assignments
+      obj.dat_dir_name = rysml.dat_dir_name;
+      obj.exp_name = rysml.exp_name;
+      obj.dat_name = rysml.dat_name;
+
+      obj.Frames=rysml.Frames;
+      obj.beads=rysml.beads;
+      obj.len_pos=rysml.len_pos;
+      obj.len_dish=rysml.len_dish;
+      % obj.len_params=rysml.len_params;
+      obj.pos=rydat.pos;
+      obj.dish=rydat.dish;
+      % obj.params=rydat.params;
     end
     function sw = spawn_swirl(obj)
-      sw = swirl(obj.data, obj.specs, obj.Frames, obj.len_specs, obj.len_dat, obj.beads);
+      sw = swirl(obj.pos, obj.dish, obj.Frames, obj.len_dish, obj.len_pos, obj.beads);
     end
     function load_filin(obj)
       obj.filin = filter_inputs([obj.dat_dir_name obj.exp_name obj.dat_name]);
@@ -90,8 +88,8 @@ classdef ODR_data < handle
       status = mkdir(save_dir);
       for i=1:obj.Frames
         id = fopen([save_dir dat_name_ '.' num2str(i-1)], 'w');
-        fprintf(id, '%g %g %g %g\n', obj.specs(i, :));
-        fprintf(id, '%g %g %g %g %g %g %g\n', obj.data(:, :, i)');
+        fprintf(id, '%g %g %g %g\n', obj.dish(i, :));
+        fprintf(id, '%g %g %g %g %g %g %g\n', obj.pos(:, :, i)');
         fclose(id);
       end
     end

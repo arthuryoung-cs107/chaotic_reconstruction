@@ -3,14 +3,13 @@ classdef stat_data < handle
   % friend class
   % swirl_group.m;
 
-    sw_gp;
+    swtrue;
 
     dat_dir_name;
     exp_name;
     dat_name;
 
     pars;
-    dels;
 
     par_len;
     noise_len;
@@ -24,25 +23,56 @@ classdef stat_data < handle
     I_best;
     I_truest;
 
+    %{a cell object that contains each swirl's position data and dish data%}
+    gp_cell;
+    %{the parameters associated with each swirl in this swirl group%}
+    params_mat;
   end
-
   methods
     function obj = stat_data(dat_dir_name_, exp_name_, dat_name_, noise_len_)
+      params_mat = AYdata.aysml_read([dat_dir_name_ exp_name_ dat_name_ '_pars']);
+      [len_params,noise_len] = size(params_mat);
+      if (nargin==4)
+        noise_len=noise_len_;
+      else
+        noise_len=noise_len-1;
+      end
+      params_true = params_mat(:, 1);
+      params_mat = params_mat(:, 2:(noise_len+1));
+
+      rysml = ODR_data.get_rysml(dat_dir_name_, exp_name_, [dat_name_ '.0']);
+      swtrue = ODR_data.construct_swirl(dat_dir_name_, exp_name_, [dat_name_ '.0']);
+
+
+      gp_cell = cell([noise_len, 2]);
+      [Frames, beads, len_pos] = deal(rysml.Frames, rysml.beads, rysml.len_pos);
+      mat_dims = [beads*len_pos, Frames];
+      parameter_error = nan(noise_len, par_len);
+      position_error = nan(noise_len, obj.sw(1).Frames-1);
+      for i=1:noise_len
+        rysml.dat_name = [dat_name_ '.' num2str(i)];
+        rydat_i = ODR_data.get_rydat(rysml);
+        pos_it = reshape(rydat_i.pos, mat_dims);
+        [gp_cell{i, :}] = deal(pos_it, rydat_i.dish);
+
+        parameter_error(:, i) = (params_true-params_mat(:, i))./abs(params_true);
+        position_error(:, i) = swirl.compute_position_error(, pos_it); 
+      end
+
+
+
+
+      %% set stat data variables
       obj.dat_dir_name = dat_dir_name_;
       obj.exp_name = exp_name_;
       obj.dat_name = dat_name_;
-
-      obj.pars = AYdata.aysml_read([obj.dat_dir_name obj.exp_name obj.dat_name '_pars']);
-      obj.dels = AYdata.aysml_read([obj.dat_dir_name obj.exp_name obj.dat_name '_dels']);
-      if (noise_len_~=0)
-        obj.pars = obj.pars(:, 1:(noise_len_+1));
-      end
+      obj.pars = pars;
+      obj.dels = dels;
       obj.par_len = size(obj.pars, 1);
       obj.noise_len = size(obj.pars, 2);
+      obj.sw_gp = sw_gp;
 
-      swtrue = ODR_data.construct_swirl(obj.dat_dir_name, obj.exp_name, [obj.dat_name '.' num2str(i)]);
-      obj.sw_gp = swirl_group(swtrue, obj.noise_len);
-      
+
 
 
       obj.par_err = nan(obj.noise_len-1, obj.par_len);

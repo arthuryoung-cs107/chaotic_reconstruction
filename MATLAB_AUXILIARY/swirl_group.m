@@ -1,28 +1,28 @@
 classdef swirl_group < swirl
+%{A class for the management of multiple swirl instances, each being related
+to each other by ONE swirl that each of them compare to.%}
   properties
-      group_cell;
+      %{a cell object that contains each swirl's position data and dish data%}
+      gp_cell;
+      %{the number of swirl instances collected by this swirl group%}
       gp_len;
+      %{the frame duration of each swirl in this swirl group%}
       frame_vec;
+      %{the parameters associated with each swirl in this swirl group%}
       params_mat;
   end
   methods(Static)
+    
   end
   methods
-    function obj = swirl_group(sw_, gp_len_, frame_vec_)
-      obj=obj@swirl(sw_, sw_.specs); % in memory, will correspond to a order
-      if (nargin>1)
+    function obj = swirl_group(sw_, gp_len_)
+      %{ the swirl that each member of the group is compared to is the identity element %}
+      obj=obj@swirl(sw_, sw_.specs);
+      if (nargin>1) %% if we are also given the length of the swirl group
         obj.gp_len = gp_len_;
-        obj.group_cell = cell([gp_len_, 2]);
-        obj.params_mat = nan(gp_len_, obj.params_len); 
-        if (nargin==2)
-          [Frames, len_dat, len_specs, beads] = deal(obj.Frames, obj.len_dat, obj.len_specs, obj.beads);
-          obj.frame_vec = Frames*ones(gp_len_, 1);
-          obj.group_cell(:, 1) = deal(nan(beads*len_dat, Frames));
-          obj.group_cell(:, 2) = deal(nan(len_specs, Frames));
-        elseif (nargin==3)
-          obj.frame_vec = frame_vec_;
-          dim = size(sw_);
-        end
+        obj.gp_cell = cell([gp_len_, 2]);
+        obj.params_mat = nan(gp_len_, obj.params_len);
+        obj.frame_vec = nan(gp_len_, 1);
       end
     end
     function make_moviei(obj, AYfig_in, i )

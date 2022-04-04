@@ -12,12 +12,11 @@ par_id = 0;
 stat_test_type = 'maxmin';
 ran_id = 0;
 
-odr3 = read_swirl(nbeads, par_id);
+ODR3 = read_ODR(nbeads, par_id);
 stat3 = read_stat(nbeads, stat_test_type, ran_id);
 
-sw3 = odr3.spawn_swirl();
+sw3 = ODR3.spawn_swirl();
 st3_gp = stat3.spawn_swirlgroup();
-st3_sub = st3_gp.spawn_sub_swirlgroup(sw3)
 
 % race3 = swirl3.read_race();
 % stat3 = swirl3.read_stat(par_id, stat_test_type, ran_id);
