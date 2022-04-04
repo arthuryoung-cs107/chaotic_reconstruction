@@ -12,25 +12,36 @@ classdef swirl < double
     len_dat=0; % row length of data matrix; (position, quaternion)
     beads=0; % number of beads
 
+    params;
+    params_len=14;
+
     initialized = false;
   end
   methods(Static)
     function cell_out = tens2cell(tens_);
-      dims = size(tens_);
-      cell_out =
+      cell_out = 0;
     end
   end
   methods
     function data = swirl(data_, specs_, Frames_, len_specs_, len_dat_, beads_)
       if (nargin==0)
         data = data@double(0);
-      elseif(nargin==1)
+      elseif(nargin<6)
         data=data@double(data_);
+        data.beads = size(data_, 1);
+        data.len_dat = size(data_, 2);
+        data.Frames = size(data_, 3);
+        if (nargin==2)
+          data.len_specs = size(specs_, 2);
+          data.specs=specs_;
+        end
+        data.initialized=true;
+      end
       elseif (nargin==6)
         data = data@double(data_(:,:,1:Frames_));
         data.specs = specs_(:,:,1:Frames_);
         [data.Frames, data.len_specs, data.len_dat, data.beads] = deal(Frames_, len_specs_, len_dat_, beads_);
-        data.initialized=true; 
+        data.initialized=true;
       end
     end
     function [out, valid_sub_swirl] = spawn_sub_swirl(obj, oth)

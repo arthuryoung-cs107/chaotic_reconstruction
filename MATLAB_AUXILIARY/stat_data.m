@@ -42,7 +42,6 @@ classdef stat_data < handle
 
       swtrue = ODR_data.construct_swirl(obj.dat_dir_name, obj.exp_name, [obj.dat_name '.' num2str(i)]);
       obj.sw_gp = swirl_group(swtrue, obj.noise_len);
-
       
 
 

@@ -44,7 +44,6 @@ classdef ODR_data < handle
       sw = swirl(data, specs, Frames, len_specs, len_dat, beads);
     end
   end
-
   methods
     function obj = ODR_data(dat_dir_name_, exp_name_, dat_name_)
       obj.dat_dir_name = dat_dir_name_;
