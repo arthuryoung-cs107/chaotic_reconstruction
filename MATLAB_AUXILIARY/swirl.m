@@ -40,7 +40,7 @@ classdef swirl < double
       end
       elseif (nargin==6)
         data = data@double(data_(:,:,1:Frames_));
-        data.specs = specs_(:,:,1:Frames_);
+        data.dish = dish_(:,:,1:Frames_);
         [data.Frames, data.len_dish, data.len_pos, data.beads] = deal(Frames_, len_dish_, len_pos_, beads_);
         data.initialized=true;
       end

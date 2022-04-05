@@ -6,13 +6,15 @@ to each other by ONE swirl that each of them compare to.%}
       gp_cell;
       %{the number of swirl instances collected by this swirl group%}
       gp_len;
+      %{ the length of swirl params %}
+      len_par=14;
       %{the frame duration of each swirl in this swirl group%}
       frame_vec;
       %{the parameters associated with each swirl in this swirl group%}
       params_mat;
   end
   methods(Static)
-    
+
   end
   methods
     function obj = swirl_group(sw_, gp_len_)
@@ -21,9 +23,21 @@ to each other by ONE swirl that each of them compare to.%}
       if (nargin>1) %% if we are also given the length of the swirl group
         obj.gp_len = gp_len_;
         obj.gp_cell = cell([gp_len_, 2]);
-        obj.params_mat = nan(gp_len_, obj.params_len);
+        obj.params_mat = nan(gp_len_, obj.len_par);
         obj.frame_vec = nan(gp_len_, 1);
       end
+    end
+    function compute_error()
+      % obj.par_err = nan(obj.noise_len-1, obj.par_len);
+      % obj.pos_err = nan(obj.noise_len-1, obj.sw(1).Frames-1);
+      % for i=1:(obj.noise_len-1)
+      %   obj.par_err(i, :) = (obj.pars(:, 1)-obj.pars(:, i+1))./abs(obj.pars(:, 1));
+      %   obj.pos_err(i, :) = obj.sw(1).comp_pos_err(obj.sw(i+1));
+      % end
+      % [obj.par_err_truest, obj.I_truest] = mink(sum(abs(obj.par_err)'), obj.noise_len-1);
+      % obj.pos_err_sum = sum(obj.pos_err');
+      % [obj.pos_err_best, obj.I_best ] = mink(obj.pos_err_sum, obj.noise_len-1);
+      % obj.par_cov = (abs(obj.par_err)).*(obj.pos_err_sum)';
     end
     function make_moviei(obj, AYfig_in, i )
       obj.sw(i).make_movie(AYfig_in);

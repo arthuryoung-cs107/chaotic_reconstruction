@@ -9,11 +9,16 @@ classdef stat_data < handle
     exp_name;
     dat_name;
 
-    pars;
-
-    par_len;
+    len_par;
     noise_len;
 
+    % shared with swirl_group
+    %{a cell object that contains each swirl's position data and dish data%}
+    gp_cell;
+    %{the parameters associated with each swirl in this swirl group%}
+    params_mat;
+
+    %% must be initialized
     par_err;
     pos_err;
     par_cov;
@@ -22,11 +27,6 @@ classdef stat_data < handle
     par_err_truest;
     I_best;
     I_truest;
-
-    %{a cell object that contains each swirl's position data and dish data%}
-    gp_cell;
-    %{the parameters associated with each swirl in this swirl group%}
-    params_mat;
   end
   methods
     function obj = stat_data(dat_dir_name_, exp_name_, dat_name_, noise_len_)
@@ -42,58 +42,39 @@ classdef stat_data < handle
 
       rysml = ODR_data.get_rysml(dat_dir_name_, exp_name_, [dat_name_ '.0']);
       swtrue = ODR_data.construct_swirl(dat_dir_name_, exp_name_, [dat_name_ '.0']);
-
-
       gp_cell = cell([noise_len, 2]);
       [Frames, beads, len_pos] = deal(rysml.Frames, rysml.beads, rysml.len_pos);
       mat_dims = [beads*len_pos, Frames];
-      parameter_error = nan(noise_len, par_len);
-      position_error = nan(noise_len, obj.sw(1).Frames-1);
       for i=1:noise_len
         rysml.dat_name = [dat_name_ '.' num2str(i)];
         rydat_i = ODR_data.get_rydat(rysml);
-        pos_it = reshape(rydat_i.pos, mat_dims);
-        [gp_cell{i, :}] = deal(pos_it, rydat_i.dish);
-
-        parameter_error(:, i) = (params_true-params_mat(:, i))./abs(params_true);
-        position_error(:, i) = swirl.compute_position_error(, pos_it); 
+        [gp_cell{i, :}] = deal(reshape(rydat_i.pos, mat_dims), rydat_i.dish);
       end
-
-
-
 
       %% set stat data variables
       obj.dat_dir_name = dat_dir_name_;
       obj.exp_name = exp_name_;
       obj.dat_name = dat_name_;
-      obj.pars = pars;
-      obj.dels = dels;
-      obj.par_len = size(obj.pars, 1);
-      obj.noise_len = size(obj.pars, 2);
-      obj.sw_gp = sw_gp;
 
+      obj.len_par = len_params;
+      obj.noise_len = noise_len;
 
+      swtrue.len_par=obj.len_par;
+      swtrue.params = params_true;
+      obj.swtrue = swtrue;
 
-
-      obj.par_err = nan(obj.noise_len-1, obj.par_len);
-      obj.pos_err = nan(obj.noise_len-1, obj.sw(1).Frames-1);
-      for i=1:(obj.noise_len-1)
-        obj.par_err(i, :) = (obj.pars(:, 1)-obj.pars(:, i+1))./abs(obj.pars(:, 1));
-        obj.pos_err(i, :) = obj.sw(1).comp_pos_err(obj.sw(i+1));
-      end
-      [obj.par_err_truest, obj.I_truest] = mink(sum(abs(obj.par_err)'), obj.noise_len-1);
-      obj.pos_err_sum = sum(obj.pos_err');
-      [obj.pos_err_best, obj.I_best ] = mink(obj.pos_err_sum, obj.noise_len-1);
-      obj.par_cov = (abs(obj.par_err)).*(obj.pos_err_sum)';
+      obj.gp_cell = gp_cell;
+      obj.params_mat = params_mat;
     end
-    function swirl_group_out = spawn_swirlgroup(obj)
-      swgp_out = swirl_group();
+    function swgp_out = spawn_swirlgroup(obj)
+      swtru = obj.swtrue 
 
-      swgp_out.sw = obj.sw;
-      swgp_out.sw_len = obj.noise_len;
-      swgp_out.pars = obj.pars;
+      obj.swtrue = swtru;
+      swgp_out = swirl_group(obj.swtrue, );
+
+      swgp_out.
     end
-    function swout = spawn_swrlindex(obj, id_)
+    function swout = spawn_swindex(obj, id_)
       swout = ODR_data(obj.dat_dir_name, obj.exp_name, [obj.dat_name '.' num2str(i)]);
     end
     function plot_frame_error(obj, fig_in, base_color)
