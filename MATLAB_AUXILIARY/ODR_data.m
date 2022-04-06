@@ -20,7 +20,7 @@ classdef ODR_data < handle
 
     contact_frames;
   end
-  methods(static)
+  methods(Static)
     function sw = construct_swirl(dat_dir_name_, exp_name_, dat_name_)
       rysml = ODR_data.get_rysml(dat_dir_name_, exp_name_, dat_name_);
       rydat = ODR_data.get_rydat(rysml);
@@ -31,34 +31,34 @@ classdef ODR_data < handle
       rysml_out = struct('dat_dir', dat_dir_name_, 'exp_name',exp_name_,'dat_name',dat_name_,'split',rysml(1,1),'Frames',rysml(1,2),'beads',rysml(3,2),'len_dish',rysml(2, 3),'len_pos',rysml(3,3));
     end
     function rydat_out = get_rydat(rysml, flatten_)
-      dish = nan(rysml.Frames, rysml.len_dish);
-      pos = nan(rysml.beads, rysml.len_pos, rysml.Frames);
-      if (rysml.split==1) %% if the data is stored across many binary files
-        for f=0:(rysml.Frames-1)
-          id = fopen([rysml.dat_dir_name rysml.exp_name rysml.dat_name '.' num2str(f) '.aydat']);
-          dish(f+1, :) = (fread( id,[1, rysml.len_dish], 'float64=>float64'));
-          pos(:, :, f+1) = (fread( id,[rysml.len_pos, rysml.beads], 'float64=>float64'))';
-          fclose(id);
+        dish = nan(rysml.Frames, rysml.len_dish);
+        pos = nan(rysml.beads, rysml.len_pos, rysml.Frames);
+        if (rysml.split==1) %% if the data is stored across many binary files
+            for f=0:(rysml.Frames-1)
+                id = fopen([rysml.dat_dir rysml.exp_name rysml.dat_name '.' num2str(f) '.aydat']);
+                dish(f+1, :) = (fread( id,[1, rysml.len_dish], 'float64=>float64'));
+                pos(:, :, f+1) = (fread( id,[rysml.len_pos, rysml.beads], 'float64=>float64'))';
+                fclose(id);
+            end
+        elseif (rysml.split==0) %% if the data is consolidated into one binary file
+            id = fopen([rysml.dat_dir rysml.exp_name rysml.dat_name '.rydat']);
+            for f=0:(rysml.Frames-1)
+                dish(f+1, :) = (fread( id,[1, rysml.len_dish], 'float64=>float64'));
+                pos(:, :, f+1) = (fread( id,[rysml.len_pos, rysml.beads], 'float64=>float64'))';
+            end
+            fclose(id);
         end
-      elseif (split==0) %% if the data is consolidated into one binary file
-        id = fopen([rysml.dat_dir_name rysml.exp_name rysml.dat_name '.rydat']);
-        for f=0:(rysml.Frames-1)
-          dish(f+1, :) = (fread( id,[1, rysml.len_dish], 'float64=>float64'));
-          pos(:, :, f+1) = (fread( id,[rysml.len_pos, rysml.beads], 'float64=>float64'))';
-        end
-        fclose(id);
-      end
-      rydat_out = struct('pos', pos, 'dish', dish);
+        rydat_out = struct('pos', pos, 'dish', dish);
     end
   end
   methods
     function obj = ODR_data(dat_dir_name_, exp_name_, dat_name_)
       %% first, construct the swirl that represents this data simulation outputs
       rysml = ODR_data.get_rysml(dat_dir_name_, exp_name_, dat_name_);
-      rcdat = ODR_data.get_rydat(rysml);
+      rydat = ODR_data.get_rydat(rysml);
 
       %% ODR member assignments
-      obj.dat_dir_name = rysml.dat_dir_name;
+      obj.dat_dir_name = rysml.dat_dir;
       obj.exp_name = rysml.exp_name;
       obj.dat_name = rysml.dat_name;
 
@@ -95,56 +95,6 @@ classdef ODR_data < handle
     end
     function sw_out = spawn_best(obj)
       sw_out = ODR_data([obj.dat_dir_name obj.exp_name], 'swirl_best.odr/', obj.dat_name);
-    end
-    function err_vec = comp_pos_err(obj, oth)
-      %% computes mean bead position error for each frame
-      err_vec = zeros(1, obj.Frames-1); %% ignore first frame, assuming equivalent initial conditions
-      diff = obj.data - oth.data;
-      for i=1:(obj.Frames-1)
-        err_vec(i) = sum(sum((diff(:, :,i+1).*diff_mat(:, :,i+1))'));
-      end
-    end
-    function find_contact_frames(obj)
-      obj.contact_frames = zeros(obj.Frames, 1);
-      fa = sqrt(0.75);
-      d = 5.72;
-      walls = [0, 1; fa, 0.5; fa , -0.5]';
-      for i=1:obj.Frames
-        s_mat = (obj.data(:, 1:2, i)-[obj.specs(i, 2), obj.specs(i, 3)])*walls;
-        w_mat = s_mat - d*(double(s_mat>0)) + d*(double(s_mat<0));
-        contact_beads = find(abs(w_mat)<0.5); %% rycrofts contact criterion
-        obj.contact_frames(i) = length(contact_beads)>0;
-      end
-    end
-    function make_movie(obj, AYfig_in)
-      pause;
-      frames = obj.Frames;
-
-      walld = 5.72;
-      wallL = (2/sqrt(3))*walld;
-      wallv = [-wallL/2 -walld; -wallL 0; -wallL/2 walld ; wallL/2 walld; wallL 0; wallL/2 -walld; -wallL/2 -walld];
-      AYfig_in.init_movie(frames);
-      wsca = max(abs([min(obj.specs(:, 2))-wallL, max(obj.specs(:, 2))+walld, min(obj.specs(:, 3))-wallL, max(obj.specs(:, 3))+walld]));
-      lims = [-wsca, wsca, -wsca, wsca];
-
-      rads = 0.5*ones(obj.beads,1);
-      figdims = AYfig_in.get_dims();
-      MS = figdims(4)/(4*wsca); %% radius in pixels
-      SS = pi*MS*MS; %% area in pixels
-      for i=1:frames
-        plot(AYfig_in.ax, wallv(:, 1)+obj.specs(i, 2), wallv(:, 2)+obj.specs(i, 3), 'k -')
-        hold(AYfig_in.ax, 'on');
-        objdots = scatter(AYfig_in.ax, obj.data(:, 1, i), obj.data(:, 2, i), 'o', 'LineWidth', 1, 'SizeData', SS, 'MarkerEdgeColor', [0 0 0], 'MarkerFaceColor', [0.1000 0.4440 0.2440], 'MarkerFaceAlpha', 0.5);
-        txtbx = annotation(AYfig_in.fig, 'textbox', [0.8 0.9 0.1 0.1], 'String', num2str(i-1), 'LineStyle', 'none', 'FontSize', 16);
-        hold(AYfig_in.ax, 'off');
-        axis(AYfig_in.ax, lims);
-        drawnow
-        AYfig_in.movie_gen(i) = getframe(AYfig_in.ax);
-        delete(txtbx);
-      end
-      % alternative way of plotting the circles, but not quite as flexible
-      % viscircles(AYfig_in.ax, obj.data(:, 1:2, i), rads, 'Color', [0.1000 0.4440 0.2440]);
-      % objdots = plot(AYfig_in.ax, obj.data(:, 1, i), obj.data(:, 2, i), 'o', 'ColorMode', 'manual', 'LineWidth', 1, 'MarkerSize', MS, 'MarkerEdgeColor', [0 0 0], 'MarkerFaceColor', [0.1000 0.4440 0.2440]);
     end
     function make_movie_comp(obj, AYfig_in, oth)
       frames = obj.Frames;

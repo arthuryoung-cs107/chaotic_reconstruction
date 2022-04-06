@@ -9,10 +9,7 @@ proc_name = '../dat_dir/';
 pov_dir = '../POV_AUXILIARY/';
 dat_name = 'pts';
 
-nbeads = 20;
+nbeads = 3;
 par_id = 0;
 
-exp_name = ['swirl' num2str(nbeads) '.odr/'];
-file_name = [dat_name '.' num2str(par_id)];
-sw20 = ODR_data(proc_name, exp_name, file_name);
-sw20.make_movie(movie1);
+sw = read_swirl(nbeads, par_id);
