@@ -46,8 +46,15 @@ classdef AYfig < handle
       end
     end
     function play_movie(obj, nplay_, fps_)
-      obj.fig.Visible = 'on';
-      movie(obj.ax, obj.movie_gen, nplay_, fps_);
+        if (nargin==1)
+            nplay=5;
+            fps=90;
+        elseif (nargin==3)
+            nplay=nplay_;
+            fps=fps_;
+        end
+        obj.fig.Visible = 'on';
+        movie(obj.ax, obj.movie_gen, nplay, fps);
     end
     function dims_out = get_dims(obj)
       curunits = get(obj.ax, 'Units');

@@ -30,7 +30,7 @@ classdef ODR_data < handle
       rysml = dlmread([dat_dir_name_ exp_name_ dat_name_ '.rysml']);
       rysml_out = struct('dat_dir', dat_dir_name_, 'exp_name',exp_name_,'dat_name',dat_name_,'split',rysml(1,1),'Frames',rysml(1,2),'beads',rysml(3,2),'len_dish',rysml(2, 3),'len_pos',rysml(3,3));
     end
-    function rydat_out = get_rydat(rysml, flatten_)
+    function rydat_out = get_rydat(rysml)
         dish = nan(rysml.Frames, rysml.len_dish);
         pos = nan(rysml.beads, rysml.len_pos, rysml.Frames);
         if (rysml.split==1) %% if the data is stored across many binary files
