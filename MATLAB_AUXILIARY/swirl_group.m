@@ -35,7 +35,7 @@ classdef swirl_group
             len_gp = obj.len_gp;
             [pos_err_best, I_best] = mink(pos_err_acc,len_gp);
             [par_err_truest, I_truest] = mink(sum(abs(par_err)'),len_gp);
-            par_cov = sum(pos_err_acc.*par_err)./mean(par_err);
+            par_cov = (sum(pos_err_acc.*par_err))./mean(par_err);
         end
         function plot_frame_error(obj, ax_, base_color, pos_err, I_best, I_truest)
             [len_gp, Frames] = size(pos_err);
@@ -65,24 +65,24 @@ classdef swirl_group
             xlabel(ax_, 'parameter index', 'Interpreter', 'Latex', 'Fontsize', 14)
             ylabel(ax_, 'position error', 'Interpreter', 'Latex', 'Fontsize', 14)
         end
-        function plot_param_covariance(obj, fig_in, base_color)
-            figure(fig_in.Number)
-            for i=1:obj.noise_len-1
-            plot(1:obj.par_len, obj.par_cov(i, :), ' -', 'Color', [base_color, 0.1], 'LineWidth', 1);
-            end
-            plot(1:obj.par_len, mean(obj.par_cov), ' -', 'Color', base_color, 'LineWidth', 2);
-            plot(1:obj.par_len, obj.par_cov(obj.I_best(1), :), ' -', 'Color', [0 0 0 ], 'LineWidth', 1);
-            plot(1:obj.par_len, obj.par_cov(obj.I_truest(1), :), ' :', 'Color', [0 0 0 ], 'LineWidth', 1);
-            % xlabel('parameter index', 'Interpreter', 'Latex', 'Fontsize', 14)
-            % ylabel('param error', 'Interpreter', 'Latex', 'Fontsize', 14)
+        function plot_param_covariance(obj, ax_, base_color, par_cov)
+            [len_gp, len_par] = size(par_cov);
+            box(ax_,'on');
+            hold(ax_, 'on');
+            plot(ax_, 1:len_par, par_cov, ' -', 'Color', base_color, 'LineWidth', 1);
+            xlabel(ax_, 'parameter index', 'Interpreter', 'Latex', 'Fontsize', 14)
+            ylabel(ax_, 'cov', 'Interpreter', 'Latex', 'Fontsize', 14)
         end
-        function plot_param_pos_error(obj, fig_in, base_color)
-            figure(fig_in.Number)
-            plot(sum(abs(obj.par_err)'), obj.pos_err_sum, ' o', 'Color', base_color, 'LineWidth', 2);
-            plot(sum(abs(obj.par_err(obj.I_best(1), :))), obj.pos_err_sum(obj.I_best(1)), ' p', 'Color', [0 0 0], 'LineWidth', 2);
-            plot(sum(abs(obj.par_err(obj.I_truest(1), :))), obj.pos_err_sum(obj.I_truest(1)), ' h', 'Color', [0 0 0], 'LineWidth', 2);
-            % xlabel('param error', 'Interpreter', 'Latex', 'Fontsize', 14)
-            % ylabel('position error', 'Interpreter', 'Latex', 'Fontsize', 14)
+        function plot_param_pos_error(obj, ax_, base_color, par_err, pos_err_acc, I_best, I_truest)
+            [len_gp, len_par] = size(par_err);
+            par_err_absum = sum(abs(par_err)');
+            box(ax_,'on');
+            hold(ax_, 'on');
+            scatter(ax_, par_err_absum, pos_err_acc, ' o', 'MarkerFaceColor', base_color, 'SizeData', 50);
+            scatter(ax_, par_err_absum(I_best), pos_err_acc(I_best), 'p', 'MarkerFaceColor', [0 0 0], 'SizeData', 80);
+            scatter(ax_, par_err_absum(I_truest), pos_err_acc(I_truest), 'h', 'MarkerFaceColor', [0 0 0], 'SizeData', 80);
+            xlabel('param error', 'Interpreter', 'Latex', 'Fontsize', 14)
+            ylabel('position error', 'Interpreter', 'Latex', 'Fontsize', 14)
         end
         function make_moviei(obj, AYfig_in, i )
             obj.sw(i).make_movie(AYfig_in);
