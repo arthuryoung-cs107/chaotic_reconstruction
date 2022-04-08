@@ -53,6 +53,17 @@ classdef swirl_group
             xlabel(ax_, 'Frame', 'Interpreter', 'Latex', 'Fontsize', 14)
             ylabel(ax_, 'position error', 'Interpreter', 'Latex', 'Fontsize', 14)
         end
+        function swi = spawn_swirl_i(obj,i_)
+            Frames = obj.frame_vec(i_);
+            len_dish = obj.sw0.len_dish;
+            len_pos = obj.sw0.len_pos;
+            beads = obj.sw0.beads;
+            [pos,dish] = swirl_group.cellrow2posdish(obj.gp_cell,i_,beads,len_pos);
+
+            swi = swirl(pos,dish,Frames,len_dish,len_pos,beads);
+            swi.params=obj.params_mat(:,i_);
+            swi.len_par=size(obj.params_mat,1);
+        end
         function plot_param_error(obj, ax_, base_color, par_err, I_best, I_truest)
             [len_gp, len_par] = size(par_err);
             box(ax_,'on');
@@ -84,8 +95,48 @@ classdef swirl_group
             xlabel('param error', 'Interpreter', 'Latex', 'Fontsize', 14)
             ylabel('position error', 'Interpreter', 'Latex', 'Fontsize', 14)
         end
-        function make_moviei(obj, AYfig_in, i )
-            obj.sw(i).make_movie(AYfig_in);
+    end
+    methods(Static)
+        function [pos, dish] = cellrow2posdish(gp_cell_, i_, beads, len_pos)
+            pos=reshape(gp_cell_{i_,1},[beads,len_pos,size(gp_cell_{i_,1},2)]);
+            dish=gp_cell_{i_,2};
+        end
+        function make_movie_comp(AYfig_in,movie_data,movie_specs)
+            Frames = movie_specs.Frames;
+            AYfig_in.init_movie(Frames);
+
+            movie_fig = AYfig_in.fig;
+            movie_ax = AYfig_in.ax;
+            movie_gen = AYfig_in.movie_gen;
+
+            dish = movie_specs.dish;
+
+            pos = cat(1,movie_data{:,1});
+            colors = cat(1,movie_data{:,2});
+
+            walld = 5.72;
+            wallL = (2/sqrt(3))*walld;
+            wallv = [-wallL/2 -walld; -wallL 0; -wallL/2 walld; wallL/2 walld; wallL 0; wallL/2 -walld; -wallL/2 -walld];
+
+            wsca = max(abs([min(dish(:, 2))-wallL, max(dish(:, 2))+walld, min(dish(:, 3))-wallL, max(dish(:, 3))+walld]));
+            lims = [-wsca, wsca, -wsca, wsca];
+
+            figdims = AYfig_in.get_dims();
+            MS = figdims(4)/(4*wsca); %% radius in pixels
+            SS = pi*MS*MS; %% area in pixels
+
+            for i=1:Frames
+                plot(movie_ax, wallv(:, 1)+dish(i, 2), wallv(:, 2)+dish(i, 3), 'k -')
+                hold(AYfig_in.ax, 'on');
+                dots = scatter(movie_ax, pos(:, 1, i), pos(:, 2, i), 'o', 'filled', 'CData', colors, 'LineWidth', 1, 'SizeData', SS, 'MarkerEdgeColor', [0 0 0], 'MarkerFaceAlpha', 0.5);
+                txtbx = annotation(movie_fig, 'textbox', [0.8 0.9 0.1 0.1], 'String', num2str(i-1), 'LineStyle', 'none', 'FontSize', 16);
+                hold(movie_ax, 'off');
+                axis(movie_ax, lims);
+                drawnow
+                movie_gen(i) = getframe(movie_fig);
+                delete(txtbx);
+            end
+            AYfig_in.movie_gen = movie_gen;
         end
     end
 end

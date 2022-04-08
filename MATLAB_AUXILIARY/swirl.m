@@ -16,12 +16,6 @@ classdef swirl
     params; % the parameters associated with the swirl
 
   end
-  methods(Static)
-    function mat_pos = tens2mat(tens_)
-        [beads, len_dat, Frames] = size(tens);
-        mat_pos = reshape(tens_, [beads*len_dat, Frames]);
-    end
-  end
   methods
     function data = swirl(pos_, dish_, Frames_, len_dish_, len_pos_, beads_)
         if(nargin==1)
@@ -115,46 +109,15 @@ classdef swirl
         % viscircles(AYfig_in.ax, obj.pos(:, 1:2, i), rads, 'Color', [0.1000 0.4440 0.2440]);
         % objdots = plot(AYfig_in.ax, obj.pos(:, 1, i), obj.pos(:, 2, i), 'o', 'ColorMode', 'manual', 'LineWidth', 1, 'MarkerSize', MS, 'MarkerEdgeColor', [0 0 0], 'MarkerFaceColor', [0.1000 0.4440 0.2440]);
     end
-    % function make_movie_par(obj, AYfig_in, par_pool)
-    %     frames = obj.Frames;
-    %
-    %     walld = 5.72;
-    %     wallL = (2/sqrt(3))*walld;
-    %     wallv = [-wallL/2 -walld; -wallL 0; -wallL/2 walld ; wallL/2 walld; wallL 0; wallL/2 -walld; -wallL/2 -walld];
-    %     AYfig_in.init_movie(frames);
-    %     wsca = max(abs([min(obj.dish(:, 2))-wallL, max(obj.dish(:, 2))+walld, min(obj.dish(:, 3))-wallL, max(obj.dish(:, 3))+walld]));
-    %     lims = [-wsca, wsca, -wsca, wsca];
-    %
-    %     rads = 0.5*ones(obj.beads,1);
-    %     figdims = AYfig_in.get_dims();
-    %     MS = figdims(4)/(4*wsca); %% radius in pixels
-    %     SS = pi*MS*MS; %% area in pixels
-    %
-    %     movie_fig = AYfig_in.fig;
-    %     movie_ax = AYfig_in.ax;
-    %     movie_gen = AYfig_in.movie_gen;
-    %     dish = obj.dish;
-    %     pos = obj.pos(:, 1:2, :);
-    %
-    %     parfor i=1:frames
-    %         getframe_inputs = struct('ax', movie_ax, 'wallv', wallv, 'dish', dish(i,:), 'pos', pos(:,:,i), 'fig', movie_fig, 'lims', lims, 'i', i);
-    %         plot(movie_ax, wallv(:, 1)+dish(i, 2), wallv(:, 2)+dish(i, 3), 'k -')
-    %         hold(AYfig_in.ax, 'on');
-    %         objdots = scatter(movie_ax, pos(:, 1, i), pos(:, 2, i), 'o', 'LineWidth', 1, 'SizeData', SS, 'MarkerEdgeColor', [0 0 0], 'MarkerFaceColor', [0.1000 0.4440 0.2440], 'MarkerFaceAlpha', 0.5);
-    %         txtbx = annotation(movie_fig, 'textbox', [0.8 0.9 0.1 0.1], 'String', num2str(i-1), 'LineStyle', 'none', 'FontSize', 16);
-    %         hold(movie_ax, 'off');
-    %         axis(movie_ax, lims);
-    %         drawnow
-    %         movie_gen(i) = getframe(movie_ax);
-    %         delete(txtbx);
-    %
-    %         movie_gen(i) = swirl_movie_getframe();
-    %     end
-    %     AYfig_in.movie_gen = movie_gen;
-    %     % alternative way of plotting the circles, but not quite as flexible
-    %     % viscircles(AYfig_in.ax, obj.pos(:, 1:2, i), rads, 'Color', [0.1000 0.4440 0.2440]);
-    %     % objdots = plot(AYfig_in.ax, obj.pos(:, 1, i), obj.pos(:, 2, i), 'o', 'ColorMode', 'manual', 'LineWidth', 1, 'MarkerSize', MS, 'MarkerEdgeColor', [0 0 0], 'MarkerFaceColor', [0.1000 0.4440 0.2440]);
-    % end
+  end
+  methods(Static)
+    function mat_pos = tens2mat(tens_)
+        [beads, len_dat, Frames] = size(tens);
+        mat_pos = reshape(tens_, [beads*len_dat, Frames]);
+    end
+    function tens_pos = mat2tens(mat_,beads,len_dat)
+        tens_pos = reshape(mat_,[beads,len_dat,size(mat_,2)]);
+    end
   end
 end
 
