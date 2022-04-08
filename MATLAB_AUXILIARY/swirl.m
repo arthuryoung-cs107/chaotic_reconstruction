@@ -110,7 +110,7 @@ classdef swirl
         % objdots = plot(AYfig_in.ax, obj.pos(:, 1, i), obj.pos(:, 2, i), 'o', 'ColorMode', 'manual', 'LineWidth', 1, 'MarkerSize', MS, 'MarkerEdgeColor', [0 0 0], 'MarkerFaceColor', [0.1000 0.4440 0.2440]);
     end
   end
-  methods(Static)
+  methods (Static)
     function mat_pos = tens2mat(tens_)
         [beads, len_dat, Frames] = size(tens);
         mat_pos = reshape(tens_, [beads*len_dat, Frames]);
@@ -118,9 +118,15 @@ classdef swirl
     function tens_pos = mat2tens(mat_,beads,len_dat)
         tens_pos = reshape(mat_,[beads,len_dat,size(mat_,2)]);
     end
+    function frscore = compute_frscore(fcap, tol, diff_full)
+        f = 0;
+        not_lost = true;
+        while ((f<fcap)&&(not_lost))
+            f=f+1;
+            diff = diff_full(:, :, f);
+            not_lost = max(sqrt(sum((diff.*diff)')))<tol;
+        end
+        frscore = f;
+    end
   end
-end
-
-function frame_out = swirl_movie_getframe()
-
 end

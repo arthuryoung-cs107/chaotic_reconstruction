@@ -37,6 +37,22 @@ classdef swirl_group
             [par_err_truest, I_truest] = mink(sum(abs(par_err)'),len_gp);
             par_cov = (sum(pos_err_acc.*par_err))./mean(par_err);
         end
+        function frscores = compute_frscores(obj)
+            sw0=obj.sw0;
+            len_gp = obj.len_gp;
+            gp_cell = obj.gp_cell;
+
+            Frames = sw0.Frames;
+            beads = sw0.beads;
+            len_pos = sw0.len_pos;
+            pos_true = sw0.pos;
+
+            frscores = nan(len_gp,1);
+
+            for i = 1:len_gp
+                frscores(i) = swirl.compute_frscore(Frames, 1, pos_true-reshape(gp_cell{i,1},[beads,len_pos,Frames]));
+            end
+        end
         function plot_frame_error(obj, ax_, base_color, pos_err, I_best, I_truest)
             [len_gp, Frames] = size(pos_err);
             mean_err = mean(pos_err);
@@ -96,7 +112,7 @@ classdef swirl_group
             ylabel('position error', 'Interpreter', 'Latex', 'Fontsize', 14)
         end
     end
-    methods(Static)
+    methods (Static)
         function [pos, dish] = cellrow2posdish(gp_cell_, i_, beads, len_pos)
             pos=reshape(gp_cell_{i_,1},[beads,len_pos,size(gp_cell_{i_,1},2)]);
             dish=gp_cell_{i_,2};

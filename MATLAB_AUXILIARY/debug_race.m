@@ -2,27 +2,33 @@ clear
 close all
 run AYfigprops.m
 fig_pos = AYfig.fig_pos_gen(2, 3);
-pos_bottom_row = [1 1 1440 345];
+pos_top_row = [1 551 1728 460];
+pos_bottom_row = [0 1 1728 460];
 
-diagnostics_fig = AYfig(AYfig.specs_gen('generation diagnostics',pos_bottom_row));
-diagnostics_fig.init_tiles([1, 3]);
+stat_diagnostics_fig = AYfig(AYfig.specs_gen('stat_diagnostics',pos_top_row));
+stat_diagnostics_fig.init_tiles([1, 3]);
+
+race_diagnostics_fig = AYfig(AYfig.specs_gen('race_diagnostics',pos_bottom_row));
+race_diagnostics_fig.init_tiles([1, 3]);
 
 nbeads = 3;
 par_id = 0;
-stat_test_type = 'gauss';
-ran_id = 0;
+stat_test_type = 'maxmin';
+ran_id = 1;
 
-sw3 = read_swirl(nbeads, par_id);
-stat3 = read_stat(nbeads, stat_test_type, ran_id);
-race3 = read_race(nbeads, par_id);
+sw = read_swirl(nbeads, par_id);
+stat = read_stat(nbeads, stat_test_type, ran_id);
+race = read_race(nbeads, par_id);
 
-stat3.
-swbst3 = race3.spawn_swbest();
+stgp = stat.spawn_swirlgroup();
+stat = stat_data.init_statistics(stat, stgp);
+stat = stat_data.init_stat_generation(stat, stgp);
 
-% race.F = 1200;
-% race.lambda = (1.0)*log(((1e16)-1)/(100-1));
+stat.plot_gen_scores(stat_diagnostics_fig.ax_tile(1));
 
-% for i=1:race.gen_count
-%   race.plot_diagnosticsi(diagnostics_fig, i);
-%   pause
-% end
+swbst3 = race.spawn_swbest();
+
+race.F = 1200;
+race.lambda = (1.0)*log(((1e16)-1)/(100-1));
+
+race.plot_diagnosticsi(race_diagnostics_fig, 1);

@@ -8,16 +8,15 @@ fig_all.init_tiles([2, 2]);
 movie1 = AYfig(AYfig.specs_gen('playback', [fig_pos(5, 1:2), 500,500] ));
 
 nbeads = 3;
-test = 'gauss'; %% parameter perturbation
-ran_id = 0;
+test = 'maxmin'; %% parameter perturbation
+ran_id = 1;
 
 %% this effort is to produce a learned quantity that is FULLY PHYSICALLY INTERPRETABLE
 
 stat = read_stat(nbeads,test,ran_id);
 stgp = stat.spawn_swirlgroup();
 
-[stat.par_err, stat.pos_err, stat.pos_err_acc] = stgp.compute_error();
-[stat.I_best, stat.I_truest, stat.par_cov] = stgp.compute_statistics(stat.par_err, stat.pos_err, stat.pos_err_acc);
+stat = stat_data.init_statistics(stat,stgp);
 
 stgp.plot_frame_error(fig_all.ax_tile(1), blue5, stat.pos_err, stat.I_best(1), stat.I_truest(1));
 stgp.plot_param_error(fig_all.ax_tile(2), green4, stat.par_err, stat.I_best(1), stat.I_truest(1));
