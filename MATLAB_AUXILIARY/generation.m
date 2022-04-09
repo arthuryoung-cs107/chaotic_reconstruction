@@ -88,14 +88,23 @@ classdef generation < handle
             fworst = min(frscores);
             fbest = max(frscores);
             frame_bins = fworst:fbest;
-            k = frame_bins-fworst;
             P = fcount/(sum(fcount));
-            lambda = dot(k,P)
+            lambda = dot(frame_bins,P)
+
+            [fmode_count, i_mode] = max(fcount);
+            fmode = fworst+i_mode-1;
+            fcount_h = fcount(i_mode:end);
+            frame_bins_h = fmode:fbest;
+            P_h = fcount_h/(sum(fcount_h));
+            lambda_h = dot(frame_bins_h,P_h);
 
             yyaxis(ax, 'left');
             histogram(ax, frscores, fbest-fworst+1);
             yyaxis(ax, 'right');
-            plot(ax, frame_bins, poisspdf(k, lambda),' o -', 'Color', [1 0 0], 'LineWidth', 2);
+            plot(ax, frame_bins, poisspdf(frame_bins, lambda),' o -', 'Color', [0 0 1], 'LineWidth', 2);
+            hold(ax, 'on')
+            plot(ax, frame_bins, poisspdf(frame_bins, lambda_h),' o -', 'Color', [1 0 0], 'LineWidth', 2);
+            hold(ax, 'off')
         end
     end
 end

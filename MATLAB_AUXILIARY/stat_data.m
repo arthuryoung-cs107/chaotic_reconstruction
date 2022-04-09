@@ -78,13 +78,10 @@ classdef stat_data < handle
         end
         function plot_gen_scores(obj, ax_)
             frscores = obj.frscores;
-            fbest = max(frscores);
-            fworst = min(frscores);
-            frame_bins = fworst:fbest;
             fcount = histcounts(frscores, max(frscores)-min(frscores)+1);
-            lambda = dot(fcount, frame_bins)/(length(frscores)) - fworst;
-
             generation.plot_gen_scores(ax_, frscores, fcount);
+            
+
         end
         function make_POVray_inputsi(obj, i_, pov_dir_)
             obj.sw(i_).make_POVray_inputs(pov_dir_, obj.dat_name);
