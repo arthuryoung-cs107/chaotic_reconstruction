@@ -11,7 +11,7 @@
 #include "omp.h"
 #endif
 
-const int record_int_len=6;
+const int record_int_len=7;
 const int record_double_len=1;
 
 struct record
@@ -20,44 +20,34 @@ struct record
   int len;
   int Frames;
 
-  int global_index;
-  int frscore;
+  const int global_index; // index position of this record
+  int frscore; // frame score
   int gen; // generation in which this particle was generated
   int parent_gen; // generation this particle comes from
   int parent_count; // number of particle ancestors
-  int parent_global_index; // number of particle ancestors
+  int parent_global_index; // index position of parent particle
+  int dup_count; // number of times this particle has been duplicated
 
   double l2score;
+
   double gau_h;
   double gau_lambda;
 
   double * params;
 
-  record() {}
   record(int i_): global_index(i_) {}
   ~record() {}
 
-  void init(double * params_, int len_, int Frames_, double gau_h_, double gau_lambda_)
-  {frscore=0; l2score=0.0; gen=0; parent_gen=0; parent_count=0;
-    params=params_; len=len_; Frames=Frames_; gau_h=gau_h_; gau_lambda=gau_lambda_;}
+  void init(double * params_, int len_, int Frames_, double gau_h_, double gau_lambda_);
+  void reset_record(int gen_=0);
+  void resample(int gen_, double * dmin_, double *dmax_, AYrng * r_);
+  void duplicate(record *parent_, int gen_, double *dmin_, double *dmax_, AYrng * r_);
+  void take_vals(record * rtake_);
 
-  void resample(int gen_, double * dmin_, double *dmax_, AYrng * r_)
-  {
-    gen = gen_; parent_gen = 0; parent_count = 0; parent_global_index = global_index;
-    for (int i = 0; i < len; i++)
-      params[i] = dmin_[i]+(dmax_[i]-dmin_[i])*(r_->rand_uni_gsl(0.0,1.0));
-  }
-
-  void duplicate(record *parent_, int gen_, double *dmin_, double *dmax_, AYrng * r_)
-  {
-    gen=gen_; parent_gen=parent_->gen; parent_count=parent_->parent_count+1; parent_global_index=parent_->global_index;
-    for (int i = 0; i < len; i++)
-    {
-      params[i] = parent_->params[i]*(r_->rand_gau_gsl(1.0, parent_->var()));
-      if (params[i] > dmax_[i]) params[i]=dmax_[i];
-      else if (params[i] < dmin_[i]) params[i]=dmin_[i];
-    }
-  }
+  inline void init_leader(double * params_, int len_, int Frames_, double gau_h_, double gau_lambda_)
+  {init(params_, len_, Frames_, gau_h_, gau_lambda_); reset_record();}
+  inline void init_pool(double * params_, int len_, int Frames_, double gau_h_, double gau_lambda_, double * dmin_, double *dmax_, AYrng * r_)
+  {init(params_, len_, Frames_, gau_h_, gau_lambda_); resample(0,dmin_,dmax_,r_);}
 
   inline bool check_success(int frscore_, double l2score_, int frmin_, double l2min_)
   {
@@ -75,14 +65,6 @@ struct record
     else if (l2score<rcomp_->l2score) return true;
     else return false;
   }
-
-  void take_vals(record * rtake_)
-  {
-    frscore = rtake_->frscore; l2score = rtake_->l2score;
-    gen=rtake_->gen; parent_gen=rtake_->parent_gen; parent_count=rtake_->parent_count; parent_global_index=rtake_->parent_global_index;
-    for (int i = 0; i < len; i++) params[i] = rtake_->params[i];
-  }
-
   inline bool isworse(record * rcomp_)
   {return !(isbetter(rcomp_));}
 
@@ -95,11 +77,7 @@ struct record
   inline double var()
   {return gau_h*exp(-2.0*gau_lambda*((double) frscore)/((double)Frames));}
 
-  void print_record()
-  {
-    printf("record ID:%d, fr:%d, l2:%e, params: ", global_index, frscore, l2score);
-    for (int i = 0; i < 12; i++) printf("%e ", params[i]);
-  }
+  void print_record();
 };
 
 class runner : public swirl
@@ -156,13 +134,15 @@ struct referee
 
     bool alloc_flag=false;
 
-    referee(int nlead_, int npool_, int param_len_, double dt_sim_, double gau_var_high_, double gau_var_low_, double lambda_coeff_, double rs_fill_factor_, double rs_full_factor_): nlead(nlead_), npool(npool_), param_len(param_len_), dt_sim(dt_sim_), gau_var_high(gau_var_high_), gau_var_low(gau_var_low_), gau_lambda(log(gau_var_high_/gau_var_low_)), lambda(lambda_coeff_*log(((double) 1e16-1)/((double) nlead-1))), rs_fill_factor(rs_fill_factor_), rs_full_factor(rs_full_factor_) {}
+    referee(int nlead_, int npool_, int param_len_, double dt_sim_, double gau_var_high_, double gau_var_low_, double lambda_coeff_, double rs_fill_factor_, double rs_full_factor_): nlead(nlead_), npool(npool_), param_len(param_len_), dt_sim(dt_sim_), gau_var_high(gau_var_high_), gau_var_low(gau_var_low_), gau_lambda(log(gau_var_high_/gau_var_low_)), lambda((lambda_coeff_)*log(((double) 1e16-1)/((double) nlead_-1))), rs_fill_factor(rs_fill_factor_), rs_full_factor(rs_full_factor_) {}
 
     referee(referee &ref_): nlead(ref_.nlead), npool(ref_.npool), param_len(ref_.param_len), dt_sim(ref_.dt_sim), gau_var_high(ref_.gau_var_high), gau_var_low(ref_.gau_var_low), gau_lambda(ref_.gau_lambda), lambda(ref_.lambda), rs_fill_factor(ref_.rs_fill_factor), rs_full_factor(ref_.rs_full_factor) {}
 
     ~referee();
 
     void alloc_records();
+
+    void print_referee_params();
 };
 
 class reporter : public ODR_struct
@@ -172,6 +152,8 @@ class reporter : public ODR_struct
     int nlead, npool, len;
 
     int * dup_vec;
+
+    double *sample_weights;
 
     record ** leaders;
 

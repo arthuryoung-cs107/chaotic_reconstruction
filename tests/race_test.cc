@@ -8,6 +8,7 @@
 
 const int nbeads=3;
 const int param_id=0;
+const int generations=3;
 char proc_loc[] = "./dat_dir/";
 int main()
 {
@@ -43,7 +44,7 @@ int main()
     referee ref(100, 1000, 12, 0.002, 1e-2, 1e-3, 1.0, 0.5, 0.8);
     race prace(ref,sp_min,sp_max,wl,t_phys,&rep);
     prace.init_race();
-    prace.start_race(50);
+    prace.start_race(generations);
     prace.make_best_swirl("swirl_best.odr/");
 
     return 0;

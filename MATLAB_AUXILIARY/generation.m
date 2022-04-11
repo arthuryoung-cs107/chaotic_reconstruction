@@ -13,6 +13,8 @@ classdef generation < handle
         wleader_index;
         bleader_index;
 
+        sample_weights;
+
         records;
 
         frscores;
@@ -32,6 +34,8 @@ classdef generation < handle
             obj.par_len = obj.specs(5);
             obj.wleader_index = obj.specs(6);
             obj.bleader_index = obj.specs(7);
+
+            obj.sample_weights = fread( dat,[1, obj.leader_count], 'double=>double');
 
             obj.records = record.empty(obj.leader_count, 0);
             obj.frscores = nan(obj.leader_count, 1);
@@ -89,7 +93,7 @@ classdef generation < handle
             fbest = max(frscores);
             frame_bins = fworst:fbest;
             P = fcount/(sum(fcount));
-            lambda = dot(frame_bins,P)
+            lambda = dot(frame_bins,P);
 
             [fmode_count, i_mode] = max(fcount);
             fmode = fworst+i_mode-1;

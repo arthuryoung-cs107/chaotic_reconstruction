@@ -65,17 +65,13 @@ void race::init_race()
 #pragma omp parallel
   {
     AYrng *r = rng[thread_num()];
+    double *dmin=&sp_min.Kn, *dmax=&sp_max.Kn;
 #pragma omp for
     for (int i = 0; i < npool; i++)
-    {
-      double *dmin=&sp_min.Kn, *dmax=&sp_max.Kn;
-      pool[i]->params=pool_params[i];
-      pool[i]->init(pool_params[i], param_len, Frames, gau_var_high, gau_lambda);
-      pool[i]->resample(gen_count, dmin, dmax, r);
-    }
+      pool[i]->init_pool(pool_params[i], param_len, Frames, gau_var_high, gau_lambda, dmin, dmax, r);
   }
   for (int i = 0; i < nlead; i++)
-    leaders[i]->init(lead_params[i], param_len, Frames, gau_var_high, gau_lambda);
+    leaders[i]->init_leader(lead_params[i], param_len, Frames, gau_var_high, gau_lambda);
 }
 
 void race::start_race(int gen_max_, bool verbose_)
@@ -122,6 +118,7 @@ bool race::check_pool_results()
 
     int worst_best = find_worst(leader_board, nlead);
 
+    // consider the pool candidates, which are positioned adjacent to the current leaders on the leaderboard
     for (int i = nlead; i < nlead + pool_candidates; i++)
       if (leader_board[worst_best]->isworse(leader_board[i]))
       {
@@ -199,7 +196,7 @@ void race::resample_pool()
       {
         int j = 0;
         double uni = r->rand_uni_gsl(0.0, 1.0);
-        while ( (j<leader_count)&&(uni>0.0) ) uni -= sample_weights[j++];
+        while ((j<leader_count)&&(uni>0.0)) uni -= sample_weights[j++];
         double *dmin=&sp_min.Kn, *dmax=&sp_max.Kn;
         if (j > 0) // if we have particles worth resampling
         {
@@ -209,7 +206,6 @@ void race::resample_pool()
           // we hit the resampling pool
           else
             {res_count++; pool[i]->resample(gen_count, dmin, dmax, r);}
-
         }
         // we currently have no leaders (particles worth resampling)
         else
@@ -217,10 +213,11 @@ void race::resample_pool()
       }
     }
     for (int i = 0; i < nt; i++) for (int j = 0; j < leader_count; j++)
-      dup_vec[j]+= dup_mat[i][j];
+      dup_vec[j]+=dup_mat[i][j];
 
     int dup_unique=0;
-    for (int i = 0; i < leader_count; i++) if (dup_vec[i]) dup_unique++;
+    for (int i = 0; i < leader_count; i++) if (dup_vec[i])
+    {leaders[i]->dup_count+=dup_vec[i]; dup_unique++;}
 
     printf("%d duplicates (%d unique), %d resamples\n", dup_count, dup_unique, res_count);
 }

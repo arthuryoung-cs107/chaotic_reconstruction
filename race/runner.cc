@@ -1,3 +1,4 @@
+#include "particle_race.hh"
 
 runner::runner(swirl_param &sp_, proximity_grid * pg_, wall_list &wl_, int n_, int thread_id_, int param_len_, int Frames_, double tol_): swirl(sp_, pg_, wl_, n_), thread_id(thread_id_), param_len(param_len_), Frames(Frames_), tol(tol_), x0(new double[2*n_])
 {

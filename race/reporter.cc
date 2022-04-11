@@ -34,7 +34,6 @@ void reporter::init_race( char * proc_loc_, char * rydat_dir_, char * file_name_
   sml_stream.close();
 }
 
-
 void reporter::write_gen_diagnostics(int gen_count_, int leader_count_, int worst_leader_, int best_leader_)
 {
   int int_params[] = {gen_count_, leader_count_, record_int_len, record_double_len, len, worst_leader_, best_leader_};
@@ -43,6 +42,7 @@ void reporter::write_gen_diagnostics(int gen_count_, int leader_count_, int wors
   sprintf(buf_it, "%s.gen%d.rcdat", file_name, gen_count_);
   FILE * out_dat = fopen(out_buf, "wb");
   fwrite(int_params, sizeof(int), 7, out_dat);
+  fwrite(sample_weights, sizeof(double), leader_count_, out_dat);
   for (int i = 0; i < leader_count_; i++)
   {
     // write the integer records

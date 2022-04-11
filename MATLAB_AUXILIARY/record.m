@@ -5,6 +5,8 @@ classdef record < handle
     gen;
     parent_gen;
     parent_count;
+    parent_global_index;
+    dup_count;
 
     l2score;
 
@@ -18,6 +20,8 @@ classdef record < handle
       obj.gen = int_vec_in(3);
       obj.parent_gen = int_vec_in(4);
       obj.parent_count = int_vec_in(5);
+      obj.parent_global_index = int_vec_in(6);
+      obj.dup_count = int_vec_in(7);
 
       obj.l2score = double_vec_in(1);
 

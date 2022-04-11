@@ -30,7 +30,7 @@ classdef AYfig < handle
       axdims = get(obj.ax, 'Position');
       axdims(3:4) = min(axdims(3:4));
       set(obj.ax, 'Position', axdims);
-      % obj.fig.Visible = 'off';
+      obj.fig.Visible = 'off';
     end
     function init_tiles(obj, tile_dims_)
       clf(obj.fig);
@@ -54,7 +54,7 @@ classdef AYfig < handle
             fps=fps_;
         end
         obj.fig.Visible = 'on';
-        movie(obj.ax, obj.movie_gen, nplay, fps);
+        movie(obj.fig, obj.movie_gen, nplay, fps);
     end
     function dims_out = get_dims(obj)
       curunits = get(obj.ax, 'Units');
