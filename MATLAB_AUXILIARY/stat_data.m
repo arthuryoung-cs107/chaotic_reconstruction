@@ -13,6 +13,7 @@ classdef stat_data < swirl_group
 
         I_best;
         I_truest;
+        I_leader;
         par_cov;
 
         %% compute_frscores
@@ -63,6 +64,9 @@ classdef stat_data < swirl_group
             [~,obj.I_best]=mink(obj.pos_err_acc, noise_len);
             [~,obj.I_truest]=mink(sum(abs(obj.par_err)./abs(params_true), 1), noise_len);
             obj.par_cov=cov(params_mat');
+            obj.frscores = obj.compute_frscores;
+            [~,obj.I_leader]=maxk(obj.frscores, noise_len);
+
 
             %% set stat data variables
             obj.dat_dir_name = dat_dir_name_;
