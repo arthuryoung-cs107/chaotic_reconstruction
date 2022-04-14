@@ -1,10 +1,6 @@
 classdef swirl
   properties
-  % big brother
-    % ODR_data.m;
-
-    %% this class holds the double precision data of a simulation. It IS ODR_data data. Note that it is NOT a handle
-
+      
     %% data shared with swirl ODR data
     Frames=0; % number of frames in swirl
     beads=0; % number of beads

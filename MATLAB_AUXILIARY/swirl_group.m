@@ -185,6 +185,7 @@ classdef swirl_group
         end
         function plot_frscore_poserr(obj, ax_, color_left, color_right, pos_err, frscores, I_best, I_truest, I_leader)
             [len_gp, Frames] = size(pos_err);
+            nleaders = 100;
 
             pos_err_acc = sum(pos_err,2);
             pos_err_acc_kill = nan(len_gp, 1);
@@ -205,6 +206,7 @@ classdef swirl_group
             plot(ax_,frscores(I_truest), pos_err_final_kill(I_truest), ' x', 'Color', [0 0 0], 'LineWidth', 3, 'MarkerSize', 10);
             plot(ax_,frscores(I_leader), pos_err_final_kill(I_leader), ' +', 'Color', [0 0 0], 'LineWidth', 3, 'MarkerSize', 10);
 
+
             yyaxis(ax_, 'right');
             % set(ax_, 'YScale', 'log');
             ylabel(ax_, 'cumulative position error, killed, averaged', 'Interpreter', 'Latex', 'Fontsize', 14)
@@ -214,6 +216,72 @@ classdef swirl_group
             plot(ax_,frscores(I_leader), pos_err_acc_kill(I_leader), ' d', 'Color', [0 0 0], 'LineWidth', 3, 'MarkerSize', 10);
 
             xlabel(ax_, 'frame score', 'Interpreter', 'Latex', 'Fontsize', 14)
+        end
+        function plot_acc_weights(obj, ax_, color_left, color_right, pos_err, frscores, I_best, I_truest, I_leader)
+            [len_gp, Frames] = size(pos_err);
+            % nleaders = 100;
+            % nleaders = 500;
+            nleaders = 250;
+
+            [frleaders, I_leaders] = maxk(frscores, nleaders);
+
+            pos_err_acc = sum(pos_err,2);
+            pos_err_acc_f1 = nan(len_gp, 1);
+            pos_err_acc_f2 = nan(len_gp, 1);
+            for i=1:len_gp
+                pos_err_acc_f1(i) = sum(pos_err(i, 1:frscores(i)))/frscores(i)/(frscores(i)-min(frleaders)+1);
+                pos_err_acc_f2(i) = sum(pos_err(i, 1:frscores(i)))/(frscores(i)+frscores(i)-min(frleaders));
+            end
+
+            box(ax_,'on');
+            hold(ax_, 'on');
+
+            yyaxis(ax_, 'left');
+            % set(ax_, 'YScale', 'log');
+            ylabel(ax_, 'reweighted 1', 'Interpreter', 'Latex', 'Fontsize', 14)
+            % plot(ax_,frscores, pos_err_acc_f1, ' o', 'Color', [color_left, 0.1], 'LineWidth', 1);
+            plot(ax_,frscores(I_leaders), pos_err_acc_f1(I_leaders), ' o', 'Color', [color_left, 0.1], 'LineWidth', 1);
+
+            yyaxis(ax_, 'right');
+            % set(ax_, 'YScale', 'log');
+            ylabel(ax_, 'reweighted 2', 'Interpreter', 'Latex', 'Fontsize', 14)
+            % plot(ax_,frscores, pos_err_acc_f2, ' s', 'Color', [color_right, 0.1], 'LineWidth', 1);
+            plot(ax_,frscores(I_leaders), pos_err_acc_f2(I_leaders), ' s', 'Color', [color_right, 0.1], 'LineWidth', 1);
+
+            xlabel(ax_, 'frame score', 'Interpreter', 'Latex', 'Fontsize', 14)
+        end
+        function plot_acc_weights_hist(obj, ax_, color_left, color_right, pos_err, frscores, I_best, I_truest, I_leader)
+
+            [len_gp, Frames] = size(pos_err);
+            % nleaders = 100;
+            % nleaders = 500;
+            nleaders = 250;
+
+            [frleaders, I_leaders] = maxk(frscores, nleaders);
+
+            pos_err_acc = sum(pos_err,2);
+            pos_err_acc_f1 = nan(len_gp, 1);
+            pos_err_acc_f2 = nan(len_gp, 1);
+            for i=1:len_gp
+                pos_err_acc_f1(i) = sum(pos_err(i, 1:frscores(i)))/frscores(i)/(frscores(i)-min(frleaders)+1);
+                pos_err_acc_f2(i) = sum(pos_err(i, 1:frscores(i)))/(frscores(i)+frscores(i)-min(frleaders));
+            end
+
+            lambda = 1/(mean(pos_err_acc_f1(I_leaders)));
+
+            box(ax_,'on');
+            hold(ax_, 'on');
+
+            yyaxis(ax_, 'left');
+            ylabel(ax_, 'frequency', 'Interpreter', 'Latex', 'Fontsize', 14)
+            histogram(ax_, pos_err_acc_f1(I_leaders));
+
+            yyaxis(ax_, 'right');
+            fplot(@(z) lambda*exp(-lambda.*z), [0, max(pos_err_acc_f1(I_leaders))], 'Color', color_right);
+            % ylabel(ax_, 'reweighted 2', 'Interpreter', 'Latex', 'Fontsize', 14)
+            % plot(ax_,frscores(I_leaders), pos_err_acc_f1(I_leaders), ' o', 'Color', [color_left, 0.1], 'LineWidth', 1);
+
+            xlabel(ax_, 'z', 'Interpreter', 'Latex', 'Fontsize', 14)
         end
     end
     methods (Static)

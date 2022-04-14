@@ -27,21 +27,21 @@ void runner::reset_sim(double *ptest_)
   }
 }
 
-void runner::run_race(double dt_sim_, double *ts_, double *xs_, double *d_ang_)
+void runner::run_race(double dt_sim_, double *ts_, double *xs_, double *d_ang_, record * rec_, double frscore_min_, double l2score_min_)
 {
-  bool run_on=true;
   frame = 0; pos_err_acc=0.0;
   do
   {
     double dur=(ts_[frame+1]-ts_[frame])/t_phys, ctheta=d_ang_[frame],comega=d_ang_[frame+1]-d_ang_[frame];
-    if(comega>M_PI) comega-=2*M_PI;else if(comega<-M_PI) comega+=2*M_PI;
+    if(comega>M_PI) comega-=2*M_PI; else if(comega<-M_PI) comega+=2*M_PI;
     comega/=dur;
     double *f = xs_ + (2*n*(frame+1));
     advance(dur, ctheta, comega, dt_sim_);
-    if (is_lost(f)) run_on = false;
+    if (is_lost(f)) break;
     // if the next frame is the final frame
-    else if (++frame == Frames-1) run_on = false;
-  } while(run_on);
+    else if (++frame == Frames-1) break;
+  } while(true);
+  return (int)(rec_->check_success(frame, pos_err_acc, frscore_min_, l2score_min_));
 }
 
 bool runner::is_lost(double *f_)

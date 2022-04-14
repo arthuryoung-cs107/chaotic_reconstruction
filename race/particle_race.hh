@@ -29,6 +29,7 @@ struct record
   int dup_count; // number of times this particle has been duplicated
 
   double l2score;
+  double z;
 
   double gau_h;
   double gau_lambda;
@@ -74,6 +75,12 @@ struct record
   inline double w(int F_, double lambda_)
   {return exp(lambda_*((double) frscore)/((double) F_));}
 
+  inline double w(double lambda_z_)
+  {return lambda_z_*exp(-lambda_z_*z);}
+
+  inline double z_eval(int frscore_min_)
+  {return z;}
+
   inline double var()
   {return gau_h*exp(-2.0*gau_lambda*((double) frscore)/((double)Frames));}
 
@@ -92,7 +99,7 @@ class runner : public swirl
 
       void init_ics(double t_phys_ , double *x0_, double t0_raw_, double ctheta0_);
       void reset_sim(double *ptest_);
-      void run_race(double dt_sim_, double *ts_, double *xs_, double *d_ang_);
+      int run_race(double dt_sim_, double *ts_, double *xs_, double *d_ang_, record * rec_, double frscore_min_, double l2score_min_);
 
       void print_raw_ics();
       void print_params();
@@ -236,6 +243,8 @@ class race : public referee
         int best_leader, worst_leader;
 
         bool debugging_flag=true;
+        bool z_weight_flag=true;
+
 
         void stage_diagnostics();
 

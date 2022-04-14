@@ -88,8 +88,7 @@ void race::start_race(int gen_max_, bool verbose_)
       for (int i = 0; i < npool; i++)
       {
         rt->reset_sim(pool_params[i]);
-        rt->run_race(dt_sim, ts, xs, d_ang);
-        success_local+= (int) pool[i]->check_success(rt->frame, rt->pos_err_acc, frscore_min, l2score_min);
+        success_local += rt->run_race(dt_sim, ts, xs, d_ang, pool[i], frscore_min, l2score_min);
       }
     }
     gen_count++;
@@ -176,8 +175,20 @@ int race::collect_pool_leaders()
 void race::resample_pool()
 {
   double acc = 0.0;
-  for (int i = 0; i < leader_count; i++)
+  if (z_weight_flag)
+  {
+    double z_acc=z_mean=0.0;
+    for (int i = 0; i < leader_count; i++)
+      z_acc+=leaders[i]->z_eval(frscore_min);
+    z_mean=z_acc/((double)leader_count);
+    double lambda_z=1.0/z_mean;
+    for (int i = 0; i < leader_count; i++)
+      acc += sample_weights[i] = leaders[i]->w(lambda_z);
+
+  }
+  else for (int i = 0; i < leader_count; i++)
     acc += sample_weights[i] = leaders[i]->w(Frames, lambda);
+
 
   acc /= (leader_count<nlead)? rs_fill_factor:rs_full_factor;
 
