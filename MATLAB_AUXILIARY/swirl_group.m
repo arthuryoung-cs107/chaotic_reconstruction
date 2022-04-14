@@ -19,23 +19,16 @@ classdef swirl_group
             obj.frame_vec = frame_vec_;
             obj.params_mat = params_mat_;
         end
-        function [par_err, pos_err, pos_err_acc] = compute_error(obj)
-            [len_gp, Frames, len_par, par0, pos0, pars, pos, tensdims] = deal(obj.len_gp, obj.sw0.Frames, obj.sw0.len_par, obj.sw0.params, obj.sw0.pos(:, 1:2, :), obj.params_mat, obj.gp_cell(:,1), size(obj.sw0.pos));
+        function swi = spawn_swirl_i(obj,i_)
+            Frames = obj.frame_vec(i_);
+            len_dish = obj.sw0.len_dish;
+            len_pos = obj.sw0.len_pos;
+            beads = obj.sw0.beads;
+            [pos,dish] = swirl_group.cellrow2posdish(obj.gp_cell,i_,beads,len_pos);
 
-            par_err = nan(len_gp, len_par);
-            pos_err = nan(len_gp, Frames-1);
-            pos_err_acc = nan(len_gp, 1);
-            for i=1:len_gp
-                par_err(i,:) = (par0-pars(:,i))./abs(par0);
-                pos_err(i,:) = compute_frame_error(pos0,pos{i},tensdims);
-                pos_err_acc(i) = sum(pos_err(i,:));
-            end
-        end
-        function [I_best, I_truest, par_cov] = compute_statistics(obj, par_err, pos_err, pos_err_acc)
-            len_gp = obj.len_gp;
-            [pos_err_best, I_best] = mink(pos_err_acc,len_gp);
-            [par_err_truest, I_truest] = mink(sum(abs(par_err)'),len_gp);
-            par_cov = (sum(pos_err_acc.*par_err))./mean(par_err);
+            swi = swirl(pos,dish,Frames,len_dish,len_pos,beads);
+            swi.params=obj.params_mat(:,i_);
+            swi.len_par=size(obj.params_mat,1);
         end
         function frscores = compute_frscores(obj)
             sw0=obj.sw0;
@@ -53,56 +46,90 @@ classdef swirl_group
                 frscores(i) = swirl.compute_frscore(Frames, 1, pos_true-reshape(gp_cell{i,1},[beads,len_pos,Frames]));
             end
         end
-        function plot_frame_error(obj, ax_, base_color, pos_err, I_best, I_truest)
+        function plot_frame_error(obj, ax_, color_left, color_right, t_vec, pos_err, I_best, I_truest)
             [len_gp, Frames] = size(pos_err);
             mean_err = mean(pos_err);
 
+            box(ax_,'on');
+            yyaxis(ax_, 'left');
             set(ax_, 'YScale', 'log');
-            box(ax_,'on');
+            yyaxis(ax_, 'right');
+            set(ax_, 'YScale', 'log');
             hold(ax_, 'on');
             for i=1:len_gp
-                plot(ax_,1:Frames, pos_err(i,:), ' -', 'Color', [base_color, 0.1], 'LineWidth', 1);
+                yyaxis(ax_, 'left');
+                plot(ax_,t_vec, pos_err(i,:), ' -', 'Color', [color_left, 0.1], 'LineWidth', 1);
+                yyaxis(ax_, 'right');
+                plot(ax_,t_vec, cumsum(pos_err(i,:)), ' -', 'Color', [color_right, 0.1], 'LineWidth', 1);
             end
-            plot(ax_, 1:Frames, mean_err, ' -', 'Color', base_color, 'LineWidth', 2);
-            plot(ax_, 1:Frames, pos_err(I_best, :), ' -', 'Color', [0 0 0], 'LineWidth', 1);
-            plot(ax_, 1:Frames, pos_err(I_truest, :), ' :', 'Color', [0 0 0], 'LineWidth', 1);
-            xlabel(ax_, 'Frame', 'Interpreter', 'Latex', 'Fontsize', 14)
-            ylabel(ax_, 'position error', 'Interpreter', 'Latex', 'Fontsize', 14)
-        end
-        function swi = spawn_swirl_i(obj,i_)
-            Frames = obj.frame_vec(i_);
-            len_dish = obj.sw0.len_dish;
-            len_pos = obj.sw0.len_pos;
-            beads = obj.sw0.beads;
-            [pos,dish] = swirl_group.cellrow2posdish(obj.gp_cell,i_,beads,len_pos);
+            yyaxis(ax_, 'left');
+            plot(ax_, t_vec, mean_err, ' -', 'Color', color_left, 'LineWidth', 2);
+            plot(ax_, t_vec, pos_err(I_best, :), ' -', 'Color', [0 0 0], 'LineWidth', 2);
+            plot(ax_, t_vec, pos_err(I_truest, :), ' :', 'Color', [0 0 0], 'LineWidth', 2);
+            yyaxis(ax_, 'right');
+            plot(ax_, t_vec, cumsum(mean_err), ' -', 'Color', color_right, 'LineWidth', 2);
+            plot(ax_, t_vec, cumsum(pos_err(I_best, :)), ' -', 'Color', [0 0 0], 'LineWidth', 2);
+            plot(ax_, t_vec, cumsum(pos_err(I_truest, :)), ' :', 'Color', [0 0 0], 'LineWidth', 2);
 
-            swi = swirl(pos,dish,Frames,len_dish,len_pos,beads);
-            swi.params=obj.params_mat(:,i_);
-            swi.len_par=size(obj.params_mat,1);
+            xlabel(ax_, 'time', 'Interpreter', 'Latex', 'Fontsize', 14)
+            yyaxis(ax_, 'left');
+            ylabel(ax_, 'position error', 'Interpreter', 'Latex', 'Fontsize', 14)
+            yyaxis(ax_, 'right');
+            ylabel(ax_, 'cumulative position error', 'Interpreter', 'Latex', 'Fontsize', 14)
         end
-        function plot_param_error(obj, ax_, base_color, par_err, I_best, I_truest)
-            [len_gp, len_par] = size(par_err);
+        function plot_param_error(obj, ax_, base_color, par_err_, par_true, I_best, I_truest)
+            par_err = par_err_./abs(par_true);
+            [len_par, len_gp] = size(par_err);
             box(ax_,'on');
             hold(ax_, 'on');
             for i=1:len_gp
-                plot(ax_, 1:len_par, par_err(i, :), ' -', 'Color', [base_color, 0.1], 'LineWidth', 1);
+                plot(ax_, 1:len_par, par_err(:,i), ' -', 'Color', [base_color, 0.1], 'LineWidth', 1);
             end
-            plot(ax_, 1:len_par, par_err(I_best,:), ' -', 'Color', [0 0 0], 'LineWidth', 1);
-            plot(ax_, 1:len_par, par_err(I_truest,:), ' :', 'Color', [0 0 0], 'LineWidth', 1);
+            plot(ax_, 1:len_par, par_err(:,I_best), ' -', 'Color', [0 0 0], 'LineWidth', 1);
+            plot(ax_, 1:len_par, par_err(:,I_truest), ' :', 'Color', [0 0 0], 'LineWidth', 1);
             xlabel(ax_, 'parameter index', 'Interpreter', 'Latex', 'Fontsize', 14)
+            ylabel(ax_, 'parameter error', 'Interpreter', 'Latex', 'Fontsize', 14)
+        end
+        function plot_err_vs_accerr(obj, ax_, base_color, pos_err, I_best, I_truest)
+            [len_gp, Frames] = size(pos_err);
+
+            box(ax_,'on');
+            % set(ax_, 'YScale', 'log');
+            % set(ax_, 'XScale', 'log');
+            hold(ax_, 'on');
+            for i=1:len_gp
+                plot(ax_,cumsum(pos_err(i,:)), pos_err(i,:), ' -', 'Color', [base_color, 0.1], 'LineWidth', 1);
+            end
+            plot(ax_, cumsum(pos_err(I_best, :)), pos_err(I_best, :), ' -', 'Color', [0 0 0], 'LineWidth', 2);
+            plot(ax_, cumsum(pos_err(I_truest, :)), pos_err(I_truest, :), ' :', 'Color', [0 0 0], 'LineWidth', 2);
+
+            xlabel(ax_, 'cumulative position error', 'Interpreter', 'Latex', 'Fontsize', 14)
             ylabel(ax_, 'position error', 'Interpreter', 'Latex', 'Fontsize', 14)
         end
         function plot_param_covariance(obj, ax_, base_color, par_cov)
-            [len_gp, len_par] = size(par_cov);
+            % [len_gp, len_par] = size(par_cov);
+            % box(ax_,'on');
+            % hold(ax_, 'on');
+            % plot(ax_, 1:len_par, par_cov, ' -', 'Color', base_color, 'LineWidth', 1);
+            % xlabel(ax_, 'parameter index', 'Interpreter', 'Latex', 'Fontsize', 14)
+            % ylabel(ax_, 'cov', 'Interpreter', 'Latex', 'Fontsize', 14)
+        end
+        function plot_derr_vs_err(obj, ax_, base_color, del_t, pos_err, I_best, I_truest)
+            [len_gp, Frames] = size(pos_err);
             box(ax_,'on');
             hold(ax_, 'on');
-            plot(ax_, 1:len_par, par_cov, ' -', 'Color', base_color, 'LineWidth', 1);
-            xlabel(ax_, 'parameter index', 'Interpreter', 'Latex', 'Fontsize', 14)
-            ylabel(ax_, 'cov', 'Interpreter', 'Latex', 'Fontsize', 14)
+            for i=1:len_gp
+                plot(ax_,pos_err(i,2:Frames), (pos_err(i,2:Frames)-pos_err(i,1:(Frames-1)))/del_t, ' -', 'Color', [base_color, 0.1], 'LineWidth', 1);
+            end
+            % plot(ax_, pos_err(I_best,2:end), (pos_err(I_best,2:end)-pos_err(I_best,1:end-1))/(del_t), ' -', 'Color', [0 0 0], 'LineWidth', 2);
+            % plot(ax_, cumsum(pos_err(I_truest,2:end), (pos_err(I_truest,2:end)-pos_err(I_truest,1:end-1))/(del_t), ' :', 'Color', [0 0 0], 'LineWidth', 2);
+
+            xlabel(ax_, 'position error', 'Interpreter', 'Latex', 'Fontsize', 14)
+            ylabel(ax_, 'Dt position error', 'Interpreter', 'Latex', 'Fontsize', 14)
         end
-        function plot_param_pos_error(obj, ax_, base_color, par_err, pos_err_acc, I_best, I_truest)
-            [len_gp, len_par] = size(par_err);
-            par_err_absum = sum(abs(par_err)');
+        function plot_pos_vs_param_error(obj, ax_, base_color, par_err, par_true, pos_err_acc, I_best, I_truest)
+            [len_par,len_gp] = size(par_err);
+            par_err_absum = sum(abs(par_err)./abs(par_true),1);
             box(ax_,'on');
             hold(ax_, 'on');
             scatter(ax_, par_err_absum, pos_err_acc, ' o', 'MarkerFaceColor', base_color, 'SizeData', 50);
@@ -154,15 +181,5 @@ classdef swirl_group
             end
             AYfig_in.movie_gen = movie_gen;
         end
-    end
-end
-
-function pos_err_out = compute_frame_error(pos0,posi,dims)
-    [beads, len_pos, Frames] = deal(dims(1),dims(2),dims(3));
-    pos_err_out = nan(1,Frames-1);
-    posi_tens = reshape(posi,dims);
-    diff = pos0-posi_tens(:,1:2,:);
-    for i=1:(Frames-1)
-        pos_err_out(i) = sum(sqrt(sum((diff(:,:,i).*diff(:,:,i))')./sum((pos0(:,:,i).*pos0(:,:,i))')));
     end
 end

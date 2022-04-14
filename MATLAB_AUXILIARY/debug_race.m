@@ -18,9 +18,6 @@ ran_id = 0;
 sw = read_swirl(nbeads, par_id);
 race = read_race(nbeads, par_id);
 
-race.F = 1200;
-race.lambda = (1.0)*log(((1e16)-1)/(100-1));
-
 race.plot_diagnosticsi(race_diagnostics_fig, 1);
 
 swbst = race.spawn_swbest();

@@ -35,6 +35,9 @@ classdef swirl
             [data.Frames, data.len_dish, data.len_pos, data.beads] = deal(Frames_, len_dish_, len_pos_, beads_);
         end
     end
+    function t_vec_out = t_vec(obj)
+        t_vec_out = obj.dish(:,1); 
+    end
     function [out, valid_sub_swirl] = spawn_sub_swirl(obj, oth)
         %% on output, we want to give the sub swirl of the input that matches THIS swirl
         out = 0;

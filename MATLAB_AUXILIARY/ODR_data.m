@@ -43,7 +43,7 @@ classdef ODR_data < handle
         elseif (rysml.split==0) %% if the data is consolidated into one binary file
             id = fopen([rysml.dat_dir rysml.exp_name rysml.dat_name '.rydat']);
             for f=0:(rysml.Frames-1)
-                dish(f+1, :) = (fread( id,[1, rysml.len_dish], 'float64=>float64'));
+                dish(f+1, :) = fread( id,[1, rysml.len_dish], 'float64=>float64');
                 pos(:, :, f+1) = (fread( id,[rysml.len_pos, rysml.beads], 'float64=>float64'))';
             end
             fclose(id);
