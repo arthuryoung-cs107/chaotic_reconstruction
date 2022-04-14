@@ -36,7 +36,7 @@ classdef swirl
         end
     end
     function t_vec_out = t_vec(obj)
-        t_vec_out = obj.dish(:,1); 
+        t_vec_out = obj.dish(:,1);
     end
     function [out, valid_sub_swirl] = spawn_sub_swirl(obj, oth)
         %% on output, we want to give the sub swirl of the input that matches THIS swirl
@@ -75,13 +75,17 @@ classdef swirl
             obj.contact_frames(i) = length(contact_beads)>0;
         end
     end
-    function make_movie(obj, AYfig_in)
+    function make_movie(obj, AYfig_in, watch_)
         frames = obj.Frames;
+        if nargin==3
+            AYfig_in.init_movie(frames, watch_);
+        else
+            AYfig_in.init_movie(frames);
+        end
 
         walld = 5.72;
         wallL = (2/sqrt(3))*walld;
         wallv = [-wallL/2 -walld; -wallL 0; -wallL/2 walld ; wallL/2 walld; wallL 0; wallL/2 -walld; -wallL/2 -walld];
-        AYfig_in.init_movie(frames);
         wsca = max(abs([min(obj.dish(:, 2))-wallL, max(obj.dish(:, 2))+walld, min(obj.dish(:, 3))-wallL, max(obj.dish(:, 3))+walld]));
         lims = [-wsca, wsca, -wsca, wsca];
 

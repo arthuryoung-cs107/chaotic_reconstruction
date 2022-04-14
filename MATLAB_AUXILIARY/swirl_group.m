@@ -221,9 +221,13 @@ classdef swirl_group
             pos=reshape(gp_cell_{i_,1},[beads,len_pos,size(gp_cell_{i_,1},2)]);
             dish=gp_cell_{i_,2};
         end
-        function make_movie_comp(AYfig_in,movie_data,movie_specs)
-            Frames = movie_specs.Frames;
-            AYfig_in.init_movie(Frames);
+        function make_movie_comp(AYfig_in,movie_data,movie_specs,watch_)
+            frames = movie_specs.Frames;
+            if nargin==4
+                AYfig_in.init_movie(frames, watch_);
+            else
+                AYfig_in.init_movie(frames);
+            end
 
             movie_fig = AYfig_in.fig;
             movie_ax = AYfig_in.ax;
@@ -245,7 +249,7 @@ classdef swirl_group
             MS = figdims(4)/(4*wsca); %% radius in pixels
             SS = pi*MS*MS; %% area in pixels
 
-            for i=1:Frames
+            for i=1:frames
                 plot(movie_ax, wallv(:, 1)+dish(i, 2), wallv(:, 2)+dish(i, 3), 'k -')
                 hold(AYfig_in.ax, 'on');
                 dots = scatter(movie_ax, pos(:, 1, i), pos(:, 2, i), 'o', 'filled', 'CData', colors, 'LineWidth', 1, 'SizeData', SS, 'MarkerEdgeColor', [0 0 0], 'MarkerFaceAlpha', 0.5);

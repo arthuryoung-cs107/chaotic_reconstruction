@@ -48,12 +48,12 @@ classdef stat_data < swirl_group
                 id = fopen([rysml.dat_dir rysml.exp_name [dat_name_ '.' num2str(i)] '.rydat']);
                 data = reshape(fread(id,'double'), [len_dish+beads*len_pos, Frames]);
                 fclose(id);
-                dish_mat(:,i) = reshape(data(1:len_dish, :), [len_dish*Frames, 1]);
+                dish_mat(:,i) = reshape(reshape(data(1:len_dish, :), [len_dish, Frames])', [len_dish*Frames, 1]);
                 pos_mat(:,i) = reshape(permute(reshape(data(len_dish+1:end, :), [len_pos, beads, Frames]),[2 1 3]),[len_pos*beads*Frames, 1]);
             end
             gp_cell = cell([noise_len, 2]);
             gp_cell(:,1) = reshape(cellfun(@(pos) reshape(pos, [len_pos*beads, Frames]), num2cell(pos_mat,1), 'UniformOutput',false), [noise_len, 1]);
-            gp_cell(:,2) = reshape(cellfun(@(dish) reshape(dish, [len_dish, Frames]), num2cell(dish_mat,1),   'UniformOutput',false), [noise_len, 1]);
+            gp_cell(:,2) = reshape(cellfun(@(dish) reshape(dish, [Frames, len_dish]), num2cell(dish_mat,1),   'UniformOutput',false), [noise_len, 1]);
 
             obj@swirl_group(swtrue, gp_cell, noise_len, Frames*ones(noise_len, 1), params_mat);
 
@@ -77,7 +77,7 @@ classdef stat_data < swirl_group
         function swgp_out = spawn_swirlgroup(obj)
             swgp_out = swirl_group(obj.swtrue, obj.gp_cell, obj.noise_len, obj.swtrue.Frames*ones(obj.noise_len, 1), obj.params_mat);
         end
-        function swout = spawn_swindex(obj, id_)
+        function swout = spawn_ODRindex(obj, id_)
             swout = ODR_data(obj.dat_dir_name, obj.exp_name, [obj.dat_name '.' num2str(i)]);
         end
         function plot_gen_scores(obj, ax_)

@@ -14,5 +14,5 @@ par_id = 0;
 
 sw = read_swirl(nbeads, par_id);
 
-% sw.make_movie(movie1);
-% movie1.play_movie();
+sw.make_movie(movie1, 'watch');
+movie1.play_movie();
