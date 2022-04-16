@@ -57,17 +57,32 @@ classdef race_data
         end
         lineage = flip(lineage);
     end
-    function lin_mat = get_lineage_mat(obj, rec)
+    function [lin_mat, params_out] = get_lineage_mat(obj, rec)
         lin_count = rec.parent_count+1;
         lin_mat = nan(lin_count,3);
         lin_mat(1,:) = [rec.global_index, rec.gen, rec.frscore];
         parent_gen = rec.parent_gen;
         parent_index = rec.parent_global_index;
-        for i = 2:lin_count
-            parent = obj.gen(parent_gen+1).records(parent_index+1);
-            lin_mat(i,:) = [parent.global_index, parent.gen, parent.frscore];
-            parent_gen = parent.parent_gen;
-            parent_index = parent.parent_global_index;
+
+        if (nargout==1)
+            for i = 2:lin_count
+                parent = obj.gen(parent_gen+1).records(parent_index+1);
+                lin_mat(i,:) = [parent.global_index, parent.gen, parent.frscore];
+                parent_gen = parent.parent_gen;
+                parent_index = parent.parent_global_index;
+            end
+        else
+            len_par = length(rec.params);
+            params_out = nan(len_par,lin_count);
+            params_out(:, 1) = rec.params;
+            for i = 2:lin_count
+                parent = obj.gen(parent_gen+1).records(parent_index+1);
+                lin_mat(i,:) = [parent.global_index, parent.gen, parent.frscore];
+                params_out(:,i) = parent.params;
+                parent_gen = parent.parent_gen;
+                parent_index = parent.parent_global_index;
+            end
+            params_out = flip(params_out,2);
         end
         lin_mat = flip(lin_mat);
     end
@@ -116,10 +131,11 @@ classdef race_data
         gen_zero = obj.gen(1);
         rec_best = gen_final.get_best_record;
         ancestors_zero =  obj.get_gen_ancestors_zero(gen_final);
-        best_lineage = obj.get_lineage_mat(rec_best);
+        [best_lineage, best_lin_pars] = obj.get_lineage_mat(rec_best);
         top_k_lineage = obj.get_gen_lineage_cell(gen_final,k);
         par_err_zero = (-gen_zero.param_mat+par_true)./abs(par_true);
         par_err_final = (-gen_final.param_mat+par_true)./abs(par_true);
+        par_err_linf = (-best_lin_pars+par_true)./abs(par_true);
 
         gen_vec = nan(gen_count, 1);
         index_vec = nan(gen_count, 1);
@@ -170,9 +186,14 @@ classdef race_data
         xlabel(ax_(4), 'generation', 'Interpreter', 'Latex', 'Fontsize', 14)
         ylabel(ax_(4), 'pool index', 'Interpreter', 'Latex', 'Fontsize', 14)
 
-        histogram(ax_(5), index_vec);
-        xlabel(ax_(5), 'Global index', 'Interpreter', 'Latex', 'Fontsize', 14)
-        ylabel(ax_(5), 'frequency', 'Interpreter', 'Latex', 'Fontsize', 14)
+        hold(ax_(5), 'on')
+        for i=1:size(best_lin_pars,2)
+            plot(ax_(5), 1:len_par, par_err_linf(:,i), ' -', 'Color', [green4, 0.1], 'LineWidth', 1);
+        end
+        plot(ax_(5), 1:len_par, par_err_final(:,gen_final.bleader_index+1), ' -', 'Color', red5, 'LineWidth', 1);
+        xlabel(ax_(5), 'parameter index', 'Interpreter', 'Latex', 'Fontsize', 14)
+        ylabel(ax_(5), '$$(\hat{P}_i - P_i)/|\hat{P}_i|$$', 'Interpreter', 'Latex', 'Fontsize', 14)
+        ylim(ax_(5), [-4 1])
 
         histogram(ax_(6), parent_count_vec);
         xlabel(ax_(6), 'Gen final parent count', 'Interpreter', 'Latex', 'Fontsize', 14)

@@ -119,13 +119,14 @@ classdef generation
                 hold(ax_(2), 'off')
 
             xlabel(ax_(3), 'z', 'Interpreter', 'Latex', 'Fontsize', 14)
-                yyaxis(ax_(3), 'left');
+                % yyaxis(ax_(3), 'left');
                 % histogram(ax_(3), 'BinEdges', linspace(0.5, length(dup_vec)+0.5, length(dup_vec)+1), 'BinCounts', dup_zsort);
-                plot(ax_(3),I_z,dup_zsort,' o', 'Color', blue5, 'LineWidth', 1);
-                ylabel(ax_(3), 'frequency', 'Interpreter', 'Latex', 'Fontsize', 14)
+                % plot(ax_(3),I_z,dup_zsort,' o', 'Color', blue5, 'LineWidth', 1);
+                % ylabel(ax_(3), 'frequency', 'Interpreter', 'Latex', 'Fontsize', 14)
 
                 yyaxis(ax_(3), 'right');
-                plot(ax_(3),1:leader_count, weights_zsort, ' o', 'Color', orange1, 'LineWidth', 1);
+                % plot(ax_(3),1:leader_count, weights_zsort, ' o', 'Color', orange1, 'LineWidth', 1);
+                plot(ax_(3),1:leader_count, weights, ' o', 'Color', orange1, 'LineWidth', 1);
                 ylabel(ax_(3), 'weights', 'Interpreter', 'Latex', 'Fontsize', 14)
         end
     end
