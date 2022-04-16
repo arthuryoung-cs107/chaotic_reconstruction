@@ -16,7 +16,7 @@ nbeads = 3;
 par_id = 0;
 stat_test_type = 'maxmin';
 ran_id = 1;
-race_id = 0;
+race_id = 1;
 
 stat = read_stat(nbeads, stat_test_type, ran_id);
 race = read_race(nbeads, par_id, race_id);
