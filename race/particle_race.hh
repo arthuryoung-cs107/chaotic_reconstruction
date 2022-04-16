@@ -79,7 +79,7 @@ struct record
   {return lambda_z_*exp(-lambda_z_*z);}
 
   inline double z_eval(int frscore_min_)
-  {return (z=(1.0/(double)(frscore-frscore_min_+1))*(1.0/((double)frscore))*l2score);}
+  {return (z=(1.0/((double)(frscore-frscore_min_+1)))*(1.0/((double)frscore))*l2score);}
 
   inline double var()
   {return gau_h*exp(-2.0*gau_lambda*((double) frscore)/((double)Frames));}

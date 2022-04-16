@@ -106,6 +106,7 @@ bool race::check_pool_results()
 {
   pool_candidates = collect_pool_leaders();
   // if we now have a full leader roster
+  int repl_count=0;
   if (leader_count + pool_candidates >= nlead)
   {
     // fill up remainder of leaders
@@ -132,6 +133,7 @@ bool race::check_pool_results()
     for (int i = 0; i < nlead; i++)
       if (leaders[i]->global_index != leader_board[i]->global_index)
       {
+        repl_count++;
         leaders[i]->take_vals(leader_board[i]);
         leader_board[i] = leaders[i];
       }
@@ -139,6 +141,7 @@ bool race::check_pool_results()
   // otherwise, we can just fill in the leaderboard
   else for (int i = 0; i < pool_candidates; i++)
   {
+    repl_count++;
     leader_board[leader_count] = leaders[leader_count];
     leaders[leader_count++]->take_vals(pool_leaders[i]);
   }
@@ -146,7 +149,7 @@ bool race::check_pool_results()
   best_leader = find_best(leaders, leader_count);
   l2score_best = leaders[best_leader]->l2score;
   frscore_best = leaders[best_leader]->frscore;
-  printf("Best: (ID, gen, parents, frsc, l2sc) = (%d %d %d %d %e). ", best_leader, leaders[best_leader]->gen, leaders[best_leader]->parent_count, frscore_best, l2score_best);
+  printf("Best: (ID, gen, parents, frsc, l2sc) = (%d %d %d %d %e), %d replacements. ", best_leader, leaders[best_leader]->gen, leaders[best_leader]->parent_count, frscore_best, l2score_best, repl_count);
   if (frscore_best == Frames-1) return true;
   return false;
 }
