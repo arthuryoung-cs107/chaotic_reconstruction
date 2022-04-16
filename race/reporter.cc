@@ -6,7 +6,7 @@
 
 #include "particle_race.hh"
 
-void reporter::init_race( char * proc_loc_, char * rydat_dir_, char * file_name_)
+void reporter::init_race( char * proc_loc_, char * rydat_dir_, char * file_name_, int race_id_): race_id(race_id_)
 {
   reading_flag=true;
   rydat_dir=string_gen_pruned(rydat_dir_); file_name=string_gen_pruned(file_name_);
@@ -39,7 +39,7 @@ void reporter::write_gen_diagnostics(int gen_count_, int leader_count_, int wors
   int int_params[] = {gen_count_, leader_count_, record_int_len, record_double_len, len, worst_leader_, best_leader_};
 
   char * buf_it = out_buf+obuf_end;
-  sprintf(buf_it, "%s.gen%d.rcdat", file_name, gen_count_);
+  sprintf(buf_it, "%s.rc%d_gen%d.rcdat", file_name, race_id, gen_count_);
   FILE * out_dat = fopen(out_buf, "wb");
   fwrite(int_params, sizeof(int), 7, out_dat);
   fwrite(sample_weights, sizeof(double), leader_count_, out_dat);
@@ -60,7 +60,7 @@ void reporter::close_diagnostics(int gen_count_, int leader_count_, int worst_le
   int int_params[] = {gen_count_, leader_count_, record_int_len, record_double_len, len, worst_leader_, best_leader_};
 
   char * buf_it = out_buf+obuf_end;
-  sprintf(buf_it, "%s.end.rcdat", file_name);
+  sprintf(buf_it, "%s.rc%d_end.rcdat", file_name, race_id);
   FILE * out_dat = fopen(out_buf, "wb");
   fwrite(int_params, sizeof(int), 7, out_dat);
   for (int i = 0; i < leader_count_; i++)

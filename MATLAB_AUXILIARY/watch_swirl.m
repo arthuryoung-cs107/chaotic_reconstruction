@@ -5,5 +5,5 @@ function movie1 = watch_swirl(nbeads, par_id)
 
   sw = read_swirl(nbeads, par_id);
   sw.load_filin();
-  sw.make_movie(movie1);
+  sw.make_movie(movie1, 'watch');
 end

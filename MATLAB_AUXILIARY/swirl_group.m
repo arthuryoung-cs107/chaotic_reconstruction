@@ -201,19 +201,19 @@ classdef swirl_group
             yyaxis(ax_, 'left');
             % set(ax_, 'YScale', 'log');
             ylabel(ax_, 'cumulative position error', 'Interpreter', 'Latex', 'Fontsize', 14)
-            plot(ax_,frscores, pos_err_final_kill, ' o', 'Color', [color_left, 0.1], 'LineWidth', 1);
+            plot(ax_,frscores, pos_err_acc, ' o', 'Color', [color_left, 0.1], 'LineWidth', 1);
             plot(ax_,frscores(I_best), pos_err_final_kill(I_best), ' *', 'Color', [0 0 0], 'LineWidth', 3, 'MarkerSize', 10);
-            plot(ax_,frscores(I_truest), pos_err_final_kill(I_truest), ' x', 'Color', [0 0 0], 'LineWidth', 3, 'MarkerSize', 10);
-            plot(ax_,frscores(I_leader), pos_err_final_kill(I_leader), ' +', 'Color', [0 0 0], 'LineWidth', 3, 'MarkerSize', 10);
+            plot(ax_,frscores(I_truest), pos_err_acc(I_truest), ' x', 'Color', [0 0 0], 'LineWidth', 3, 'MarkerSize', 10);
+            plot(ax_,frscores(I_leader), pos_err_acc(I_leader), ' +', 'Color', [0 0 0], 'LineWidth', 3, 'MarkerSize', 10);
 
 
             yyaxis(ax_, 'right');
             % set(ax_, 'YScale', 'log');
             ylabel(ax_, 'cumulative position error, killed, averaged', 'Interpreter', 'Latex', 'Fontsize', 14)
-            plot(ax_,frscores, pos_err_acc_kill, ' s', 'Color', [color_right, 0.1], 'LineWidth', 1);
-            plot(ax_,frscores(I_best), pos_err_acc_kill(I_best), ' p', 'Color', [0 0 0], 'LineWidth', 3, 'MarkerSize', 10);
-            plot(ax_,frscores(I_truest), pos_err_acc_kill(I_truest), ' h', 'Color', [0 0 0], 'LineWidth', 3, 'MarkerSize', 10);
-            plot(ax_,frscores(I_leader), pos_err_acc_kill(I_leader), ' d', 'Color', [0 0 0], 'LineWidth', 3, 'MarkerSize', 10);
+            plot(ax_,frscores, pos_err_final_kill, ' s', 'Color', [color_right, 0.1], 'LineWidth', 1);
+            plot(ax_,frscores(I_best), pos_err_final_kill(I_best), ' p', 'Color', [0 0 0], 'LineWidth', 3, 'MarkerSize', 10);
+            plot(ax_,frscores(I_truest), pos_err_final_kill(I_truest), ' h', 'Color', [0 0 0], 'LineWidth', 3, 'MarkerSize', 10);
+            plot(ax_,frscores(I_leader), pos_err_final_kill(I_leader), ' d', 'Color', [0 0 0], 'LineWidth', 3, 'MarkerSize', 10);
 
             xlabel(ax_, 'frame score', 'Interpreter', 'Latex', 'Fontsize', 14)
         end

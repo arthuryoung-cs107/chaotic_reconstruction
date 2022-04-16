@@ -100,5 +100,6 @@ end
 
 function pos_err_out = frame_pos_err(pos0,posi)
     diff = pos0-posi(:,1:2,:);
-    pos_err_out = sum(sqrt(squeeze(sum(diff.*diff, 2)))./sqrt(squeeze(sum(pos0.*pos0, 2))), 1);
+    % pos_err_out = sum(sqrt(squeeze(sum(diff.*diff, 2)))./sqrt(squeeze(sum(pos0.*pos0, 2))), 1);
+    pos_err_out = sum(sqrt(squeeze(sum(diff.*diff, 2))), 1);
 end

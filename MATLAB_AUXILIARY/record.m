@@ -1,4 +1,4 @@
-classdef record < handle
+classdef record
   properties
     global_index;
     frscore;

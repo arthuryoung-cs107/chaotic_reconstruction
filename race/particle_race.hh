@@ -79,7 +79,7 @@ struct record
   {return lambda_z_*exp(-lambda_z_*z);}
 
   inline double z_eval(int frscore_min_)
-  {return z;}
+  {return (z=(1.0/(double)(frscore-frscore_min_+1))*(1.0/((double)frscore))*l2score);}
 
   inline double var()
   {return gau_h*exp(-2.0*gau_lambda*((double) frscore)/((double)Frames));}
@@ -156,7 +156,7 @@ class reporter : public ODR_struct
 {
   public:
     bool staged_flag = false;
-    int nlead, npool, len;
+    int nlead, npool, len, race_id;
 
     int * dup_vec;
 
@@ -166,9 +166,9 @@ class reporter : public ODR_struct
 
     reporter(): ODR_struct() {}
     ~reporter() {}
-    void init_race(char * proc_loc_, char * rydat_dir_, char * file_name_);
-      void init_race(const char *proc_loc_, const char *rydat_dir_, const char *file_name_)
-        {init_race((char*)proc_loc_,(char*)rydat_dir_,(char*)file_name_);}
+    void init_race(char * proc_loc_, char * rydat_dir_, char * file_name_, int race_id_);
+      void init_race(const char *proc_loc_, const char *rydat_dir_, const char *file_name_, int race_id_)
+        {init_race((char*)proc_loc_,(char*)rydat_dir_,(char*)file_name_, race_id_);}
     void write_gen_diagnostics(int gen_count_, int leader_count_, int worst_leader_, int best_leader_);
     void close_diagnostics(int gen_count_, int leader_count_, int worst_leader_, int best_leader_);
     ODR_struct * spawn_swirlODR(char *name_);

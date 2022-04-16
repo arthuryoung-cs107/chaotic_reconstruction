@@ -9,7 +9,6 @@ nbeads = 3;
 test = 'maxmin'; %% parameter perturbation
 ran_id = 1;
 
-%% this effort is to produce a learned quantity that is FULLY PHYSICALLY INTERPRETABLE
 tic
 stat = read_stat(nbeads,test,ran_id);
 toc
@@ -27,9 +26,6 @@ stat.plot_acc_weights_hist(fig_all.ax_tile(6), blue5, red5, stat.pos_err, stat.f
 % stat.plot_derr_vs_err(fig_all.ax_tile(6), orange1, stat.sw0.dish, stat.pos_err, stat.I_best(1), stat.I_truest(1),stat.I_leader(1));
 
 pause
-
-
-
 
 movie1 = AYfig(AYfig.specs_gen('playback', [fig_pos(5, 1:2), 500,500] ));
 

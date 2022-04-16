@@ -1,6 +1,6 @@
 classdef swirl
   properties
-      
+
     %% data shared with swirl ODR data
     Frames=0; % number of frames in swirl
     beads=0; % number of beads
@@ -49,14 +49,6 @@ classdef swirl
         if (f_final > 1)
             valid_sub_swirl = true;
             out = swirl(oth, oth.dish, f_final, oth.len_dish, oth.len_pos, oth.beads);
-        end
-    end
-    function err_vec = comp_pos_err(obj, oth)
-        %% computes mean bead position error for each frame
-        err_vec = zeros(1, obj.Frames-1); %% ignore first frame, assuming equivalent initial conditions
-        diff = obj.pos - oth.data;
-        for i=1:(obj.Frames-1)
-            err_vec(i) = sum(sum((diff(:, :,i+1).*diff_mat(:, :,i+1))'));
         end
     end
     function find_contact_frames(obj)

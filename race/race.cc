@@ -177,14 +177,13 @@ void race::resample_pool()
   double acc = 0.0;
   if (z_weight_flag)
   {
-    double z_acc=z_mean=0.0;
+    double z_acc=0.0;
     for (int i = 0; i < leader_count; i++)
       z_acc+=leaders[i]->z_eval(frscore_min);
-    z_mean=z_acc/((double)leader_count);
-    double lambda_z=1.0/z_mean;
+    double  z_mean=z_acc/((double)leader_count),
+            lambda_z=1.0/z_mean;
     for (int i = 0; i < leader_count; i++)
       acc += sample_weights[i] = leaders[i]->w(lambda_z);
-
   }
   else for (int i = 0; i < leader_count; i++)
     acc += sample_weights[i] = leaders[i]->w(Frames, lambda);
