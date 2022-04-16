@@ -6,8 +6,9 @@
 
 #include "particle_race.hh"
 
-void reporter::init_race( char * proc_loc_, char * rydat_dir_, char * file_name_, int race_id_): race_id(race_id_)
+void reporter::init_race( char * proc_loc_, char * rydat_dir_, char * file_name_, int race_id_)
 {
+  race_id = race_id_; 
   reading_flag=true;
   rydat_dir=string_gen_pruned(rydat_dir_); file_name=string_gen_pruned(file_name_);
   size_t len_loc = strlen(proc_loc_) + strlen(rydat_dir);

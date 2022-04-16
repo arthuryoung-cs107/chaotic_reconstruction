@@ -50,7 +50,7 @@ void referee::print_referee_params()
   printf("double params:\n");
   for (int i = 0; i < 7; i++) printf("%e ", double_params[i]);
   printf("\n\nint params:\n");
-  for (int i = 0; i < 3; i++) printf("%e ", int_params[i]);
+  for (int i = 0; i < 3; i++) printf("%d ", int_params[i]);
   printf("\n");
 }
 
