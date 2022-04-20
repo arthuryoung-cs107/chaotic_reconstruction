@@ -97,6 +97,37 @@ classdef swirl_group
             xlabel(ax_, 'parameter index', 'Interpreter', 'Latex', 'Fontsize', 14)
             ylabel(ax_, 'parameter error', 'Interpreter', 'Latex', 'Fontsize', 14)
         end
+        function plot_param_error_leaders(obj, ax_, base_color, par_err_, par_true, I_best, I_truest, I_leaders, nlead)
+            par_err = par_err_./abs(par_true);
+            [len_par, len_gp] = size(par_err);
+            I_leader = I_leaders(1);
+            box(ax_,'on');
+            hold(ax_, 'on');
+            for i=reshape(I_leaders(1:nlead), 1,[])
+                plot(ax_, 1:len_par, par_err(:,i), ' -', 'Color', [base_color, 0.1], 'LineWidth', 1);
+            end
+            plot(ax_, 1:len_par, par_err(:,I_best), ' -', 'Color', [0 0 0], 'LineWidth', 1);
+            plot(ax_, 1:len_par, par_err(:,I_truest), ' :', 'Color', [0 0 0], 'LineWidth', 1);
+            plot(ax_, 1:len_par, par_err(:,I_leader), ' -.', 'Color', [0 0 0], 'LineWidth', 1);
+            xlabel(ax_, 'parameter index', 'Interpreter', 'Latex', 'Fontsize', 14)
+            ylabel(ax_, 'parameter error', 'Interpreter', 'Latex', 'Fontsize', 14)
+        end
+        function plot_param_error_best(obj, ax_, base_color, par_err_, par_true, I_bestest, I_truest, I_leader, nbest)
+            par_err = par_err_./abs(par_true);
+            [len_par, len_gp] = size(par_err);
+            I_best = I_bestest(1);
+            box(ax_,'on');
+            hold(ax_, 'on');
+            for i=reshape(I_bestest(1:nbest), 1,[])
+                plot(ax_, 1:len_par, par_err(:,i), ' -', 'Color', [base_color, 0.1], 'LineWidth', 1);
+            end
+            plot(ax_, 1:len_par, par_err(:,I_best), ' -', 'Color', [0 0 0], 'LineWidth', 1);
+            plot(ax_, 1:len_par, par_err(:,I_truest), ' :', 'Color', [0 0 0], 'LineWidth', 1);
+            plot(ax_, 1:len_par, par_err(:,I_leader), ' -.', 'Color', [0 0 0], 'LineWidth', 1);
+            xlabel(ax_, 'parameter index', 'Interpreter', 'Latex', 'Fontsize', 14)
+            ylabel(ax_, 'parameter error', 'Interpreter', 'Latex', 'Fontsize', 14)
+        end
+
         function plot_err_vs_accerr(obj, ax_, base_color, pos_err, I_best, I_truest, I_leader)
             [len_gp, Frames] = size(pos_err);
 
@@ -198,23 +229,12 @@ classdef swirl_group
             box(ax_,'on');
             hold(ax_, 'on');
 
-            yyaxis(ax_, 'left');
-            % set(ax_, 'YScale', 'log');
-            ylabel(ax_, 'cumulative position error', 'Interpreter', 'Latex', 'Fontsize', 14)
             plot(ax_,frscores, pos_err_acc, ' o', 'Color', [color_left, 0.1], 'LineWidth', 1);
-            plot(ax_,frscores(I_best), pos_err_final_kill(I_best), ' *', 'Color', [0 0 0], 'LineWidth', 3, 'MarkerSize', 10);
-            plot(ax_,frscores(I_truest), pos_err_acc(I_truest), ' x', 'Color', [0 0 0], 'LineWidth', 3, 'MarkerSize', 10);
-            plot(ax_,frscores(I_leader), pos_err_acc(I_leader), ' +', 'Color', [0 0 0], 'LineWidth', 3, 'MarkerSize', 10);
+            plot(ax_,frscores(I_best), pos_err_acc(I_best), ' *', 'Color', [0 0 0], 'LineWidth', 2, 'MarkerSize', 8);
+            plot(ax_,frscores(I_truest), pos_err_acc(I_truest), ' x', 'Color', [0 0 0], 'LineWidth', 2, 'MarkerSize', 8);
+            plot(ax_,frscores(I_leader), pos_err_acc(I_leader), ' +', 'Color', [0 0 0], 'LineWidth', 2, 'MarkerSize', 8);
 
-
-            yyaxis(ax_, 'right');
-            % set(ax_, 'YScale', 'log');
-            ylabel(ax_, 'cumulative position error, killed, averaged', 'Interpreter', 'Latex', 'Fontsize', 14)
-            plot(ax_,frscores, pos_err_final_kill, ' s', 'Color', [color_right, 0.1], 'LineWidth', 1);
-            plot(ax_,frscores(I_best), pos_err_final_kill(I_best), ' p', 'Color', [0 0 0], 'LineWidth', 3, 'MarkerSize', 10);
-            plot(ax_,frscores(I_truest), pos_err_final_kill(I_truest), ' h', 'Color', [0 0 0], 'LineWidth', 3, 'MarkerSize', 10);
-            plot(ax_,frscores(I_leader), pos_err_final_kill(I_leader), ' d', 'Color', [0 0 0], 'LineWidth', 3, 'MarkerSize', 10);
-
+            ylabel(ax_, 'cumulative position error', 'Interpreter', 'Latex', 'Fontsize', 14)
             xlabel(ax_, 'frame score', 'Interpreter', 'Latex', 'Fontsize', 14)
         end
         function plot_acc_weights(obj, ax_, color_left, color_right, pos_err, frscores, I_best, I_truest, I_leader)
@@ -236,18 +256,9 @@ classdef swirl_group
             box(ax_,'on');
             hold(ax_, 'on');
 
-            yyaxis(ax_, 'left');
-            % set(ax_, 'YScale', 'log');
-            ylabel(ax_, 'reweighted 1', 'Interpreter', 'Latex', 'Fontsize', 14)
-            % plot(ax_,frscores, pos_err_acc_f1, ' o', 'Color', [color_left, 0.1], 'LineWidth', 1);
             plot(ax_,frscores(I_leaders), pos_err_acc_f1(I_leaders), ' o', 'Color', [color_left, 0.1], 'LineWidth', 1);
 
-            yyaxis(ax_, 'right');
-            % set(ax_, 'YScale', 'log');
-            ylabel(ax_, 'reweighted 2', 'Interpreter', 'Latex', 'Fontsize', 14)
-            % plot(ax_,frscores, pos_err_acc_f2, ' s', 'Color', [color_right, 0.1], 'LineWidth', 1);
-            plot(ax_,frscores(I_leaders), pos_err_acc_f2(I_leaders), ' s', 'Color', [color_right, 0.1], 'LineWidth', 1);
-
+            ylabel(ax_, 'reweighted 1', 'Interpreter', 'Latex', 'Fontsize', 14)
             xlabel(ax_, 'frame score', 'Interpreter', 'Latex', 'Fontsize', 14)
         end
         function plot_acc_weights_hist(obj, ax_, color_left, color_right, pos_err, frscores, I_best, I_truest, I_leader)

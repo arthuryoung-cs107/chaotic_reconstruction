@@ -27,7 +27,7 @@ void runner::reset_sim(double *ptest_)
   }
 }
 
-int runner::run_race(double dt_sim_, double *ts_, double *xs_, double *d_ang_, record * rec_, double frscore_min_, double l2score_min_)
+int runner::run_race(double dt_sim_, double *ts_, double *xs_, double *d_ang_, record * rec_, int frscore_min_, double l2score_min_)
 {
   frame = 0; pos_err_acc=0.0;
   do

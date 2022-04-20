@@ -71,7 +71,7 @@ referee::~referee()
   if (alloc_flag)
   {
     delete [] leader_board;
-    for (int i = 0; i < 2*nlead; i++) delete leaders[i];
+    for (int i = 0; i < nlead+npool; i++) delete leaders[i];
     delete [] leaders;
     free_AYdmatrix(lead_params);
   }
