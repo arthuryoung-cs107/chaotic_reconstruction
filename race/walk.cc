@@ -51,10 +51,19 @@ void walk::stage_diagnostics()
   ped->nlead = nlead;
   ped->npool = npool;
   ped->nA = nA;
-  ped->len = param_len;
-  ped->dup_vec = dup_vec;
+  ped->param_len = param_len;
+  ped->Frames = Frames;
+
+  ped->lead_dup_count = lead_dup_count;
+  ped->frame_kill_count = frame_kill_count;
+
   ped->sample_weights = sample_weights;
+  ped->gen_frame_res_data = gen_frame_res_data;
+  ped->gen_param_mean = gen_param_mean;
+  ped->gen_param_var = gen_param_var;
+
   ped->leaders = leaders;
+
   ped->staged_flag = true;
 }
 
@@ -112,7 +121,7 @@ void walk::train_classA(bool verbose_)
     else resample_pool(); // we try again
     if (debugging_flag) ped->write_gen_diagnostics(gen_count, leader_count, worst_leader, best_leader);
   } while (training_underway);
-  if (debugging_flag) ped->close_diagnostics(gen_count, leader_count, worst_leader, best_leader);
+  if (debugging_flag) ped->close_diagnostics(gen_count, leader_count, worst_leader, best_leader, t_wheels, min_res);
   printf("\n");
 }
 
@@ -244,16 +253,16 @@ void walk::resample_pool()
   acc /= (leader_count<nlead)? rs_fill_factor:rs_full_factor;
 
   for (int i = 0; i < leader_count; i++)
-    {sample_weights[i] /= acc; dup_vec[i] = 0;}
+    {sample_weights[i] /= acc; lead_dup_count[i] = 0;}
 
   int dup_count=0, resample_count=0;
   #pragma omp parallel
     {
       int t = thread_num();
       AYrng *r = rng[t];
-      int *dup_t = dup_mat[t];
+      int *dup_t = walkers[t]->lead_dup_count;
       for (int i = 0; i < leader_count; i++) dup_t[i] = 0;
-  #pragma omp for reduction(+:dup_count) reduction(+:resample_count)
+      #pragma omp for reduction(+:dup_count) reduction(+:resample_count) nowait
       for (int i = 0; i < npool; i++)
       {
         int j = 0;
@@ -273,13 +282,15 @@ void walk::resample_pool()
         else
           {resample_count++; pool[i]->resample(gen_count, dmin, dmax, r);}
       }
+      #pragma omp critical
+      {
+        for (int i = 0; i < leader_count; i++) lead_dup_count[i]+=dup_t[i]
+      }
     }
-    for (int i = 0; i < nt; i++) for (int j = 0; j < leader_count; j++)
-      dup_vec[j]+=dup_mat[i][j];
 
     int dup_unique=0;
-    for (int i = 0; i < leader_count; i++) if (dup_vec[i])
-    {leaders[i]->dup_count+=dup_vec[i]; dup_unique++;}
+    for (int i = 0; i < leader_count; i++) if (lead_dup_count[i])
+    {leaders[i]->dup_count+=lead_dup_count[i]; dup_unique++;}
 
     printf("%d duplicates (%d unique), %d resamples\n", dup_count, dup_unique, resample_count);
 }

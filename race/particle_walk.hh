@@ -7,8 +7,8 @@
 #include "omp.h"
 #endif
 
-const int grade_int_len=8;
-const int grade_double_len=1;
+const int grade_int_len=7;
+const int grade_double_len=2;
 
 struct grade
 {
@@ -24,8 +24,7 @@ struct grade
         int dup_count; // number of times this particle has been duplicated
 
   double  l2score; // note that this is NOW the squared residual
-  double  z;
-
+          raw_weight;
   double * const params;
 
   grade(int i_, double * params_): global_index(i_), params(params_) {}
@@ -43,10 +42,10 @@ struct grade
   inline void init_pool(double * params_, int len_, int Frames_, double * dmin_, double *dmax_, AYrng * r_)
   {init(len_, Frames_); resample(0,dmin_,dmax_,r_);}
 
-  inline bool check_success(int frscore_, double l2score_, int frmin_, double l2min_)
+  inline bool check_success(int frscore_, double l2score_, int frworst_, double l2worst_)
   {
     frscore = frscore_; l2score = l2score_;
-    return success=(l2score<l2min_)?true:false; // conditioning on average frame error
+    return success=l2score<l2min_; // conditioning on average frame error
   }
   inline bool isbetter(grade * rcomp_)
   {return l2score<rcomp_->l2score;}
@@ -55,7 +54,7 @@ struct grade
   {return !(isbetter(rcomp_));}
 
   inline double w(double min_res_)
-  {return exp(min_res_-l2score);}
+  {return raw_weight = exp(min_res_-l2score);}
 
 };
 
@@ -98,8 +97,7 @@ class walker: public swirl
 
       double  *pvals,
               *ts, *xs, *d_ang,
-              t0, *x0, ctheta0, t0_raw,
-              min_accres;
+              t0, *x0, ctheta0, t0_raw;
 
       void compute_error(double *f_, double dur_);
 };
@@ -147,19 +145,26 @@ class pedestrian : public ped_struct
 {
   public:
     bool staged_flag = false;
-    int nlead, npool, nA, len, walk_id;
+    int walk_id;
+    int nlead, npool, nA, param_len, Frames;
 
-    double * sample_weights;
+    int *lead_dup_count,
+        *frame_kill_count;
+
+    double  *sample_weights,
+            *gen_frame_res_data,
+            *gen_param_mean,
+            *gen_param_var;
 
     grade ** leaders;
 
-    pedestrian() : ped_struct() {}
+    pedestrian() : ODR_struct() {}
     ~pedestrian() {}
     void init_walk(char * proc_loc_, char * rydat_dir_, char * file_name_, int walk_id_);
       void init_walk(const char *proc_loc_, const char *rydat_dir_, const char *file_name_, int walk_id_)
         {init_walk((char*)proc_loc_,(char*)rydat_dir_,(char*)file_name_, walk_id_);}
 
-    void write_gen_diagnostics(int gen_count_, int leader_count_, int worst_leader_, int best_leader_, double t_wheels_);
+    void write_gen_diagnostics(int gen_count_, int leader_count_, int worst_leader_, int best_leader_, double t_wheels_, double min_res_);
     void close_diagnostics(int gen_count_, int leader_count_, int worst_leader_, int best_leader_);
     ODR_struct * spawn_swirlODR(char *name_);
 };

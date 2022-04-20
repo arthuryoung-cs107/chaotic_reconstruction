@@ -9,7 +9,7 @@
 const int nbeads=3;
 const int param_id=0;
 const int walk_id=0;
-const int generations=5;
+const int generations=2;
 const int nlead = 500;
 const int npool = 1000;
 const int nA = 12;

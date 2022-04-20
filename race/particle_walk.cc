@@ -35,7 +35,7 @@ void grade::duplicate(grade *parent_, int gen_, double *dmin_, double *dmax_, AY
 
   for (int i = 0; i < len; i++)
   {
-    params[i] = parent_->params[i]*(r_->rand_gau_gsl(1.0, var_[i]));
+    params[i] = parent_->params[i]*(r_->rand_gau_gsl(1.0, var_[i])); // do we account for the displacement relative to mean?
     if (params[i] > dmax_[i]) params[i]=dmax_[i];
     else if (params[i] < dmin_[i]) params[i]=dmin_[i];
   }
