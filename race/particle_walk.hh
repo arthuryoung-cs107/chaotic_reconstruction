@@ -16,7 +16,6 @@ struct grade
   int len,Frames;
 
   const int global_index;
-        int school; // refers to the class A particle lineage
         int frscore;
         int gen; // generation in which this particle was generated
         int parent_gen; // generation this particle comes from
@@ -24,7 +23,7 @@ struct grade
         int parent_global_index; // index position of parent particle
         int dup_count; // number of times this particle has been duplicated
 
-  double  l2score;
+  double  l2score; // note that this is NOW the squared residual
   double  z;
 
   double * const params;
@@ -34,7 +33,7 @@ struct grade
 
   void reset_grade(int gen_);
   void resample(int gen_, double * dmin_, double *dmax_, AYrng * r_);
-  void duplicate(grade *parent_, int gen_, double *dmin_, double *dmax_, AYrng * r_);
+  void duplicate(grade *parent_, int gen_, double *dmin_, double *dmax_, AYrng * r_, double * var_);
   void take_vals(grade * rtake_);
 
   inline void init(int len_, int Frames_)
@@ -55,14 +54,8 @@ struct grade
   inline bool isworse(grade * rcomp_)
   {return !(isbetter(rcomp_));}
 
-  inline double w(double lambda_z_)
-  {return lambda_z_*exp(-lambda_z_*z);}
-
-  inline double z_eval(int frscore_min_)
-  {return (z=(1.0/((double)(frscore-frscore_min_+1)))*(1.0/((double)frscore))*l2score);}
-
-  inline double var()
-  {return gau_h*exp(-2.0*gau_lambda*((double) frscore)/((double)Frames));}
+  inline double w(double min_res_)
+  {return exp(min_res_-l2score);}
 
 };
 
@@ -85,18 +78,18 @@ class walker: public swirl
       int *lead_dup_count, // length = nlead
           *frame_kill_count; // length = Frames
 
-      double  pos_err_acc,
-              *frame_err_data; // [pos_err|max_err|pos_err_dead|pos_err_alive]
+      double  pos_res_acc,
+              *frame_res_data, // [pos_res|max_err|pos_res_dead|pos_res_alive]
+              *param_mean;
 
       walker(swirl_param &sp_, proximity_grid * pg_, wall_list &wl_, int n_, int thread_id_, int param_len_, int Frames_, double tol_, double t_phys_, double dt_sim_, double t_wheels_, double *ts_, double *xs_, double *d_ang_, int ic_index_, int nlead_, int npool_);
       ~walker();
 
       int start_walking(grade * gra_, int frscore_min_, double l2score_min_);
 
-      void reset_diagnostics()
-      {n_test=0; for (int i = 0; i < 4*Frames; i++) frame_err_data[i] = 0.0; for (int i = 0; i < Frames; i++) frame_kill_count[i] = 0;}
+      void reset_diagnostics();
       void consolidate_diagnostics();
-      void update_diagnostics(int *frame_kill_count_, double *mean_frame_err_data_);
+      void update_diagnostics(int *frame_kill_count_, double *gen_frame_res_data_, double * gen_param_mean_, double * min_res_);
 
     private:
       bool dead;
@@ -105,7 +98,8 @@ class walker: public swirl
 
       double  *pvals,
               *ts, *xs, *d_ang,
-              t0, *x0, ctheta0, t0_raw;
+              t0, *x0, ctheta0, t0_raw,
+              min_accres;
 
       void compute_error(double *f_, double dur_);
 };
@@ -133,7 +127,11 @@ struct guide
       *frame_kill_count; // length = Frames
 
   double  *sample_weights, // length = nlead
-          *mean_frame_err_data; // [pos_err|max_err|pos_err_dead|pos_err_alive]
+          *gen_frame_res_data, // [pos_res|max_err|pos_res_dead|pos_res_alive]
+          *gen_param_mean,
+          *gen_param_var;
+
+  double  min_res;
 
   bool alloc_flag=false;
 
@@ -150,8 +148,6 @@ class pedestrian : public ped_struct
   public:
     bool staged_flag = false;
     int nlead, npool, nA, len, walk_id;
-
-
 
     double * sample_weights;
 
@@ -218,6 +214,8 @@ class walk : public guide
       void stage_diagnostics();
 
       void train_classA(bool verbose_);
+
+      double compute_leader_statistics();
 
 
 #ifdef _OPENMP

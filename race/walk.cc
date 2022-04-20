@@ -88,7 +88,7 @@ void walk::train_classA(bool verbose_)
   do
   {
     int success_local=0;
-    for (int i = 0; i < 4*Frames; i++) mean_frame_err_data[i]=0.0;
+    for (int i = 0; i < 4*Frames; i++) gen_frame_res_data[i]=0.0;
     for (int i = 0; i < Frames; i++) frame_kill_count[i] = 0;
 #pragma omp parallel
     {
@@ -102,7 +102,7 @@ void walk::train_classA(bool verbose_)
       rt->consolidate_diagnostics();
 #pragma omp critical
       {
-        rt->update_diagnostics(frame_kill_count,mean_frame_err_data);
+        rt->update_diagnostics(frame_kill_count,gen_frame_res_data, gen_param_mean, &min_res);
       }
     }
     gen_count++;
@@ -114,6 +114,27 @@ void walk::train_classA(bool verbose_)
   } while (training_underway);
   if (debugging_flag) ped->close_diagnostics(gen_count, leader_count, worst_leader, best_leader);
   printf("\n");
+}
+
+int walk::collect_pool_leaders()
+{
+  pool_success_count = 0;
+  for (int i = 0; i < npool; i++)
+    if (pool[i]->success)
+      pool_leaders[pool_success_count++] = pool[i];
+  if (pool_success_count > nlead) // if we have lots of good candidates
+  {
+    // we seek to pick the nlead best grades for comparison.
+    int worst_best = find_worst_grade(pool_leaders, nlead);
+    for (int i = nlead; i < pool_success_count; i++)
+      if (pool_leaders[worst_best]->isworse(pool_leaders[i]))
+      {
+        pool_leaders[worst_best] = pool_leaders[i];
+        worst_best = find_worst_grade(pool_leaders, nlead);
+      }
+    return nlead;
+  }
+  else return pool_success_count;
 }
 
 bool walk::check_pool_results()
@@ -168,56 +189,71 @@ bool walk::check_pool_results()
   return false;
 }
 
-int walk::collect_pool_leaders()
+double walk::compute_leader_statistics()
 {
-  pool_success_count = 0;
-  for (int i = 0; i < npool; i++)
-    if (pool[i]->success)
-      pool_leaders[pool_success_count++] = pool[i];
-  if (pool_success_count > nlead) // if we have lots of good candidates
+  double nlead_inv = 1.0/((double)leader_count);
+  min_res = DBL_MAX;
+  for (int i = 0; i < param_len; i++) gen_param_mean[i] = gen_param_var[i] = 0.0;
+  #pragma omp parallel
   {
-    // we seek to pick the nlead best grades for comparison.
-    int worst_best = find_worst_grade(pool_leaders, nlead);
-    for (int i = nlead; i < pool_success_count; i++)
-      if (pool_leaders[worst_best]->isworse(pool_leaders[i]))
+    walker *rt = walkers[thread_num()];
+    double * param_mean = rt->param_mean;
+    for (int i = 0; i < param_len; i++) param_mean[i] = 0.0;
+    #pragma omp for reduction(min:min_res) nowait
+    for (int i = 0; i < leader_count; i++)
+    {
+      double * params_i = leaders[i]->params;
+      for (int j = 0; j < param_len; j++) param_mean[j]+=(nlead_inv)*params_i[j];
+      if (leaders[i]->l2score < min_res) min_res = leaders[i]->l2score;
+    }
+    #pragma omp critical
+    {
+      for (int i = 0; i < param_len; i++) gen_param_mean[i] += param_mean[i];
+    }
+
+    for (int i = 0; i < param_len; i++) param_mean[i] = 0.0;
+
+    #pragma omp barrier
+
+    #pragma omp for nowait
+    for (int i = 0; i < leader_count; i++)
+    {
+      double * params_i = leaders[i]->params;
+      for (int j = 0; j < param_len; j++)
       {
-        pool_leaders[worst_best] = pool_leaders[i];
-        worst_best = find_worst_grade(pool_leaders, nlead);
+        double z = (params_i[j] - gen_param_mean[j]);
+        param_mean[j]+=nlead_inv*(z*z);
       }
-    return nlead;
+    }
+    #pragma omp critical
+    {
+      for (int i = 0; i < param_len; i++) gen_param_var[i] += param_mean[i];
+    }
   }
-  else return pool_success_count;
+  return min_res;
 }
+
 void walk::resample_pool()
 {
-  double acc = 0.0;
-  if (z_weight_flag)
-  {
-    double z_acc=0.0;
-    for (int i = 0; i < leader_count; i++)
-      z_acc+=leaders[i]->z_eval(frscore_min);
-    double  z_mean=z_acc/((double)leader_count),
-            lambda_z=1.0/z_mean;
-    for (int i = 0; i < leader_count; i++)
-      acc += sample_weights[i] = leaders[i]->w(lambda_z);
-  }
-  else for (int i = 0; i < leader_count; i++)
-    acc += sample_weights[i] = leaders[i]->w(Frames, lambda);
+  min_res = compute_leader_statistics();
 
+  double acc = 0.0;
+  for (int i = 0; i < leader_count; i++)
+    acc += sample_weights[i] = leaders[i]->w(min_res);
 
   acc /= (leader_count<nlead)? rs_fill_factor:rs_full_factor;
 
   for (int i = 0; i < leader_count; i++)
     {sample_weights[i] /= acc; dup_vec[i] = 0;}
 
-  int dup_count=0, res_count=0;
+  int dup_count=0, resample_count=0;
   #pragma omp parallel
     {
       int t = thread_num();
       AYrng *r = rng[t];
       int *dup_t = dup_mat[t];
       for (int i = 0; i < leader_count; i++) dup_t[i] = 0;
-  #pragma omp for reduction(+:dup_count) reduction(+:res_count)
+  #pragma omp for reduction(+:dup_count) reduction(+:resample_count)
       for (int i = 0; i < npool; i++)
       {
         int j = 0;
@@ -228,14 +264,14 @@ void walk::resample_pool()
         {
           // resample the particle, add gaussian noise
           if (uni<0.0)
-          {dup_count++; dup_t[--j]++; pool[i]->duplicate(leaders[j], gen_count, dmin, dmax,r);}
+          {dup_count++; dup_t[--j]++; pool[i]->duplicate(leaders[j], gen_count, dmin, dmax,r, gen_param_var);}
           // we hit the resampling pool
           else
-            {res_count++; pool[i]->resample(gen_count, dmin, dmax, r);}
+            {resample_count++; pool[i]->resample(gen_count, dmin, dmax, r);}
         }
         // we currently have no leaders (particles worth resampling)
         else
-          {res_count++; pool[i]->resample(gen_count, dmin, dmax, r);}
+          {resample_count++; pool[i]->resample(gen_count, dmin, dmax, r);}
       }
     }
     for (int i = 0; i < nt; i++) for (int j = 0; j < leader_count; j++)
@@ -245,5 +281,5 @@ void walk::resample_pool()
     for (int i = 0; i < leader_count; i++) if (dup_vec[i])
     {leaders[i]->dup_count+=dup_vec[i]; dup_unique++;}
 
-    printf("%d duplicates (%d unique), %d resamples\n", dup_count, dup_unique, res_count);
+    printf("%d duplicates (%d unique), %d resamples\n", dup_count, dup_unique, resample_count);
 }

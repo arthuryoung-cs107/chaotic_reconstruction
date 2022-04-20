@@ -8,7 +8,6 @@ extern "C"
 void grade::reset_grade(int gen_)
 {
   frscore=0;
-  school=-1;
   gen=gen_;
   parent_gen=-1; // negative value implies no parent
   parent_count=0;
@@ -23,7 +22,7 @@ void grade::resample(int gen_, double * dmin_, double *dmax_, AYrng * r_)
   for (int i = 0; i < len; i++)
     params[i] = dmin_[i]+(dmax_[i]-dmin_[i])*(r_->rand_uni_gsl(0.0,1.0));
 }
-void grade::duplicate(grade *parent_, int gen_, double *dmin_, double *dmax_, AYrng * r_)
+void grade::duplicate(grade *parent_, int gen_, double *dmin_, double *dmax_, AYrng * r_, double * var_)
 {
   frscore=0;
   gen=gen_;
@@ -36,14 +35,13 @@ void grade::duplicate(grade *parent_, int gen_, double *dmin_, double *dmax_, AY
 
   for (int i = 0; i < len; i++)
   {
-    params[i] = parent_->params[i]*(r_->rand_gau_gsl(1.0, parent_->var()));
+    params[i] = parent_->params[i]*(r_->rand_gau_gsl(1.0, var_[i]));
     if (params[i] > dmax_[i]) params[i]=dmax_[i];
     else if (params[i] < dmin_[i]) params[i]=dmin_[i];
   }
 }
 void grade::take_vals(grade * gtake_)
 {
-  school=gtake_->school;
   frscore=gtake_->frscore;
   gen=gtake_->gen;
   parent_gen=gtake_->parent_gen;
@@ -67,7 +65,8 @@ dt_sim(dt_sim_), t_wheels(t_wheels_),
 ts(ts_+ic_index_), xs(xs_+2*n_*ic_index_), d_ang(d_ang_+ic_index_),
 nlead(nlead_), npool(npool_),
 lead_dup_count(new int[nlead_]), frame_kill_count(new int[Frames_]),
-frame_err_data(new double[4*Frames_])
+frame_res_data(new double[4*Frames_]), param_mean(new double[param_len_])
+
 {
   pvals = &Kn;
   t0_raw=*ts;
@@ -76,12 +75,13 @@ frame_err_data(new double[4*Frames_])
 walker::~walker()
 {
   delete [] lead_dup_count; delete [] frame_kill_count;
-  delete [] frame_err_data;
+  delete [] frame_res_data; delete [] param_mean;
 }
 void walker::reset_sim(double *ptest_)
 {
   // load the set of parameters we are to test
   for (int i = 0; i < param_len; i++) pvals[i] = ptest_[i];
+
   time=t0;
   set_swirl(ctheta0, 0.0);
   for (int i=0,j=0; i < n; i++,j+=2)
@@ -93,10 +93,9 @@ void walker::reset_sim(double *ptest_)
 int walker::start_walking(grade * gra_, int frscore_min_, double l2score_min_)
 {
   reset_sim(gra_->params);
-  n_test++;
   int frame_kill=Frames;
   dead=false;
-  pos_err_acc=0.0;
+  pos_res_acc=0.0;
   for (frame = 0; frame < Frames-1; frame++)
   {
     double dur=(ts[frame+1]-ts[frame])/t_phys, ctheta=d_ang_[frame],comega=d_ang[frame+1]-d_ang[frame];
@@ -106,55 +105,61 @@ int walker::start_walking(grade * gra_, int frscore_min_, double l2score_min_)
     advance(dur, ctheta, comega, dt_sim);
     compute_error(f,dur);
   }
-  return (int)(gra_->check_success(frame_kill, pos_err_acc, frscore_min_, l2score_min_));
+  return (int)(gra_->check_success(frame_kill, pos_res_acc, frscore_min_, l2score_min_));
 }
 void walker::compute_error(double *f_, double dur_)
 {
-  double pos_err=0.0, max_err=0.0, fac=t_wheels/cl_im, idur=1.0/dur_;
+  double pos_res=0.0, max_err=0.0, fac=t_wheels/cl_im, idur=1.0/dur_;
   for (int i=0, j=0; i < n; i++, j+=2)
   {
     double xt=(q[i].x-cx)*cl_im + cx_im - f_[j], yt=(q[i].y-cy)*cl_im + cy_im - f_[j+1], rsq = xt*xt+yt*yt, r = sqrt(rsq);
 
     q[i].tweak_pos(-fac*xt,-fac*yt,idur); // training wheels
 
+    pos_res+=rsq;
     if (r>max_err) max_err=r;
-    pos_err+=r;
   }
-  frame_err_data[frame*4]+=pos_err/=(((double)n)*cl_im);
-  frame_err_data[frame*4+1]+=max_err/=cl_im;
-  pos_err_acc+=pos_err;
+  frame_res_data[frame*4]+=pos_res;
+  frame_res_data[frame*4+1]+=max_err/=cl_im;
+  pos_res_acc+=pos_res;
 
-  if (dead) frame_err_data[frame*4+2]+= pos_err;
+  if (dead) frame_res_data[frame*4+2]+= pos_res;
   else
   {
-    frame_err_data[frame*4+3]+=pos_err;
+    frame_res_data[frame*4+3]+=pos_res;
     if (max_err>cl_im*cl_im) {frame_kill_count[frame]++; frame_kill=frame; dead=true;}
   }
+}
+void walker::reset_diagnostics()
+{
+  n_test=0;
+  for (int i = 0; i < 4*Frames; i++) frame_res_data[i] = 0.0;
+  for (int i = 0; i < Frames; i++) frame_kill_count[i] = 0;
 }
 void walker::consolidate_diagnostics()
 {
   int n_alive=n_test,n_dead=0;
   for (int i = 0; i < Frames; i++)
   {
-    frame_err_data[4*i] /= (double)n_test;
-    frame_err_data[4*i+1] /= (double)n_test;
+    frame_res_data[4*i] /= (double)n_test;
+    frame_res_data[4*i+1] /= (double)n_test;
 
     n_dead+=frame_kill_count[i];
-    if (n_dead) frame_err_data[4*i+2] /= (double)n_dead;
-    frame_err_data[4*i+3] /= (double)n_alive;
+    if (n_dead) frame_res_data[4*i+2] /= (double)n_dead;
+    frame_res_data[4*i+3] /= (double)n_alive;
     n_alive-=frame_kill_count[i];
   }
 }
-void walker::update_diagnostics(int * frame_kill_count_, double * mean_frame_err_data_)
+void walker::update_diagnostics(int * frame_kill_count_, double * gen_frame_res_data_)
 {
   double w = ((double)n_test)/((double)npool);
   for (int i = 0; i < Frames; i++)
   {
     frame_kill_count_[i]+=frame_kill_count[i];
-    mean_frame_err_data_[4*i] += w*frame_err_data[4*i];
-    mean_frame_err_data_[4*i+1] += w*frame_err_data[4*i+1];
-    mean_frame_err_data_[4*i+2] += w*frame_err_data[4*i+2];
-    mean_frame_err_data_[4*i+3] += w*frame_err_data[4*i+3];
+    gen_grame_res_data_[4*i] += w*frame_res_data[4*i];
+    gen_grame_res_data_[4*i+1] += w*frame_res_data[4*i+1];
+    gen_grame_res_data_[4*i+2] += w*frame_res_data[4*i+2];
+    gen_grame_res_data_[4*i+3] += w*frame_res_data[4*i+3];
   }
 }
 
@@ -176,7 +181,9 @@ guide::~guide()
     delete [] lead_dup_count; delete [] frame_kill_count;
 
     delete [] sample_weights;
-    delete [] mean_frame_err_data;
+    delete [] gen_frame_res_data;
+    delete [] gen_param_mean;
+    delete [] gen_param_var;
   }
 }
 void guide::alloc_grades(int nt_, int Frames_)
@@ -195,7 +202,9 @@ void guide::alloc_grades(int nt_, int Frames_)
   frame_kill_count = new int [Frames_];
 
   sample_weights = new double[nlead];
-  mean_frame_err_data = new double[4*Frames_];
+  gen_frame_res_data = new double[4*Frames_];
+  gen_param_mean = new double[param_len];
+  gen_param_var = new double[param_len];
 
   alloc_flag = true;
 }
