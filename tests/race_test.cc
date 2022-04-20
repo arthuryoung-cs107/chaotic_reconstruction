@@ -8,8 +8,8 @@
 
 const int nbeads=3;
 const int param_id=0;
-const int race_id=1;
-const int generations=100;
+const int race_id=2;
+const int generations=500;
 const int nlead = 900;
 const int npool = 1000;
 char proc_loc[] = "./dat_dir/";
