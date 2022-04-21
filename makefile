@@ -9,6 +9,8 @@ FIOBJS:= $(SWOBJS) $(addprefix $(FI_DIR), $(addsuffix .o, $(FILTER)))
 
 RAOBJS:= $(SWOBJS) $(addprefix $(RA_DIR), $(addsuffix .o, $(RACE)))
 
+WAOBJS:= $(SWOBJS) $(addprefix $(RA_DIR), $(addsuffix .o, $(WALK)))
+
 # rules for each directory
 # AYlinalg rules
 $(AY_DIR)%.o: $(AY_SRC)%.c | $(AY_DIR)
@@ -26,7 +28,7 @@ $(FI_DIR)%.o: $(FI_SRC)%.cc | $(FI_DIR)
 $(RA_DIR)%.o: $(RA_SRC)%.cc | $(RA_DIR)
 	$(CXX) $(IDIR) $(CFLAGS) -c $< -o $@
 
-all: process_test swirl_test filter_test stat_test race_test
+all: process_test swirl_test filter_test stat_test race_test walk_test
 
 process_test: $(TEST_SRC)process_test.cc $(SWOBJS)
 	$(CXX) $(IDIR) $(CFLAGS) $(LINK) $^ $(LIBS) -o $@
@@ -41,6 +43,9 @@ stat_test: $(TEST_SRC)stat_test.cc $(SWOBJS)
 	$(CXX) $(IDIR) $(CFLAGS) $(LINK) $^ $(LIBS) -o $@
 
 race_test: $(TEST_SRC)race_test.cc $(RAOBJS)
+	$(CXX) $(IDIR) $(CFLAGS) $(LINK) $^ $(LIBS) -o $@
+
+walk_test: $(TEST_SRC)walk_test.cc $(WAOBJS)
 	$(CXX) $(IDIR) $(CFLAGS) $(LINK) $^ $(LIBS) -o $@
 
 $(AY_DIR) $(SW_DIR) $(FI_DIR) $(RA_DIR):

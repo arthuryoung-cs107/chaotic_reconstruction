@@ -35,10 +35,10 @@ void pedestrian::init_walk( char * proc_loc_, char * rydat_dir_, char * file_nam
   sml_stream.close();
 }
 
-void pedestrian::write_gen_diagnostics(int gen_count_, int leader_count_, int worst_leader_, int best_leader_, double t_wheels_, double min_res_)
+void pedestrian::write_gen_diagnostics(int gen_count_, int leader_count_, int worst_leader_, int best_leader_, int dup_count_, int resample_count_, int dup_unique_, int repl_count_, double t_wheels_, double min_res_)
 {
-  int header[] = {8,2}; // {int_len, double_len}
-  int int_params[] = {gen_count_, Frames, leader_count_, grade_int_len, grade_double_len, param_len, worst_leader_, best_leader_};
+  int header[] = {12,2}; // {int_len, double_len}
+  int int_params[] = {gen_count_, Frames, leader_count_, grade_int_len, grade_double_len, param_len, worst_leader_, best_leader_, dup_count_, resample_count_, dup_unique_, repl_count_};
   double double_params[] = {t_wheels_, min_res_};
 
   char * buf_it = out_buf+obuf_end; sprintf(buf_it, "%s.wa%d_gen%d.wadat", file_name, walk_id, gen_count_, min_res_);

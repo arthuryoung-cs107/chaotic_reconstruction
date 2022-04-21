@@ -26,7 +26,7 @@ pg(new proximity_grid*[nt]), rng(new AYrng*[nt]), walkers(new walker*[nt])
     pg[t]=new proximity_grid();
     rng[t]=new AYrng();
     rng[t]->rng_init_gsl(t+1);
-    walkers[t]=new walker(sp_min, pg[t], wl, n, t, param_len, Frames, sp_max.cl_im, t_phys, dt_sim, t_wheels, ts, xs, d_ang, ic_index);
+    walkers[t]=new walker(sp_min, pg[t], wl, n, t, param_len, Frames, sp_max.cl_im, t_phys, dt_sim, t_wheels, ts, xs, d_ang, ic_index, nlead, npool);
   }
 }
 
@@ -71,7 +71,7 @@ void walk::init_walk()
 {
   // initialize the pool of testing particles
   leader_count=gen_count=0;
-  frscore_min=1; l2score_min=DBL_MAX;
+  frscore_worst=1; l2score_worst=DBL_MAX;
 #pragma omp parallel
   {
     AYrng *r = rng[thread_num()];
@@ -88,14 +88,14 @@ void walk::start_walk(int gen_max_, bool verbose_)
 {
   if (debugging_flag) stage_diagnostics();
   bool walk_underway=true;
-  train_classA(verbose_);
+  train_classA(gen_max_, verbose_);
 }
 
-void walk::train_classA(bool verbose_)
+void walk::train_classA(int gen_max_, bool verbose_)
 {
   bool training_underway=true;
   do
-  {
+  {    
     int success_local=0;
     for (int i = 0; i < 4*Frames; i++) gen_frame_res_data[i]=0.0;
     for (int i = 0; i < Frames; i++) frame_kill_count[i] = 0;
@@ -106,12 +106,12 @@ void walk::train_classA(bool verbose_)
 #pragma omp for reduction(+:success_local) nowait
       for (int i = 0; i < npool; i++)
       {
-        success_local += rt->start_walking(pool[i], frscore_min, l2score_min);
+        success_local += rt->start_walking(pool[i], frscore_worst, l2score_worst);
       }
       rt->consolidate_diagnostics();
 #pragma omp critical
       {
-        rt->update_diagnostics(frame_kill_count,gen_frame_res_data, gen_param_mean, &min_res);
+        rt->update_diagnostics(frame_kill_count,gen_frame_res_data);
       }
     }
     gen_count++;
@@ -119,27 +119,27 @@ void walk::train_classA(bool verbose_)
     if (check_pool_results()) training_underway=false; // we win
     else if (gen_count == gen_max_) training_underway=false; // we give up
     else resample_pool(); // we try again
-    if (debugging_flag) ped->write_gen_diagnostics(gen_count, leader_count, worst_leader, best_leader);
+    if (debugging_flag) ped->write_gen_diagnostics(gen_count, leader_count, worst_leader, best_leader, dup_count, resample_count, dup_unique, repl_count, t_wheels, min_res);
   } while (training_underway);
-  if (debugging_flag) ped->close_diagnostics(gen_count, leader_count, worst_leader, best_leader, t_wheels, min_res);
+  if (debugging_flag) ped->close_diagnostics(gen_count, worst_leader, best_leader, t_wheels, min_res);
   printf("\n");
 }
 
-int walk::collect_pool_leaders()
+int walk::collect_candidates()
 {
   pool_success_count = 0;
   for (int i = 0; i < npool; i++)
     if (pool[i]->success)
-      pool_leaders[pool_success_count++] = pool[i];
+      candidates[pool_success_count++] = pool[i];
   if (pool_success_count > nlead) // if we have lots of good candidates
   {
     // we seek to pick the nlead best grades for comparison.
-    int worst_best = find_worst_grade(pool_leaders, nlead);
+    int worst_best = find_worst_grade(candidates, nlead);
     for (int i = nlead; i < pool_success_count; i++)
-      if (pool_leaders[worst_best]->isworse(pool_leaders[i]))
+      if (candidates[worst_best]->isworse(candidates[i]))
       {
-        pool_leaders[worst_best] = pool_leaders[i];
-        worst_best = find_worst_grade(pool_leaders, nlead);
+        candidates[worst_best] = candidates[i];
+        worst_best = find_worst_grade(candidates, nlead);
       }
     return nlead;
   }
@@ -148,7 +148,7 @@ int walk::collect_pool_leaders()
 
 bool walk::check_pool_results()
 {
-  pool_candidates = collect_pool_leaders();
+  pool_candidates = collect_candidates();
   // if we now have a full leader roster
   repl_count=0;
   if (leader_count + pool_candidates >= nlead)
@@ -157,7 +157,7 @@ bool walk::check_pool_results()
     for (int i = 0, gap = nlead-leader_count; i < gap; i++)
     {
       leader_board[leader_count] = leaders[leader_count];
-      leaders[leader_count++]->take_vals(pool_leaders[--pool_candidates]);
+      leaders[leader_count++]->take_vals(candidates[--pool_candidates]);
     }
 
     int worst_best = find_worst_grade(leader_board, nlead);
@@ -171,8 +171,8 @@ bool walk::check_pool_results()
       }
 
     worst_leader = worst_best; // this will be the worst leader
-    frscore_min = leader_board[worst_best]->frscore;
-    l2score_min = leader_board[worst_best]->l2score;
+    frscore_worst = leader_board[worst_best]->frscore;
+    l2score_worst = leader_board[worst_best]->l2score;
 
     for (int i = 0; i < nlead; i++)
       if (leaders[i]->global_index != leader_board[i]->global_index)
@@ -187,7 +187,7 @@ bool walk::check_pool_results()
   {
     repl_count++;
     leader_board[leader_count] = leaders[leader_count];
-    leaders[leader_count++]->take_vals(pool_leaders[i]);
+    leaders[leader_count++]->take_vals(candidates[i]);
   }
 
   best_leader = find_best_grade(leaders, leader_count);
@@ -255,7 +255,7 @@ void walk::resample_pool()
   for (int i = 0; i < leader_count; i++)
     {sample_weights[i] /= acc; lead_dup_count[i] = 0;}
 
-  int dup_count=0, resample_count=0;
+  dup_count=resample_count=dup_unique=0;
   #pragma omp parallel
     {
       int t = thread_num();
@@ -284,11 +284,10 @@ void walk::resample_pool()
       }
       #pragma omp critical
       {
-        for (int i = 0; i < leader_count; i++) lead_dup_count[i]+=dup_t[i]
+        for (int i = 0; i < leader_count; i++) lead_dup_count[i]+=dup_t[i];
       }
     }
 
-    int dup_unique=0;
     for (int i = 0; i < leader_count; i++) if (lead_dup_count[i])
     {leaders[i]->dup_count+=lead_dup_count[i]; dup_unique++;}
 

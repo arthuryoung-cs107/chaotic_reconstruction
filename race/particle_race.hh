@@ -99,7 +99,7 @@ class runner : public swirl
 
       void init_ics(double t_phys_ , double *x0_, double t0_raw_, double ctheta0_);
       void reset_sim(double *ptest_);
-      int run_race(double dt_sim_, double *ts_, double *xs_, double *d_ang_, record * rec_, frscore_min_, double l2score_min_);
+      int run_race(double dt_sim_, double *ts_, double *xs_, double *d_ang_, record * rec_, int frscore_min_, double l2score_min_);
 
       void print_raw_ics();
       void print_params();

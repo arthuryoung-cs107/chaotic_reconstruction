@@ -24,37 +24,36 @@ int main()
   char file_name[10]; sprintf(file_name, "pts.%d", param_id);
   char swbest_name[30]; sprintf(swbest_name, "swirl_best_wa%d.odr/", walk_id);
 
+  // Physical constants
+  double g_phys=9.804,                 // Gravity (m/s^2)
+         d_phys=0.00635,               // Diameter (m)
+         t_phys=sqrt(d_phys/g_phys);   // Time unit (s)
 
-    // Physical constants
-    double g_phys=9.804,                 // Gravity (m/s^2)
-           d_phys=0.00635,               // Diameter (m)
-           t_phys=sqrt(d_phys/g_phys);   // Time unit (s)
+  double  sp_min_vals[14], sp_max_vals[14];
+  int idmin=set_special_params("min", sp_min_vals),
+  idmax=set_special_params("max", sp_max_vals);
 
-    double  sp_min_vals[14], sp_max_vals[14];
-    int idmin=set_special_params("min", sp_min_vals),
-    idmax=set_special_params("max", sp_max_vals);
+  swirl_param sp_min(sp_min_vals), sp_max(sp_max_vals);
 
-    swirl_param sp_min(sp_min_vals), sp_max(sp_max_vals);
+  // Create the hexagonal dish
+  wall_list wl;
+  const double r=5.72;
+  const double fa=sqrt(0.75);
+  wall_floor wf(0.);
+  wall_par_planes wp0(0,1,0,r),wp1(fa,0.5,0,r),wp2(fa,-0.5,0,r);
+  wl.add_wall(&wf);
+  wl.add_wall(&wp0);
+  wl.add_wall(&wp1);
+  wl.add_wall(&wp2);
 
-    // Create the hexagonal dish
-    wall_list wl;
-    const double r=5.72;
-    const double fa=sqrt(0.75);
-    wall_floor wf(0.);
-    wall_par_planes wp0(0,1,0,r),wp1(fa,0.5,0,r),wp2(fa,-0.5,0,r);
-    wl.add_wall(&wf);
-    wl.add_wall(&wp0);
-    wl.add_wall(&wp1);
-    wl.add_wall(&wp2);
+  pedestrian ped;
+  ped.init_walk(proc_loc, rydat_dir, file_name, walk_id);
 
-    pedestrian ped;
-    ped.init_walk(proc_loc, rydat_dir, file_name, walk_id);
+  guide gui(nlead, npool, nA, param_len, dt_sim, t_wheels);
+  walk pwalk(gui, sp_min,sp_max,wl,t_phys,&ped);
+  pwalk.init_walk();
+  pwalk.start_walk(generations);
+  pwalk.make_best_swirl(swbest_name);
 
-    guide gui(nlead, npool, nA, param_len, dt_sim, t_wheels);
-    walk pwalk(ped,sp_min,sp_max,wl,t_phys,&gui);
-    pwalk.init_walk();
-    pwalk.start_walk(generations);
-    pwalk.make_best_swirl(swbest_name);
-
-    return 0;
+  return 0;
 }

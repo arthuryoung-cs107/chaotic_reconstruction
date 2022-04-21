@@ -23,8 +23,9 @@ struct grade
         int parent_global_index; // index position of parent particle
         int dup_count; // number of times this particle has been duplicated
 
-  double  l2score; // note that this is NOW the squared residual
+  double  l2score, // note that this is NOW the squared residual
           raw_weight;
+
   double * const params;
 
   grade(int i_, double * params_): global_index(i_), params(params_) {}
@@ -37,16 +38,17 @@ struct grade
 
   inline void init(int len_, int Frames_)
   {len=len_; Frames=Frames_;}
-  inline void init_leader(double * params_, int len_, int Frames_)
+  inline void init_leader(int len_, int Frames_)
   {init(len_, Frames_); reset_grade(0);}
-  inline void init_pool(double * params_, int len_, int Frames_, double * dmin_, double *dmax_, AYrng * r_)
+  inline void init_pool(int len_, int Frames_, double * dmin_, double *dmax_, AYrng * r_)
   {init(len_, Frames_); resample(0,dmin_,dmax_,r_);}
 
   inline bool check_success(int frscore_, double l2score_, int frworst_, double l2worst_)
   {
     frscore = frscore_; l2score = l2score_;
-    return success=l2score<l2min_; // conditioning on average frame error
+    return success=l2score<l2worst_; // conditioning on average frame error
   }
+
   inline bool isbetter(grade * rcomp_)
   {return l2score<rcomp_->l2score;}
 
@@ -84,11 +86,13 @@ class walker: public swirl
       walker(swirl_param &sp_, proximity_grid * pg_, wall_list &wl_, int n_, int thread_id_, int param_len_, int Frames_, double tol_, double t_phys_, double dt_sim_, double t_wheels_, double *ts_, double *xs_, double *d_ang_, int ic_index_, int nlead_, int npool_);
       ~walker();
 
+      void reset_sim(double *ptest_);
+
       int start_walking(grade * gra_, int frscore_min_, double l2score_min_);
 
       void reset_diagnostics();
       void consolidate_diagnostics();
-      void update_diagnostics(int *frame_kill_count_, double *gen_frame_res_data_, double * gen_param_mean_, double * min_res_);
+      void update_diagnostics(int *frame_kill_count_, double *gen_frame_res_data_);
 
     private:
       bool dead;
@@ -134,19 +138,19 @@ struct guide
   bool alloc_flag=false;
 
   guide(int nlead_, int npool_, int nA_, int param_len_, double dt_sim_, double t_wheels_): nlead(nlead_), npool(npool_), nA(nA_), param_len(param_len_), dt_sim(dt_sim_), t_wheels(t_wheels_) {}
-  guide(guide &gui_): nparent(gui_.nparent), nlead(gui_.nlead), npool(gui_.npool), param_len(gui_.param_len), dt_sim(gui_.dt_sim), t_wheels(gui_.t_wheels) {}
+  guide(guide &gui_): nlead(gui_.nlead), npool(gui_.npool), nA(gui_.nA), param_len(gui_.param_len), dt_sim(gui_.dt_sim), t_wheels(gui_.t_wheels) {}
 
   ~guide();
 
   void alloc_grades(int nt_, int Frames_);
 };
 
-class pedestrian : public ped_struct
+class pedestrian : public ODR_struct
 {
   public:
     bool staged_flag = false;
     int walk_id;
-    int nlead, npool, nA, param_len, Frames;
+    int nlead, npool, nA, param_len;
 
     int *lead_dup_count,
         *frame_kill_count;
@@ -164,8 +168,8 @@ class pedestrian : public ped_struct
       void init_walk(const char *proc_loc_, const char *rydat_dir_, const char *file_name_, int walk_id_)
         {init_walk((char*)proc_loc_,(char*)rydat_dir_,(char*)file_name_, walk_id_);}
 
-    void write_gen_diagnostics(int gen_count_, int leader_count_, int worst_leader_, int best_leader_, double t_wheels_, double min_res_);
-    void close_diagnostics(int gen_count_, int leader_count_, int worst_leader_, int best_leader_);
+    void write_gen_diagnostics(int gen_count_, int leader_count_, int worst_leader_, int best_leader_, int dup_count_, int resample_count_, int dup_unique_, int repl_count_, double t_wheels_, double min_res_);
+    void close_diagnostics(int gen_count_, int worst_leader_, int best_leader_, double t_wheels_, double min_res_);
     ODR_struct * spawn_swirlODR(char *name_);
 };
 
@@ -192,6 +196,20 @@ class walk : public guide
     /** the data index we take to be the initial conditions of the experiment */
     const int ic_index;
 
+    int leader_count,
+        pool_success_count,
+        pool_candidates,
+        gen_count,
+        frscore_worst,
+        frscore_best;
+
+    double  l2score_worst,
+            l2score_best;
+
+    double  rs_fill_factor=0.5,
+            rs_full_factor=1.0;
+
+
     pedestrian * ped;
 
     walk(guide &gui_, swirl_param &sp_min_, swirl_param &sp_max_, wall_list &wl_,double t_phys_,pedestrian * ped_,int ic_index_=0);
@@ -207,6 +225,16 @@ class walk : public guide
     private:
       /** The number of threads. */
       const int nt;
+
+      int best_leader,
+          worst_leader,
+          dup_count,
+          resample_count,
+          dup_unique,
+          repl_count;
+
+      bool debugging_flag=true;
+
       /** A reference to the list of walls for the swirling simulation. */
       wall_list &wl;
       /** The array of random number generators. */
@@ -218,10 +246,13 @@ class walk : public guide
 
       void stage_diagnostics();
 
-      void train_classA(bool verbose_);
+      void train_classA(int gen_max_, bool verbose_);
+
+      bool check_pool_results();
+      int collect_candidates();
 
       double compute_leader_statistics();
-
+      void resample_pool();
 
 #ifdef _OPENMP
         inline int thread_num() {return omp_get_thread_num();}
@@ -230,7 +261,7 @@ class walk : public guide
 #endif
 };
 
-int find_worst_grade(record ** r, int ncap);
-int find_best_grade(record ** r, int ncap);
+int find_worst_grade(grade ** r, int ncap);
+int find_best_grade(grade ** r, int ncap);
 
 #endif

@@ -17,6 +17,8 @@ FILTER:= filter_io filter
 
 RACE:= race particle_race particle_race_io reporter runner
 
+WALK:= walk particle_walk pedestrian particle_walk_io
+
 # directories
 AY_SRC:= AYlinalg/linalg/
 AY_DIR:= AYlinalg/linalg_objs/
@@ -24,10 +26,12 @@ AY_DIR:= AYlinalg/linalg_objs/
 SW_SRC:= swirl/
 FI_SRC:= filter/
 RA_SRC:= race/
+WA_SRC:= race/
 
 SW_DIR:=$(addsuffix objs/, $(SW_SRC))
 FI_DIR:=$(addsuffix objs/, $(FI_SRC))
 RA_DIR:=$(addsuffix objs/, $(RA_SRC))
+WA_DIR:=$(addsuffix objs/, $(WA_SRC))
 
 TEST_SRC:=tests/
 

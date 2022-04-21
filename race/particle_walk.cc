@@ -66,7 +66,6 @@ ts(ts_+ic_index_), xs(xs_+2*n_*ic_index_), d_ang(d_ang_+ic_index_),
 nlead(nlead_), npool(npool_),
 lead_dup_count(new int[nlead_]), frame_kill_count(new int[Frames_]),
 frame_res_data(new double[4*Frames_]), param_mean(new double[param_len_])
-
 {
   pvals = &Kn;
   t0_raw=*ts;
@@ -90,7 +89,7 @@ void walker::reset_sim(double *ptest_)
     q[i].zero_rest();
   }
 }
-int walker::start_walking(grade * gra_, int frscore_min_, double l2score_min_)
+int walker::start_walking(grade * gra_, int frscore_worst_, double l2score_worst_)
 {
   reset_sim(gra_->params);
   int frame_kill=Frames;
@@ -98,14 +97,14 @@ int walker::start_walking(grade * gra_, int frscore_min_, double l2score_min_)
   pos_res_acc=0.0;
   for (frame = 0; frame < Frames-1; frame++)
   {
-    double dur=(ts[frame+1]-ts[frame])/t_phys, ctheta=d_ang_[frame],comega=d_ang[frame+1]-d_ang[frame];
+    double dur=(ts[frame+1]-ts[frame])/t_phys, ctheta=d_ang[frame],comega=d_ang[frame+1]-d_ang[frame];
     if(comega>M_PI) comega-=2*M_PI; else if(comega<-M_PI) comega+=2*M_PI;
     comega/=dur;
     double *f = xs + (2*n*(frame+1));
     advance(dur, ctheta, comega, dt_sim);
     compute_error(f,dur);
   }
-  return (int)(gra_->check_success(frame_kill, pos_res_acc, frscore_min_, l2score_min_));
+  return (int)(gra_->check_success(frame_kill, pos_res_acc, frscore_worst_, l2score_worst_));
 }
 void walker::compute_error(double *f_, double dur_)
 {
@@ -156,10 +155,10 @@ void walker::update_diagnostics(int * frame_kill_count_, double * gen_frame_res_
   for (int i = 0; i < Frames; i++)
   {
     frame_kill_count_[i]+=frame_kill_count[i];
-    gen_grame_res_data_[4*i] += w*frame_res_data[4*i];
-    gen_grame_res_data_[4*i+1] += w*frame_res_data[4*i+1];
-    gen_grame_res_data_[4*i+2] += w*frame_res_data[4*i+2];
-    gen_grame_res_data_[4*i+3] += w*frame_res_data[4*i+3];
+    gen_frame_res_data_[4*i] += w*frame_res_data[4*i];
+    gen_frame_res_data_[4*i+1] += w*frame_res_data[4*i+1];
+    gen_frame_res_data_[4*i+2] += w*frame_res_data[4*i+2];
+    gen_frame_res_data_[4*i+3] += w*frame_res_data[4*i+3];
   }
 }
 
@@ -207,4 +206,22 @@ void guide::alloc_grades(int nt_, int Frames_)
   gen_param_var = new double[param_len];
 
   alloc_flag = true;
+}
+
+int find_worst_grade(grade ** r, int ncap)
+{
+  int worst_index = 0;
+  for (int i = 1; i < ncap; i++)
+    if (r[worst_index]->isbetter(r[i]))
+      worst_index = i;
+  return worst_index;
+}
+
+int find_best_grade(grade ** r, int ncap)
+{
+  int best_index = 0;
+  for (int i = 1; i < ncap; i++)
+    if (r[best_index]->isworse(r[i]))
+      best_index = i;
+  return best_index;
 }
