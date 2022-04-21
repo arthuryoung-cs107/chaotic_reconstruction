@@ -41,7 +41,7 @@ void pedestrian::write_gen_diagnostics(int gen_count_, int leader_count_, int wo
   int int_params[] = {gen_count_, Frames, leader_count_, grade_int_len, grade_double_len, param_len, worst_leader_, best_leader_, dup_count_, resample_count_, dup_unique_, repl_count_};
   double double_params[] = {t_wheels_, min_res_};
 
-  char * buf_it = out_buf+obuf_end; sprintf(buf_it, "%s.wa%d_gen%d.wadat", file_name, walk_id, gen_count_, min_res_);
+  char * buf_it = out_buf+obuf_end; sprintf(buf_it, "%s.wa%d_gen%d.wadat", file_name, walk_id, gen_count_);
   FILE * out_dat = fopen(out_buf, "wb");
 
   fwrite(header, sizeof(int), 2, out_dat);
