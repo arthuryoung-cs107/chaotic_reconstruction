@@ -6,7 +6,7 @@ fig_all = AYfig(AYfig.specs_gen('stat_test_plots', [3 34 1726 967]));
 fig_all.init_tiles([2, 3]);
 
 nbeads = 3;
-test = 'gauss'; %% parameter perturbation
+test = 'maxmin'; %% parameter perturbation
 ran_id = 1;
 
 tic
@@ -15,12 +15,12 @@ toc
 
 % pause
 
-stat.plot_frame_error(fig_all.ax_tile(1), blue5, red5, stat.sw0.t_vec, stat.pos_err, stat.I_best(1), stat.I_truest(1),stat.I_leader(1));
-stat.plot_param_error(fig_all.ax_tile(2), green4, stat.par_err, stat.sw0.params, stat.I_best(1), stat.I_truest(1), stat.I_leader(1));
-stat.plot_param_error_leaders(fig_all.ax_tile(3), green4, stat.par_err, stat.sw0.params, stat.I_best(1), stat.I_truest(1), stat.I_leader, 100);
-stat.plot_frame_error_kill(fig_all.ax_tile(4), blue5, red5, stat.sw0.t_vec, stat.pos_err, stat.frscores, stat.I_best(1), stat.I_truest(1),stat.I_leader(1));
-stat.plot_frscore_poserr(fig_all.ax_tile(5), blue5, red5, stat.pos_err, stat.frscores, stat.I_best(1), stat.I_truest(1),stat.I_leader(1));
-stat.plot_param_error_best(fig_all.ax_tile(6), green4, stat.par_err, stat.sw0.params, stat.I_best, stat.I_truest(1), stat.I_leader(1), 100);
+swirl_plots.plot_frame_error(fig_all.ax_tile(1), blue5, red5, stat.sw0.t_vec, stat.pos_err, stat.I_best(1), stat.I_truest(1),stat.I_leader(1));
+swirl_plots.plot_param_error(fig_all.ax_tile(2), green4, stat.par_err, stat.sw0.params, stat.I_best(1), stat.I_truest(1), stat.I_leader(1));
+swirl_plots.plot_param_error_leaders(fig_all.ax_tile(3), green4, stat.par_err, stat.sw0.params, stat.I_best(1), stat.I_truest(1), stat.I_leader, 100);
+swirl_plots.plot_frame_error_kill(fig_all.ax_tile(4), blue5, red5, stat.sw0.t_vec, stat.pos_err, stat.frscores, stat.I_best(1), stat.I_truest(1),stat.I_leader(1));
+swirl_plots.plot_frscore_poserr(fig_all.ax_tile(5), blue5, red5, stat.pos_err, stat.frscores, stat.I_best(1), stat.I_truest(1),stat.I_leader(1));
+swirl_plots.plot_param_error_best(fig_all.ax_tile(6), green4, stat.par_err, stat.sw0.params, stat.I_best, stat.I_truest(1), stat.I_leader(1), 100);
 
 % stat.plot_err_vs_accerr(fig_all.ax_tile(5), orange1, stat.pos_err, stat.I_best(1), stat.I_truest(1),stat.I_leader(1));
 % stat.plot_derr_vs_err(fig_all.ax_tile(6), orange1, stat.sw0.dish, stat.pos_err, stat.I_best(1), stat.I_truest(1),stat.I_leader(1));
