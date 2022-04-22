@@ -44,7 +44,6 @@ classdef AYfig < handle
           obj.fig.Visible = 'off';
           obj.watch_tag = 'no_watch';
       end
-
     end
     function init_tiles(obj, tile_dims_)
       clf(obj.fig);
@@ -72,6 +71,27 @@ classdef AYfig < handle
         end
         movie(obj.fig, obj.movie_gen, nplay, fps);
     end
+    function frame_by_frame(obj, frame_vec_, wait_tag_)
+        frames = obj.movie_gen;
+        figure(obj.fig.Number)
+        if (nargin==3)
+            if (strcmp(wait_tag_, 'wait'))
+                for i = reshape(frame_vec_, 1, [])
+                    imshow(frames(i).cdata);
+                    pause
+                end
+            else
+                for i = reshape(frame_vec_, 1, [])
+                    imshow(frames(i).cdata);
+                end
+            end
+        else
+            for i = reshape(frame_vec_, 1, [])
+                imshow(frames(i).cdata);
+                pause
+            end
+        end
+    end
     function dims_out = get_dims(obj)
       curunits = get(obj.ax, 'Units');
       set(obj.ax, 'Units', 'Points');
@@ -80,7 +100,7 @@ classdef AYfig < handle
     end
 
   end
-  methods(Static)
+  methods (Static)
     function fig_out = figure(props_in_)
       fig_out = figure;
       for i=1:size(props_in_, 1)

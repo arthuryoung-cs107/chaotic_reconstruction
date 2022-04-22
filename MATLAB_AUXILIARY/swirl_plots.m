@@ -25,12 +25,10 @@ classdef swirl_plots
                 plot(ax_,t_vec, cumsum(pos_err(i,:)), ' -', 'Color', [color_right, 0.1], 'LineWidth', 1);
             end
             yyaxis(ax_, 'left');
-            plot(ax_, t_vec, mean_err, ' -', 'Color', color_left, 'LineWidth', 2);
             plot(ax_, t_vec, pos_err(I_best, :), ' -', 'Color', [0 0 0], 'LineWidth', 2);
             plot(ax_, t_vec, pos_err(I_truest, :), ' :', 'Color', [0 0 0], 'LineWidth', 2);
             plot(ax_, t_vec, pos_err(I_leader, :), ' -.', 'Color', [0 0 0], 'LineWidth', 2);
             yyaxis(ax_, 'right');
-            plot(ax_, t_vec, cumsum(mean_err), ' -', 'Color', color_right, 'LineWidth', 2);
             plot(ax_, t_vec, cumsum(pos_err(I_best, :)), ' -', 'Color', [0 0 0], 'LineWidth', 2);
             plot(ax_, t_vec, cumsum(pos_err(I_truest, :)), ' :', 'Color', [0 0 0], 'LineWidth', 2);
             plot(ax_, t_vec, cumsum(pos_err(I_leader, :)), ' -.', 'Color', [0 0 0], 'LineWidth', 2);
@@ -43,7 +41,7 @@ classdef swirl_plots
             ylabel(ax_, 'position error', 'Interpreter', 'Latex', 'Fontsize', 14)
             yyaxis(ax_, 'right');
             ylim(ax_, [0, max(sum(pos_err,2))]);
-            ylabel(ax_, 'cumulative position error', 'Interpreter', 'Latex', 'Fontsize', 14)
+            ylabel(ax_, 'accumulated position error', 'Interpreter', 'Latex', 'Fontsize', 14)
             title(ax_, '\textbf{plot frame error}', 'Interpreter', 'Latex', 'Fontsize', 14)
         end
         function plot_param_error( ax_, base_color, par_err_, par_true, I_best, I_truest, I_leader)

@@ -53,11 +53,12 @@ classdef swirl_group
             dish=gp_cell_{i_,2};
         end
         function make_movie_comp(AYfig_in,movie_data,movie_specs,watch_)
-            frames = movie_specs.Frames;
+            Frame_vec = movie_specs.Frame_vec;
+
             if nargin==4
-                AYfig_in.init_movie(frames, watch_);
+                AYfig_in.init_movie(length(Frame_vec), watch_);
             else
-                AYfig_in.init_movie(frames);
+                AYfig_in.init_movie(length(Frame_vec));
             end
 
             movie_fig = AYfig_in.fig;
@@ -80,7 +81,8 @@ classdef swirl_group
             MS = figdims(4)/(4*wsca); %% radius in pixels
             SS = pi*MS*MS; %% area in pixels
 
-            for i=1:frames
+            f = 1;
+            for i=reshape(Frame_vec, 1, [])
                 plot(movie_ax, wallv(:, 1)+dish(i, 2), wallv(:, 2)+dish(i, 3), 'k -')
                 hold(AYfig_in.ax, 'on');
                 dots = scatter(movie_ax, pos(:, 1, i), pos(:, 2, i), 'o', 'filled', 'CData', colors, 'LineWidth', 1, 'SizeData', SS, 'MarkerEdgeColor', [0 0 0], 'MarkerFaceAlpha', 0.5);
@@ -88,10 +90,11 @@ classdef swirl_group
                 hold(movie_ax, 'off');
                 axis(movie_ax, lims);
                 drawnow
-                movie_gen(i) = getframe(movie_fig);
+                movie_gen(f) = getframe(movie_fig);
                 delete(txtbx);
+                f = f+1;
             end
-            txtbx = annotation(movie_fig, 'textbox', [0.8 0.9 0.1 0.1], 'String', num2str(frames-1), 'LineStyle', 'none', 'FontSize', 16);
+            txtbx = annotation(movie_fig, 'textbox', [0.8 0.9 0.1 0.1], 'String', num2str(i-1), 'LineStyle', 'none', 'FontSize', 16);
             AYfig_in.movie_gen = movie_gen;
         end
     end

@@ -51,16 +51,58 @@ classdef swirl
             out = swirl(oth, oth.dish, f_final, oth.len_dish, oth.len_pos, oth.beads);
         end
     end
-    function find_contact_frames(obj)
-        obj.contact_frames = zeros(obj.Frames, 1);
+    function wall_contact_frames = find_wall_contact_frames(obj)
+        [Frames, dish, pos] = deal(obj.Frames, obj.dish, obj.pos);
+        wall_contact_frames = 1:Frames;
+        contact_detected = zeros(Frames, 1);
         fa = sqrt(0.75);
+        r = 0.5;
         d = 5.72;
         walls = [0, 1; fa, 0.5; fa , -0.5]';
-        for i=1:obj.Frames
-            s_mat = (obj.pos(:, 1:2, i)-[obj.dish(i, 2), obj.dish(i, 3)])*walls;
+        for i=1:Frames
+            s_mat = (pos(:, 1:2, i)-dish(i, 2:3))*walls;
             w_mat = s_mat - d*(double(s_mat>0)) + d*(double(s_mat<0));
-            contact_beads = find(abs(w_mat)<0.5); %% rycrofts contact criterion
-            obj.contact_frames(i) = length(contact_beads)>0;
+            contact_detected(i) = sum(abs(w_mat(:))<r)>0;
+        end
+        wall_contact_frames = wall_contact_frames(logical(contact_detected));
+    end
+    function [contact_frames, bead_contact_frames,wall_contact_frames] = find_contact_frames(obj)
+        [Frames, dish, pos, beads] = deal(obj.Frames, obj.dish, obj.pos, obj.beads);
+        full_frames = 1:Frames;
+        wall_contact = zeros(Frames, 1);
+        bead_contact = zeros(Frames, 1);
+        fa = sqrt(0.75);
+        r = 0.5;
+        tol = 2*r;
+        d = 5.72;
+        walls = [0, 1; fa, 0.5; fa , -0.5]';
+        for i=1:Frames
+            posi = pos(:, 1:2, i);
+            s_mat = (posi-dish(i, 2:3))*walls;
+            w_mat = s_mat - d*(double(s_mat>0)) + d*(double(s_mat<0));
+            wall_contact(i) = sum(abs(w_mat(:))<r)>0;
+
+            bead_contact_count=0;
+            for j = 1:beads
+                beadj = posi(j,:);
+                for k = j+1:beads
+                    if (norm(beadj-posi(k,:)) <= tol)
+                        bead_contact_count=1;
+                        break;
+                    end
+                end
+                if (bead_contact_count>0)
+                    break;
+                end
+            end
+            bead_contact(i)=bead_contact_count;
+        end
+        contact_frames = full_frames(logical(wall_contact+bead_contact));
+        if (nargout>=2)
+            bead_contact_frames = full_frames(logical(bead_contact));
+            if (nargout==3)
+                wall_contact_frames = full_frames(logical(wall_contact));
+            end
         end
     end
     function make_movie(obj, AYfig_in, watch_)
@@ -100,9 +142,6 @@ classdef swirl
             delete(txtbx);
         end
         AYfig_in.movie_gen = movie_gen;
-        % alternative way of plotting the circles, but not quite as flexible
-        % viscircles(AYfig_in.ax, obj.pos(:, 1:2, i), rads, 'Color', [0.1000 0.4440 0.2440]);
-        % objdots = plot(AYfig_in.ax, obj.pos(:, 1, i), obj.pos(:, 2, i), 'o', 'ColorMode', 'manual', 'LineWidth', 1, 'MarkerSize', MS, 'MarkerEdgeColor', [0 0 0], 'MarkerFaceColor', [0.1000 0.4440 0.2440]);
     end
   end
   methods (Static)
