@@ -8,6 +8,28 @@ classdef error_plots < swirl_plots
         end
     end
     methods (Static)
+        function plot_frame_stats(ax1_, ax2_, frames_, frame_stats_)
+            errorbar(ax1_, frames_', frame_stats_(1,:)', frame_stats_(2,:)', ' p -', 'Color', [0 0 0], 'LineWidth', 2);
+            errorbar(ax2_, frames_', frame_stats_(3,:)', frame_stats_(4,:)', ' p -', 'Color', [0 0 0], 'LineWidth', 2);
+        end
+        function plot_res_vs_frames(ax_, base_color, st)
+            [x_vec, pos_res, I_best, I_truest, I_leader] = deal(1:st.sw0.Frames, st.pos_res, st.I_best(1), st.I_truest(1), st.I_leader(1));
+            plot_generic_frame_data(ax_, x_vec, pos_res, struct('base_color', base_color, 'I1', I_best, 'I2', I_truest, 'I3', I_leader));
+            apply_plot_labels(ax_, 'Frames', 'position residual', 'plot_res_vs_frames');
+            % set(ax_, 'YScale', 'log');
+        end
+        function plot_accres_vs_frames(ax_, base_color, st)
+            [x_vec, pos_res, I_best, I_truest, I_leader] = deal(1:st.sw0.Frames, st.pos_res, st.I_best(1), st.I_truest(1), st.I_leader(1));
+            plot_generic_frame_data(ax_, x_vec, cumsum(pos_res,2), struct('base_color', base_color, 'I1', I_best, 'I2', I_truest, 'I3', I_leader));
+            apply_plot_labels(ax_, 'Frames', 'accumulated position residual', 'plot_accres_vs_frames');
+            % set(ax_, 'YScale', 'log');
+        end
+        function plot_delres_vs_frames(ax_, base_color, st)
+            [x_vec, pos_res, I_best, I_truest, I_leader] = deal(1:st.sw0.Frames, st.pos_res, st.I_best(1), st.I_truest(1), st.I_leader(1));
+            plot_generic_frame_data(ax_, x_vec(2:end), pos_res(:,2:end)-pos_res(:,1:(size(pos_res,2)-1)), struct('base_color', base_color, 'I1', I_best, 'I2', I_truest, 'I3', I_leader));
+            apply_plot_labels(ax_, 'Frames', 'change in position residual', 'plot_delres_vs_frames');
+            % set(ax_, 'YScale', 'log');
+        end
         function plot_accres_vs_res(ax_, base_color, st)
             [X_mat, pos_res, I_best, I_truest, I_leader] = deal(cumsum(st.pos_res,2), st.pos_res, st.I_best(1), st.I_truest(1), st.I_leader(1));
             plot_matmat_frame_data(ax_, X_mat, pos_res, struct('base_color', base_color, 'I1', I_best, 'I2', I_truest, 'I3', I_leader));
@@ -37,24 +59,6 @@ classdef error_plots < swirl_plots
             apply_plot_labels(ax_, 'time', 'derivative of position residual over time', 'plot_Dres_vs_time');
             % set(ax_, 'YScale', 'log');
         end
-        function plot_res_vs_frames(ax_, base_color, st)
-            [x_vec, pos_res, I_best, I_truest, I_leader] = deal(1:st.sw0.Frames, st.pos_res, st.I_best(1), st.I_truest(1), st.I_leader(1));
-            plot_generic_frame_data(ax_, x_vec, pos_res, struct('base_color', base_color, 'I1', I_best, 'I2', I_truest, 'I3', I_leader));
-            apply_plot_labels(ax_, 'Frames', 'position residual', 'plot_res_vs_frames');
-            % set(ax_, 'YScale', 'log');
-        end
-        function plot_accres_vs_frames(ax_, base_color, st)
-            [x_vec, pos_res, I_best, I_truest, I_leader] = deal(1:st.sw0.Frames, st.pos_res, st.I_best(1), st.I_truest(1), st.I_leader(1));
-            plot_generic_frame_data(ax_, x_vec, cumsum(pos_res,2), struct('base_color', base_color, 'I1', I_best, 'I2', I_truest, 'I3', I_leader));
-            apply_plot_labels(ax_, 'Frames', 'accumulated position residual', 'plot_accres_vs_frames');
-            % set(ax_, 'YScale', 'log');
-        end
-        function plot_delres_vs_frames(ax_, base_color, st)
-            [x_vec, pos_res, I_best, I_truest, I_leader] = deal(1:st.sw0.Frames, st.pos_res, st.I_best(1), st.I_truest(1), st.I_leader(1));
-            plot_generic_frame_data(ax_, x_vec(2:end), pos_res(:,2:end)-pos_res(:,1:(size(pos_res,2)-1)), struct('base_color', base_color, 'I1', I_best, 'I2', I_truest, 'I3', I_leader));
-            apply_plot_labels(ax_, 'Frames', 'change in position residual', 'plot_delres_vs_frames');
-            % set(ax_, 'YScale', 'log');
-        end
         function plot_err_vs_frames(ax_, base_color, st)
             [x_vec, pos_err, I_best, I_truest, I_leader] = deal(1:st.sw0.Frames, st.pos_err, st.I_best(1), st.I_truest(1), st.I_leader(1));
             plot_generic_frame_data(ax_, x_vec, pos_err, struct('base_color', base_color, 'I1', I_best, 'I2', I_truest, 'I3', I_leader));
@@ -65,7 +69,7 @@ classdef error_plots < swirl_plots
             [x_vec, pos_err, I_best, I_truest, I_leader] = deal(1:st.sw0.Frames, st.pos_err, st.I_best(1), st.I_truest(1), st.I_leader(1));
             plot_generic_frame_data(ax_, x_vec, cumsum(pos_err,2), struct('base_color', base_color, 'I1', I_best, 'I2', I_truest, 'I3', I_leader));
             apply_plot_labels(ax_, 'Frames', 'accumulated position error', 'plot_accerr_vs_frames');
-            set(ax_, 'YScale', 'log');
+            % set(ax_, 'YScale', 'log');
         end
         function plot_delerr_vs_frames(ax_, base_color, st)
             [x_vec, pos_err, I_best, I_truest, I_leader] = deal(1:st.sw0.Frames, st.pos_err, st.I_best(1), st.I_truest(1), st.I_leader(1));
@@ -73,14 +77,13 @@ classdef error_plots < swirl_plots
             apply_plot_labels(ax_, 'Frames', 'change in position error', 'plot_delerr_vs_frames');
             % set(ax_, 'YScale', 'log');
         end
-        function plot_alpha_vs_accerr(ax_, base_color, st)
+        function plot_alpha_vs_INTres(ax_, base_color, st)
             [t_vec, pos_res, I_best, I_truest, I_leader] = deal(st.sw0.t_vec, st.pos_res, st.I_best(1), st.I_truest(1), st.I_leader(1));
             INT_mat = pos_res(:,2:end).*(t_vec(2:end)-t_vec(1:(length(t_vec)-1)))';
             plot_matmat_frame_data(ax_, cumsum(INT_mat,2), pos_res(:,2:end), struct('base_color', base_color, 'I1', I_best, 'I2', I_truest, 'I3', I_leader));
             apply_plot_labels(ax_, 'integral of residual over time', 'residual', 'plot_accres_vs_res');
             set(ax_, 'XScale', 'log');
             set(ax_, 'YScale', 'log');
-
         end
     end
 end

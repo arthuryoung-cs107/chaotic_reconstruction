@@ -14,14 +14,15 @@ stat = read_stat(nbeads,test,ran_id);
 toc
 
 [contact_f, bead_contact_f, wall_contact_f] = stat.sw0.find_contact_frames;
+frame_stats = stat.compute_frame_stats(contact_f);
+alpha_INTres_time = stat.compute_alpha_INTres_time; 
 
 error_plots.plot_accres_vs_frames(fig_all.ax_tile(1), red5, stat);
 error_plots.plot_res_vs_frames(fig_all.ax_tile(2), blue5, stat);
 error_plots.plot_delres_vs_frames(fig_all.ax_tile(3), green4, stat);
+error_plots.plot_frame_stats(fig_all.ax_tile(2), fig_all.ax_tile(1), contact_f, frame_stats);
 
-error_plots.plot_INTres_vs_time(fig_all.ax_tile(4), red5, stat);
-error_plots.plot_INTres_vs_res(fig_all.ax_tile(5), orange1, stat);
-error_plots.plot_Dres_vs_time(fig_all.ax_tile(6), green4, stat);
+error_plots.plot_INTres_vs_res(fig_all.ax_tile(6), orange1, stat);
 
 pause
 
@@ -42,6 +43,6 @@ movie_specs = struct('Frame_vec', bead_contact_f, 'dish', sw0.dish);
 swirl_group.make_movie_comp(movie1, movie_data, movie_specs, 'watch');
 pause
 % movie1.play_movie(10,30);
-movie1.frame_by_frame(1:length(bead_contact_f), 'wait');
+movie1.frame_by_frame(1:length(movie_specs.Frame_vec), 'wait');
 
 %* NOTE: in pursuit of a fully interpretable model, we need to make a few mathematical connections between what we are plotting between tests. One thing that is worth seeing is how the singular value profile varies with the behaviour of the covariance approximation. If we can make any connection between the values of these graphs, we should be able to gain access to a ton of tools in both linear algebra and statistics/probability/Markov chains.

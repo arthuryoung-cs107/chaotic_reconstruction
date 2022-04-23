@@ -20,9 +20,9 @@ movie_data = cell([1,2]);
 movie_data{:,1} = sw.pos(:,1:2,:);
 movie_data{:,2} = ones(sw.beads,3).*green4;
 
-movie_specs = struct('Frame_vec', bead_contact_f, 'dish', sw.dish);
+movie_specs = struct('Frame_vec', contact_f, 'dish', sw.dish);
 
 swirl_group.make_movie_comp(movie1, movie_data, movie_specs, 'watch');
 pause
 % movie1.play_movie(10,30);
-movie1.frame_by_frame(1:length(bead_contact_f), 'wait');
+movie1.frame_by_frame(1:length(movie_specs.Frame_vec), 'wait');
