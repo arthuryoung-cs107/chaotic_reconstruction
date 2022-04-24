@@ -304,9 +304,6 @@ void ODR_struct::load_filter(double *ts_, double *xs_, double *d_ang_, int offse
     char * file_name = in_buf + ibuf_end;
     sprintf(file_name, ".filin");
     FILE * inputs = fopen(in_buf, "r"); // or "rb"?
-    printf("reading: %s\n", in_buf);
-    printf("offset: %d \n", offset_);
-    printf("nsnaps: %d\n", nsnaps);
     fseek_safe(inputs, sizeof(double)*offset_, SEEK_SET);
     fread_safe(ts_, sizeof(double), nsnaps, inputs);
 

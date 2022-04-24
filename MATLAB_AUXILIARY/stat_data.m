@@ -82,18 +82,6 @@ classdef stat_data < swirl_group
         function swout = spawn_ODRindex(obj, id_)
             swout = ODR_data(obj.dat_dir_name, obj.exp_name, [obj.dat_name '.' num2str(i)]);
         end
-        function frame_stats = compute_frame_stats(obj, frames_)
-            accpos_res = cumsum(obj.pos_res, 2);
-            pos_res_short = obj.pos_res(:,frames_);
-            frame_stats = [mean(pos_res_short); std(pos_res_short); mean(accpos_res(:,frames_)); std(accpos_res(:,frames_))];
-        end
-        function alpha_INTres_time = compute_alpha_INTres_time(obj)
-            [pos_res, acc_res, t_vec] = deal(obj.pos_res, cumsum(obj.pos_res), obj.sw0.t_vec);
-            alpha_INTres_time = nan(size(obj.pos_res));
-            for i = 1:obj.noise_len
-                alpha_INTres_time(i,:) = approx_deriv_weighted_central(log(), log());
-            end
-        end
         function plot_gen_scores(obj, ax_)
             frscores = obj.frscores;
             fcount = histcounts(frscores, max(frscores)-min(frscores)+1);
@@ -119,44 +107,4 @@ end
 function pos_res_out = frame_pos_res(pos0,posi)
     diff = pos0-posi(:,1:2,:);
     pos_res_out = sum(squeeze(sum(diff.*diff, 2)), 1);
-end
-
-function prime_vec = approx_deriv_weighted_central(t_in, x_in)
-    n = length(t_in);
-    prime_vec = nan(size(x_in));
-
-    k = 5; %% number of points considered. Must be odd
-    l = (k-1)/2; %% number of points to left and right
-    p = l+1; %% index of central point
-
-    x = reshape(x_in(1:k), [1 k]);
-    t = reshape(t_in(1:k), [1 k]);
-    for i=1:l
-        ind = [1:(i-1), i+1:k];
-        t_hat = t(ind);
-        x_hat = x(ind);
-        w = (abs((0.5*(t_hat + t(i)))-t(i))).^(-1);
-        m = ((x(i)-x_hat))./(t(i)-t_hat);
-        prime_vec(i) = (sum(w.*m))/(sum(w));
-    end
-    for i=p:(n-l)
-        x = reshape(x_in(i-l:i+l), [1 k]);
-        t = reshape(t_in(i-l:i+l), [1 k]);
-        ind = [1:p-1, p+1:k];
-        t_hat = t(ind);
-        x_hat = x(ind);
-        w = (abs((0.5*(t_hat + t(p)))-t(p))).^(-1);
-        m = ((x(p)-x_hat))./(t(p)-t_hat);
-        prime_vec(i) = (sum(w.*m))/(sum(w));
-    end
-    x = reshape(x_in(n-k+1:n), [1 k]);
-    t = reshape(t_in(n-k+1:n), [1 k]);
-    for i=p+1:k
-    ind = [1:i-1, i+1:k];
-        t_hat = t(ind);
-        x_hat = x(ind);
-        w = (abs((0.5*(t_hat + t(i)))-t(i))).^(-1);
-        m = ((x(i)-x_hat))./(t(i)-t_hat);
-        prime_vec(n-k+i) = (sum(w.*m))/(sum(w));
-    end
 end

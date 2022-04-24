@@ -48,6 +48,31 @@ classdef swirl_group
         end
     end
     methods (Static)
+        function INT_mat = compute_INT(t_vec_, x_mat_)
+            [M,N] = size(x_mat_);
+            INT_mat = cumsum([zeros(M,1), 0.5*(x_mat_(:,1:(N-1))+x_mat_(:,2:end)).*reshape(t_vec_(2:end)-t_vec_(1:(N-1)), 1, [])] , 2);
+        end
+        function D_mat = compute_D(t_vec_, x_mat_)
+            [M,N] = size(x_mat_);
+            del_t = (t_vec_(2:end)-t_vec_(1:(N-1)));
+            D_mat = [(x_mat_(:,2)-x_mat_(:,1))/del_t(1), (x_mat_(:,3:end)-x_mat_(:,1:(N-2)))./reshape(del_t(1:(N-2))+del_t(2:(N-1)) ,1,[]), (x_mat_(:,N)-x_mat_(:,N-1))/del_t(N-1)];
+        end
+        function frame_stats = compute_residual_time_stats(INTpos_res, pos_res, Dpos_res, frames_)
+            if (nargin==4)
+                frame_stats = [mean(INTpos_res(:,frames_)); std(INTpos_res(:,frames_)); mean(pos_res(:, frames_)); std(pos_res(:, frames_)); mean(Dpos_res(:,frames_)); std(Dpos_res(:,frames_))];
+            else
+                frame_stats = [mean(INTpos_res); std(INTpos_res); mean(pos_res); std(pos_res); mean(Dpos_res); std(Dpos_res)];
+            end
+        end
+        function alpha_mat = compute_alpha_logD(t_vec_, x_mat_)
+            [M,N] = size(x_mat_);
+            tlog = log(t_vec_);
+            xlog = log(x_mat_);
+            alpha_mat = nan(M,N);
+            for i = 1:M
+                alpha_mat(i,:) = approx_deriv_weighted_central(tlog,xlog(i,:));
+            end
+        end
         function [pos, dish] = cellrow2posdish(gp_cell_, i_, beads, len_pos)
             pos=reshape(gp_cell_{i_,1},[beads,len_pos,size(gp_cell_{i_,1},2)]);
             dish=gp_cell_{i_,2};
@@ -97,5 +122,50 @@ classdef swirl_group
             txtbx = annotation(movie_fig, 'textbox', [0.8 0.9 0.1 0.1], 'String', num2str(i-1), 'LineStyle', 'none', 'FontSize', 16);
             AYfig_in.movie_gen = movie_gen;
         end
+    end
+end
+
+function prime_vec = approx_deriv_weighted_central(t_in, x_in, k_)
+    n = length(t_in);
+    prime_vec = nan(size(x_in));
+
+    if (nargin==3)
+        k=k_;
+    else
+        k=3;
+    end
+
+    l = (k-1)/2; %% number of points to left and right
+    p = l+1; %% index of central point
+
+    x = reshape(x_in(1:k), [1 k]);
+    t = reshape(t_in(1:k), [1 k]);
+    for i=1:l
+        ind = [1:(i-1), i+1:k];
+        t_hat = t(ind);
+        x_hat = x(ind);
+        w = (abs((0.5*(t_hat + t(i)))-t(i))).^(-1);
+        m = ((x(i)-x_hat))./(t(i)-t_hat);
+        prime_vec(i) = (sum(w.*m))/(sum(w));
+    end
+    for i=p:(n-l)
+        x = reshape(x_in(i-l:i+l), [1 k]);
+        t = reshape(t_in(i-l:i+l), [1 k]);
+        ind = [1:p-1, p+1:k];
+        t_hat = t(ind);
+        x_hat = x(ind);
+        w = (abs((0.5*(t_hat + t(p)))-t(p))).^(-1);
+        m = ((x(p)-x_hat))./(t(p)-t_hat);
+        prime_vec(i) = (sum(w.*m))/(sum(w));
+    end
+    x = reshape(x_in(n-k+1:n), [1 k]);
+    t = reshape(t_in(n-k+1:n), [1 k]);
+    for i=p+1:k
+    ind = [1:i-1, i+1:k];
+        t_hat = t(ind);
+        x_hat = x(ind);
+        w = (abs((0.5*(t_hat + t(i)))-t(i))).^(-1);
+        m = ((x(i)-x_hat))./(t(i)-t_hat);
+        prime_vec(n-k+i) = (sum(w.*m))/(sum(w));
     end
 end
