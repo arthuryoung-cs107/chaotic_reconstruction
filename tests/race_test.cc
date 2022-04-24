@@ -6,10 +6,10 @@
 
 #include "particle_race.hh"
 
-const int nbeads=3;
+const int nbeads=20;
 const int param_id=0;
-const int race_id=2;
-const int generations=500;
+const int race_id=0;
+const int generations=100;
 const int nlead = 900;
 const int npool = 1000;
 char proc_loc[] = "./dat_dir/";
@@ -19,7 +19,6 @@ int main()
   char rydat_dir[30]; sprintf(rydat_dir, "swirl%d.odr/", nbeads);
   char file_name[10]; sprintf(file_name, "pts.%d", param_id);
   char swbest_name[30]; sprintf(swbest_name, "swirl_best_rc%d.odr/", race_id);
-
 
     // Physical constants
     double g_phys=9.804,                 // Gravity (m/s^2)

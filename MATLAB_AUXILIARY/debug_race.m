@@ -12,7 +12,7 @@ lineage_fig.init_tiles([2, 3]);
 race_diagnostics_fig.init_tiles([1, 3]);
 
 
-nbeads = 3;
+nbeads = 20;
 par_id = 0;
 stat_test_type = 'maxmin';
 ran_id = 1;
