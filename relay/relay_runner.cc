@@ -112,3 +112,28 @@ void runner::detect_events(record * rec_, int start_, int end_)
   for (int i = 0; i < n; i++) event_frame_count[i][kill_frames[i]]++;
   rec_->record_event_data(kill_frames, INTpos_res, alpha_kill);
 }
+
+void runner::run_relay(record * rec_, int start_, int * end_, int latest_, double residual_worst_)
+{
+  reset_sim(rec_->params, ts[start_]/t_phys, d_ang[start_], comega_s[start_], xs + 2*n*start_);
+  for (int i = 0; i < n; i++) kill_frames[i] = 0;
+  accres = 0.0;
+  for (frame = 1; frame < latest_; frame++)
+  {
+    double dur=(ts[frame]-ts[frame-1])/t_phys, ctheta=d_ang[frame-1], comega=d_ang[frame]-d_ang[frame-1];
+    if(comega>M_PI) comega-=2*M_PI; else if(comega<-M_PI) comega+=2*M_PI; comega/=dur;
+    advance(dur, ctheta, comega, dt_sim);
+    double * f = xs+(2*n*frame);
+    for (int i=0, j=0; i < n; i++, j+=2)
+    {
+      if (i<end_[i])
+      {
+        double xt=(q[i].x-cx)*cl_im + cx_im - f[j], yt=(q[i].y-cy)*cl_im + cy_im - f[j+1], alpha_it;
+        accres += pos_res[frame][i] = xt*xt+yt*yt;
+      }
+    }
+    if (accres>residual_worst_) break;
+  }
+  if (frame==latest_) return (int)rec_->check_success(accres,residual_worst_);
+  else return rec_->success=0;
+}

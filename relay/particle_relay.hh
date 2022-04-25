@@ -16,16 +16,15 @@ struct record
   const int beads;
 
   const int global_index;
-        int frscore;
         int gen; // generation in which this particle was generated
         int parent_gen; // generation this particle comes from
         int parent_count; // number of particle ancestors
         int parent_global_index; // index position of parent particle
         int dup_count; // number of times this particle has been duplicated
 
-
   double  residual,
-          raw_weight;
+          event_residual,
+          weight;
 
   int * const event_positions;
 
@@ -47,22 +46,14 @@ struct record
   {init(len_, Frames_); reset_record(0);}
   inline void init_pool(int len_, int Frames_, double * dmin_, double *dmax_, AYrng * r_)
   {init(len_, Frames_); resample(0,dmin_,dmax_,r_);}
-
-  inline bool check_success(int frscore_, double l2score_, int frworst_, double l2worst_)
-  {
-    frscore = frscore_; l2score = l2score_;
-    return success=l2score<l2worst_; // conditioning on average frame error
-  }
-
+  inline bool check_success(double residual_, double residual_worst_)
+  {residual = residual_; return success=residual<residual_worst_;}
   inline bool isbetter(record * rcomp_)
-  {return l2score<rcomp_->l2score;}
-
+  {return residual<rcomp_->residual;}
   inline bool isworse(record * rcomp_)
   {return !(isbetter(rcomp_));}
-
-  inline double w(double min_res_)
-  {return raw_weight = exp(min_res_-l2score);}
-
+  inline double w(double c_, double b_)
+  {return weight = exp(c_-0.5*(residual/b_)*(residual/b_));}
 };
 
 class runner: public swirl
@@ -93,7 +84,7 @@ class runner: public swirl
 
       void reset_sim(double *ptest_);
 
-      int run_relay(record * gra_, int frscore_min_, double l2score_min_);
+      int run_relay(record * gra_, int frscore_min_, double residual_min_);
       void detect_events(record* rec_, int start_, int end_);
 
       void reset_diagnostics();
@@ -136,7 +127,8 @@ struct referee
 {
   /** The maximum simulation timestep to use. */
   const double dt_sim;
-        double t_wheels;
+  const double noise_tol; // of same order as standard deviation
+  const double max_weight_ceiling = 1e13;
 
   const int nlead;
   const int npool;
@@ -155,10 +147,8 @@ struct referee
 
   double  *sample_weights, // length = nlead
           *gen_frame_res_data, // [pos_res|max_err|pos_res_dead|pos_res_alive]
-          *gen_param_mean,
-          *gen_param_var;
-
-  double  min_res;
+          *lead_par_w_mean,
+          *lead_par_w_var;
 
   bool alloc_flag=false;
 
@@ -224,16 +214,12 @@ class relay : public referee
     int leader_count,
         pool_success_count,
         pool_candidates,
-        gen_count,
-        frscore_worst,
-        frscore_best;
+        gen_count;
 
-    double  l2score_worst,
-            l2score_best;
-
-    double  rs_fill_factor=0.5,
-            rs_full_factor=1.0;
-
+    double  residual_worst,
+            residual_best,
+            gau_scale_sqrt,
+            max_weight_factor;
 
     reporter * rep;
 
@@ -256,7 +242,9 @@ class relay : public referee
           dup_count,
           resample_count,
           dup_unique,
-          repl_count;
+          repl_count,
+          latest_event,
+          event_observations;
 
       bool debugging_flag=true;
 

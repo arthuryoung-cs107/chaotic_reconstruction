@@ -7,16 +7,15 @@ extern "C"
 
 void record::record_event_data(int *kill_frames_, double ** INTpos_res_, double *alpha_kill_)
 {
-  residual = pre_event_residual = 0.0;
+  residual = event_residual = 0.0;
   for (int i = 0; i < beads; i++)
   {
     event_positions[i] = kill_frames_[i];
-    residual += residual_data[i] = INTpos_res_[i][0];
-    pre_event_residual += INTpos_res_[i][2];
+    residual += residual_data[i] = INTpos_res_[i][2];
+    event_residual += INTpos_res_[i][0];
     alpha_data[i] = alpha_kill_[i];
   }
 }
-
 void record::reset_record(int gen_)
 {
   frscore=0;
@@ -65,98 +64,6 @@ void record::take_vals(record * gtake_)
 
   for (int i = 0; i < len; i++) params[i] = gtake_->params[i];
 }
-
-
-
-
-
-void runner::reset_sim(double *ptest_)
-{
-  // load the set of parameters we are to test
-  for (int i = 0; i < param_len; i++) pvals[i] = ptest_[i];
-
-  time=t0;
-  set_swirl(ctheta0, 0.0);
-  for (int i=0,j=0; i < n; i++,j+=2)
-  {
-    q[i].set_pos(((x0[j]-cx_im)/cl_im)+cx, ((x0[j+1]-cy_im)/cl_im)+cy, rad);
-    q[i].zero_rest();
-  }
-}
-int runner::run_relay(record * rec_, int frscore_worst_, double l2score_worst_)
-{
-  reset_sim(rec_->params);
-  int frame_kill=Frames;
-  dead=false;
-  pos_res_acc=0.0;
-  for (frame = 0; frame < Frames-1; frame++)
-  {
-    double dur=(ts[frame+1]-ts[frame])/t_phys, ctheta=d_ang[frame],comega=d_ang[frame+1]-d_ang[frame];
-    if(comega>M_PI) comega-=2*M_PI; else if(comega<-M_PI) comega+=2*M_PI;
-    comega/=dur;
-    double *f = xs + (2*n*(frame+1));
-    advance(dur, ctheta, comega, dt_sim);
-    compute_error(f,dur);
-  }
-  return (int)(rec_->check_success(frame_kill, pos_res_acc, frscore_worst_, l2score_worst_));
-}
-void runner::compute_error(double *f_, double dur_)
-{
-  double pos_res=0.0, max_err=0.0, fac=t_wheels/cl_im, idur=1.0/dur_;
-  for (int i=0, j=0; i < n; i++, j+=2)
-  {
-    double xt=(q[i].x-cx)*cl_im + cx_im - f_[j], yt=(q[i].y-cy)*cl_im + cy_im - f_[j+1], rsq = xt*xt+yt*yt, r = sqrt(rsq);
-
-    q[i].tweak_pos(-fac*xt,-fac*yt,idur); // training wheels
-
-    pos_res+=rsq;
-    if (r>max_err) max_err=r;
-  }
-  frame_res_data[frame*4]+=pos_res;
-  frame_res_data[frame*4+1]+=max_err/=cl_im;
-  pos_res_acc+=pos_res;
-
-  if (dead) frame_res_data[frame*4+2]+= pos_res;
-  else
-  {
-    frame_res_data[frame*4+3]+=pos_res;
-    if (max_err>cl_im*cl_im) {frame_kill_count[frame]++; frame_kill=frame; dead=true;}
-  }
-}
-void runner::reset_diagnostics()
-{
-  n_test=0;
-  for (int i = 0; i < 4*Frames; i++) frame_res_data[i] = 0.0;
-  for (int i = 0; i < Frames; i++) frame_kill_count[i] = 0;
-}
-void runner::consolidate_diagnostics()
-{
-  int n_alive=n_test,n_dead=0;
-  for (int i = 0; i < Frames; i++)
-  {
-    frame_res_data[4*i] /= (double)n_test;
-    frame_res_data[4*i+1] /= (double)n_test;
-
-    n_dead+=frame_kill_count[i];
-    if (n_dead) frame_res_data[4*i+2] /= (double)n_dead;
-    frame_res_data[4*i+3] /= (double)n_alive;
-    n_alive-=frame_kill_count[i];
-  }
-}
-void runner::update_diagnostics(int * frame_kill_count_, double * gen_frame_res_data_)
-{
-  double w = ((double)n_test)/((double)npool);
-  for (int i = 0; i < Frames; i++)
-  {
-    frame_kill_count_[i]+=frame_kill_count[i];
-    gen_frame_res_data_[4*i] += w*frame_res_data[4*i];
-    gen_frame_res_data_[4*i+1] += w*frame_res_data[4*i+1];
-    gen_frame_res_data_[4*i+2] += w*frame_res_data[4*i+2];
-    gen_frame_res_data_[4*i+3] += w*frame_res_data[4*i+3];
-  }
-}
-
-
 
 
 
