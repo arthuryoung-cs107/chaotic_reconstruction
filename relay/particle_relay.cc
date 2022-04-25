@@ -5,7 +5,19 @@ extern "C"
   #include "AYaux.h"
 }
 
-void grade::reset_grade(int gen_)
+void record::record_event_data(int *kill_frames_, double ** INTpos_res_, double *alpha_kill_)
+{
+  residual = pre_event_residual = 0.0;
+  for (int i = 0; i < beads; i++)
+  {
+    event_positions[i] = kill_frames_[i];
+    residual += residual_data[i] = INTpos_res_[i][0];
+    pre_event_residual += INTpos_res_[i][2];
+    alpha_data[i] = alpha_kill_[i];
+  }
+}
+
+void record::reset_record(int gen_)
 {
   frscore=0;
   gen=gen_;
@@ -16,13 +28,13 @@ void grade::reset_grade(int gen_)
 
   l2score=0.0;
 }
-void grade::resample(int gen_, double * dmin_, double *dmax_, AYrng * r_)
+void record::resample(int gen_, double * dmin_, double *dmax_, AYrng * r_)
 {
-  reset_grade(gen_);
+  reset_record(gen_);
   for (int i = 0; i < len; i++)
     params[i] = dmin_[i]+(dmax_[i]-dmin_[i])*(r_->rand_uni_gsl(0.0,1.0));
 }
-void grade::duplicate(grade *parent_, int gen_, double *dmin_, double *dmax_, AYrng * r_, double * var_)
+void record::duplicate(record *parent_, int gen_, double *dmin_, double *dmax_, AYrng * r_, double * var_)
 {
   frscore=0;
   gen=gen_;
@@ -40,7 +52,7 @@ void grade::duplicate(grade *parent_, int gen_, double *dmin_, double *dmax_, AY
     else if (params[i] < dmin_[i]) params[i]=dmin_[i];
   }
 }
-void grade::take_vals(grade * gtake_)
+void record::take_vals(record * gtake_)
 {
   frscore=gtake_->frscore;
   gen=gtake_->gen;
@@ -58,25 +70,7 @@ void grade::take_vals(grade * gtake_)
 
 
 
-walker::walker(swirl_param &sp_, proximity_grid * pg_, wall_list &wl_, int n_, int thread_id_, int param_len_, int Frames_, double tol_, double t_phys_, double dt_sim_, double t_wheels_, double *ts_, double *xs_, double *d_ang_, int ic_index_, int nlead_, int npool_) : swirl(sp_, pg_, wl_, n_),
-thread_id(thread_id_), param_len(param_len_), Frames(Frames_-ic_index_), tol(tol_),
-t_phys(t_phys_),
-dt_sim(dt_sim_), t_wheels(t_wheels_),
-ts(ts_+ic_index_), xs(xs_+2*n_*ic_index_), d_ang(d_ang_+ic_index_),
-nlead(nlead_), npool(npool_),
-lead_dup_count(new int[nlead_]), frame_kill_count(new int[Frames_]),
-frame_res_data(new double[4*Frames_]), param_mean(new double[param_len_])
-{
-  pvals = &Kn;
-  t0_raw=*ts;
-  t0=t0_raw/t_phys, x0=xs, ctheta0=*d_ang;
-}
-walker::~walker()
-{
-  delete [] lead_dup_count; delete [] frame_kill_count;
-  delete [] frame_res_data; delete [] param_mean;
-}
-void walker::reset_sim(double *ptest_)
+void runner::reset_sim(double *ptest_)
 {
   // load the set of parameters we are to test
   for (int i = 0; i < param_len; i++) pvals[i] = ptest_[i];
@@ -89,9 +83,9 @@ void walker::reset_sim(double *ptest_)
     q[i].zero_rest();
   }
 }
-int walker::start_walking(grade * gra_, int frscore_worst_, double l2score_worst_)
+int runner::run_relay(record * rec_, int frscore_worst_, double l2score_worst_)
 {
-  reset_sim(gra_->params);
+  reset_sim(rec_->params);
   int frame_kill=Frames;
   dead=false;
   pos_res_acc=0.0;
@@ -104,9 +98,9 @@ int walker::start_walking(grade * gra_, int frscore_worst_, double l2score_worst
     advance(dur, ctheta, comega, dt_sim);
     compute_error(f,dur);
   }
-  return (int)(gra_->check_success(frame_kill, pos_res_acc, frscore_worst_, l2score_worst_));
+  return (int)(rec_->check_success(frame_kill, pos_res_acc, frscore_worst_, l2score_worst_));
 }
-void walker::compute_error(double *f_, double dur_)
+void runner::compute_error(double *f_, double dur_)
 {
   double pos_res=0.0, max_err=0.0, fac=t_wheels/cl_im, idur=1.0/dur_;
   for (int i=0, j=0; i < n; i++, j+=2)
@@ -129,13 +123,13 @@ void walker::compute_error(double *f_, double dur_)
     if (max_err>cl_im*cl_im) {frame_kill_count[frame]++; frame_kill=frame; dead=true;}
   }
 }
-void walker::reset_diagnostics()
+void runner::reset_diagnostics()
 {
   n_test=0;
   for (int i = 0; i < 4*Frames; i++) frame_res_data[i] = 0.0;
   for (int i = 0; i < Frames; i++) frame_kill_count[i] = 0;
 }
-void walker::consolidate_diagnostics()
+void runner::consolidate_diagnostics()
 {
   int n_alive=n_test,n_dead=0;
   for (int i = 0; i < Frames; i++)
@@ -149,7 +143,7 @@ void walker::consolidate_diagnostics()
     n_alive-=frame_kill_count[i];
   }
 }
-void walker::update_diagnostics(int * frame_kill_count_, double * gen_frame_res_data_)
+void runner::update_diagnostics(int * frame_kill_count_, double * gen_frame_res_data_)
 {
   double w = ((double)n_test)/((double)npool);
   for (int i = 0; i < Frames; i++)
@@ -167,15 +161,15 @@ void walker::update_diagnostics(int * frame_kill_count_, double * gen_frame_res_
 
 
 
-guide::~guide()
+referee::~referee()
 {
   if (alloc_flag)
   {
     free_AYdmatrix(param_chunk);
 
     delete [] leader_board;
-    for (int i = 0; i < nlead+npool; i++) delete grades[i];
-    delete [] grades;
+    for (int i = 0; i < nlead+npool; i++) delete records[i];
+    delete [] records;
 
     delete [] lead_dup_count; delete [] frame_kill_count;
 
@@ -185,16 +179,16 @@ guide::~guide()
     delete [] gen_param_var;
   }
 }
-void guide::alloc_grades(int nt_, int Frames_)
+void referee::alloc_records(int nt_, int Frames_)
 {
   param_chunk = AYdmatrix(nlead+npool, param_len);
 
-  grades = leaders = classA = new grade*[nlead+npool];
-  leader_board = new grade*[nlead+npool];
+  records = leaders = classA = new record*[nlead+npool];
+  leader_board = new record*[nlead+npool];
 
-  for (int i = 0; i < nlead+npool; i++) grades[i] = new grade(i,param_chunk[i]);
-  pool = grades + nlead;
-  classB = grades + nA;
+  for (int i = 0; i < nlead+npool; i++) records[i] = new record(i,param_chunk[i]);
+  pool = records + nlead;
+  classB = records + nA;
   candidates = leader_board + nlead;
 
   lead_dup_count = new int[nlead];
@@ -208,7 +202,7 @@ void guide::alloc_grades(int nt_, int Frames_)
   alloc_flag = true;
 }
 
-int find_worst_grade(grade ** r, int ncap)
+int find_worst_record(record ** r, int ncap)
 {
   int worst_index = 0;
   for (int i = 1; i < ncap; i++)
@@ -217,7 +211,7 @@ int find_worst_grade(grade ** r, int ncap)
   return worst_index;
 }
 
-int find_best_grade(grade ** r, int ncap)
+int find_best_record(record ** r, int ncap)
 {
   int best_index = 0;
   for (int i = 1; i < ncap; i++)

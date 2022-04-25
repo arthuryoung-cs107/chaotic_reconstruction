@@ -44,14 +44,14 @@ int main()
   wl.add_wall(&wp1);
   wl.add_wall(&wp2);
 
-  pedestrian ped;
-  ped.init_walk(proc_loc, rydat_dir, file_name, relay_id);
+  reporter rep;
+  rep.init_relay(proc_loc, rydat_dir, file_name, relay_id);
 
-  guide gui(nlead, npool, nA, param_len, dt_sim, t_wheels);
-  walk pwalk(gui, sp_min,sp_max,wl,t_phys,&ped);
-  pwalk.init_walk();
-  pwalk.start_walk(generations);
-  pwalk.make_best_swirl(swbest_name);
+  referee ref(nlead, npool, nA, param_len, dt_sim);
+  relay prelay(ref, sp_min,sp_max,wl,t_phys,&rep);
+  prelay.init_relay();
+  prelay.start_relay(generations);
+  prelay.make_best_swirl(swbest_name);
 
   return 0;
 }

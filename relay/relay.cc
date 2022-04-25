@@ -1,4 +1,4 @@
-#include "particle_walk.hh"
+#include "particle_relay.hh"
 
 #ifdef _OPENMP
 #include "omp.h"
@@ -9,28 +9,31 @@ extern "C"
   #include "AYaux.h"
 }
 
-walk::walk(guide &gui_,swirl_param &sp_min_,swirl_param &sp_max_,wall_list &wl_,double t_phys_, pedestrian *ped_, int ic_index_): guide(gui_), sp_min(sp_min_), sp_max(sp_max_), t_phys(t_phys_), ped(ped_), ic_index(ic_index_), n(ped_->P), Frames(ped_->Frames), ts(new double[Frames]), xs(new double[2*n*Frames]), d_ang(new double[Frames]), wl(wl_),
+relay::relay(referee &ref_,swirl_param &sp_min_,swirl_param &sp_max_,wall_list &wl_,double t_phys_, reporter *rep_, int ic_index_): referee(ref_), sp_min(sp_min_), sp_max(sp_max_), t_phys(t_phys_), rep(rep_), ic_index(ic_index_), n(rep_->P), Frames(rep_->Frames), ts(new double[Frames]), xs(new double[2*n*Frames]), d_ang(new double[Frames]), wl(wl_),
 #ifdef _OPENMP
-nt(omp_get_max_threads()), // each thread is a walker
+nt(omp_get_max_threads()), // each thread is a runner
 #else
-nt(1), // only one walker
+nt(1), // only one runner
 #endif
-pg(new proximity_grid*[nt]), rng(new AYrng*[nt]), walkers(new walker*[nt])
+pg(new proximity_grid*[nt]), rng(new AYrng*[nt]), runners(new runner*[nt])
 {
   alloc_grades(nt, Frames);
-  ped->load_filter(ts, xs, d_ang);
-  // Set up each walker's personal data
+  rep->load_filter(ts, xs, d_ang);
+
+
+
+  // Set up each runner's personal data
 #pragma omp parallel
   {
     int t=thread_num();
     pg[t]=new proximity_grid();
     rng[t]=new AYrng();
     rng[t]->rng_init_gsl(t+1);
-    walkers[t]=new walker(sp_min, pg[t], wl, n, t, param_len, Frames, sp_max.cl_im, t_phys, dt_sim, t_wheels, ts, xs, d_ang, ic_index, nlead, npool);
+    runners[t]=new runner(sp_min, pg[t], wl, n, t, param_len, Frames, sp_max.cl_im, t_phys, dt_sim, t_wheels, ts, xs, d_ang, ic_index, nlead, npool);
   }
 }
 
-walk::~walk()
+relay::~relay()
 {
   delete [] ts;
   delete [] xs;
@@ -39,35 +42,35 @@ walk::~walk()
   {
     delete pg[i];
     delete rng[i];
-    delete walkers[i];
+    delete runners[i];
   }
   delete [] pg;
   delete [] rng;
-  delete [] walkers;
+  delete [] runners;
 }
 
-void walk::stage_diagnostics()
+void relay::stage_diagnostics()
 {
-  ped->nlead = nlead;
-  ped->npool = npool;
-  ped->nA = nA;
-  ped->param_len = param_len;
-  ped->Frames = Frames;
+  rep->nlead = nlead;
+  rep->npool = npool;
+  rep->nA = nA;
+  rep->param_len = param_len;
+  rep->Frames = Frames;
 
-  ped->lead_dup_count = lead_dup_count;
-  ped->frame_kill_count = frame_kill_count;
+  rep->lead_dup_count = lead_dup_count;
+  rep->frame_kill_count = frame_kill_count;
 
-  ped->sample_weights = sample_weights;
-  ped->gen_frame_res_data = gen_frame_res_data;
-  ped->gen_param_mean = gen_param_mean;
-  ped->gen_param_var = gen_param_var;
+  rep->sample_weights = sample_weights;
+  rep->gen_frame_res_data = gen_frame_res_data;
+  rep->gen_param_mean = gen_param_mean;
+  rep->gen_param_var = gen_param_var;
 
-  ped->leaders = leaders;
+  rep->leaders = leaders;
 
-  ped->staged_flag = true;
+  rep->staged_flag = true;
 }
 
-void walk::init_walk()
+void relay::init_relay()
 {
   // initialize the pool of testing particles
   leader_count=gen_count=0;
@@ -84,16 +87,52 @@ void walk::init_walk()
     leaders[i]->init_leader(param_len, Frames);
 }
 
-void walk::start_walk(int gen_max_, bool verbose_)
+void relay::start_relay(int gen_max_, bool verbose_)
 {
   if (debugging_flag) stage_diagnostics();
-  bool walk_underway=true;
-  train_classA(gen_max_, verbose_);
+  bool relay_underway=true;
+  learn_first_leg(gen_max_, verbose_);
+
 }
 
-void walk::train_classA(int gen_max_, bool verbose_)
+void relay::learn_first_leg(int gen_max_, bool verbose_)
 {
   bool training_underway=true;
+  bool first2finish = true;
+
+  // finding first events
+#pragma omp parallel
+  {
+    runner *rt = runners[thread_num()];
+    rt->clear_event_data();
+#pragma omp for reduction(+:success_local) nowait
+    for (int i = 0; i < npool; i++)
+    {
+      rt->detect_events(pool[i), 0, Frames);
+    }
+#pragma omp critical
+    {
+      if (first2finish)
+      {
+        for (int i = 0; i < n*Frames; i++) global_event_frame_count[i] = rt->event_frame_count[i];
+        first2finish=false;
+      }
+      else for (int i = 0; i < n*Frames; i++) global_event_frame_count[i] += rt->event_frame_count[i];
+    }
+  }
+
+  int latest_event = 0;
+  for (int i = 0; i < n; i++) for (int j = 0; j < Frames; j++)
+    if (global_event_frame_count[i][j])
+    {
+      event_end[i] = j-1;
+      if (event_end[i]>latest_event) latest_event = event_end[i];
+      break;
+    }
+
+  resample_gen0_pool();
+
+  // train off of the first events
   do
   {
     int success_local=0;
@@ -101,12 +140,12 @@ void walk::train_classA(int gen_max_, bool verbose_)
     for (int i = 0; i < Frames; i++) frame_kill_count[i] = 0;
 #pragma omp parallel
     {
-      walker *rt = walkers[thread_num()];
+      runner *rt = runners[thread_num()];
       rt->reset_diagnostics();
 #pragma omp for reduction(+:success_local) nowait
       for (int i = 0; i < npool; i++)
       {
-        success_local += rt->start_walking(pool[i], frscore_worst, l2score_worst);
+        success_local += rt->run_relay(pool[i], frscore_worst, l2score_worst);
       }
       rt->consolidate_diagnostics();
 #pragma omp critical
@@ -119,13 +158,18 @@ void walk::train_classA(int gen_max_, bool verbose_)
     if (check_pool_results()) training_underway=false; // we win
     else if (gen_count == gen_max_) training_underway=false; // we give up
     else resample_pool(); // we try again
-    if (debugging_flag) ped->write_gen_diagnostics(gen_count, leader_count, worst_leader, best_leader, dup_count, resample_count, dup_unique, repl_count, t_wheels, min_res);
+    if (debugging_flag) rep->write_gen_diagnostics(gen_count, leader_count, worst_leader, best_leader, dup_count, resample_count, dup_unique, repl_count, t_wheels, min_res);
   } while (training_underway);
-  if (debugging_flag) ped->close_diagnostics(gen_count, worst_leader, best_leader, t_wheels, min_res);
+  if (debugging_flag) rep->close_diagnostics(gen_count, worst_leader, best_leader, t_wheels, min_res);
   printf("\n");
 }
 
-int walk::collect_candidates()
+void relay::resample_gen0_pool()
+{
+  
+}
+
+int relay::collect_candidates()
 {
   pool_success_count = 0;
   for (int i = 0; i < npool; i++)
@@ -146,7 +190,7 @@ int walk::collect_candidates()
   else return pool_success_count;
 }
 
-bool walk::check_pool_results()
+bool relay::check_pool_results()
 {
   pool_candidates = collect_candidates();
   // if we now have a full leader roster
@@ -198,14 +242,14 @@ bool walk::check_pool_results()
   return false;
 }
 
-double walk::compute_leader_statistics()
+double relay::compute_leader_statistics()
 {
   double nlead_inv = 1.0/((double)leader_count);
   min_res = DBL_MAX;
   for (int i = 0; i < param_len; i++) gen_param_mean[i] = gen_param_var[i] = 0.0;
   #pragma omp parallel
   {
-    walker *rt = walkers[thread_num()];
+    runner *rt = runners[thread_num()];
     double * param_mean = rt->param_mean;
     for (int i = 0; i < param_len; i++) param_mean[i] = 0.0;
     #pragma omp for reduction(min:min_res) nowait
@@ -242,7 +286,7 @@ double walk::compute_leader_statistics()
   return min_res;
 }
 
-void walk::resample_pool()
+void relay::resample_pool()
 {
   min_res = compute_leader_statistics();
 
@@ -260,7 +304,7 @@ void walk::resample_pool()
     {
       int t = thread_num();
       AYrng *r = rng[t];
-      int *dup_t = walkers[t]->lead_dup_count;
+      int *dup_t = runners[t]->lead_dup_count;
       for (int i = 0; i < leader_count; i++) dup_t[i] = 0;
       #pragma omp for reduction(+:dup_count) reduction(+:resample_count) nowait
       for (int i = 0; i < npool; i++)

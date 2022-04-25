@@ -124,7 +124,8 @@ function plot_generic_frame_data(ax_, x, Y, plotspecs_)
     for i=1:len_gp
         plot(ax_,x, Y(i,:), ' -', 'Color', [plotspecs_.base_color, 0.1], 'LineWidth', 1);
     end
-    plot(ax_, x, Y(plotspecs_.I1, :), ' -', 'Color', [0 0 0], 'LineWidth', 2);
+    plot(ax_, x, mean(Y,1), ' -', 'Color', [0 0 0], 'LineWidth', 2);
+    plot(ax_, x, Y(plotspecs_.I1, :), ' --', 'Color', [0 0 0], 'LineWidth', 2);
     plot(ax_, x, Y(plotspecs_.I2, :), ' :', 'Color', [0 0 0], 'LineWidth', 2);
     plot(ax_, x, Y(plotspecs_.I3, :), ' -.', 'Color', [0 0 0], 'LineWidth', 2);
     xlim(ax_, [min(x), max(x)]);
@@ -147,44 +148,4 @@ function apply_plot_labels(ax_, xname, yname, titlename)
     xlabel(ax_, xname, 'Interpreter', 'Latex', 'Fontsize', 14)
     ylabel(ax_, yname, 'Interpreter', 'Latex', 'Fontsize', 14)
     title(ax_, ['\textbf{', strrep(titlename, '_', ' ') , '}'], 'Interpreter', 'Latex', 'Fontsize', 14)
-end
-
-function prime_vec = approx_deriv_weighted_central(t_in, x_in)
-  n = length(t_in);
-  prime_vec = nan(size(x_in));
-
-  k = 5; %% number of points considered. Must be odd
-  l = (k-1)/2; %% number of points to left and right
-  p = l+1; %% index of central point
-
-  x = reshape(x_in(1:k), [1 k]);
-  t = reshape(t_in(1:k), [1 k]);
-  for i=1:l
-    ind = [1:(i-1), i+1:k];
-    t_hat = t(ind);
-    x_hat = x(ind);
-    w = (abs((0.5*(t_hat + t(i)))-t(i))).^(-1);
-    m = ((x(i)-x_hat))./(t(i)-t_hat);
-    prime_vec(i) = (sum(w.*m))/(sum(w));
-  end
-  for i=p:(n-l)
-    x = reshape(x_in(i-l:i+l), [1 k]);
-    t = reshape(t_in(i-l:i+l), [1 k]);
-    ind = [1:p-1, p+1:k];
-    t_hat = t(ind);
-    x_hat = x(ind);
-    w = (abs((0.5*(t_hat + t(p)))-t(p))).^(-1);
-    m = ((x(p)-x_hat))./(t(p)-t_hat);
-    prime_vec(i) = (sum(w.*m))/(sum(w));
-  end
-  x = reshape(x_in(n-k+1:n), [1 k]);
-  t = reshape(t_in(n-k+1:n), [1 k]);
-  for i=p+1:k
-    ind = [1:i-1, i+1:k];
-    t_hat = t(ind);
-    x_hat = x(ind);
-    w = (abs((0.5*(t_hat + t(i)))-t(i))).^(-1);
-    m = ((x(i)-x_hat))./(t(i)-t_hat);
-    prime_vec(n-k+i) = (sum(w.*m))/(sum(w));
-  end
 end

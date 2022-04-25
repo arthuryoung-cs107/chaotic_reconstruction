@@ -1,19 +1,19 @@
-#ifndef PARTICLE_WALK_HH
-#define PARTICLE_WALK_HH
-
-#include "particle_race.hh"
+#ifndef PARTICLE_RELAY_HH
+#define PARTICLE_RELAY_HH
 
 #ifdef _OPENMP
 #include "omp.h"
 #endif
 
-const int grade_int_len=7;
-const int grade_double_len=2;
+const int record_int_len=7;
+const int record_double_len=2;
 
-struct grade
+struct record
 {
   bool success;
   int len,Frames;
+
+  const int beads;
 
   const int global_index;
         int frscore;
@@ -23,23 +23,28 @@ struct grade
         int parent_global_index; // index position of parent particle
         int dup_count; // number of times this particle has been duplicated
 
-  double  l2score, // note that this is NOW the squared residual
+
+  double  residual,
           raw_weight;
 
+  int * const event_positions;
+
   double * const params;
+  double * const residual_data;
+  double * const alpha_data;
 
-  grade(int i_, double * params_): global_index(i_), params(params_) {}
-  ~grade() {}
+  record(int i_, double * params_): global_index(i_), params(params_) {}
+  ~record() {}
 
-  void reset_grade(int gen_);
+  void reset_record(int gen_);
   void resample(int gen_, double * dmin_, double *dmax_, AYrng * r_);
-  void duplicate(grade *parent_, int gen_, double *dmin_, double *dmax_, AYrng * r_, double * var_);
-  void take_vals(grade * rtake_);
+  void duplicate(record *parent_, int gen_, double *dmin_, double *dmax_, AYrng * r_, double * var_);
+  void take_vals(record * rtake_);
 
   inline void init(int len_, int Frames_)
   {len=len_; Frames=Frames_;}
   inline void init_leader(int len_, int Frames_)
-  {init(len_, Frames_); reset_grade(0);}
+  {init(len_, Frames_); reset_record(0);}
   inline void init_pool(int len_, int Frames_, double * dmin_, double *dmax_, AYrng * r_)
   {init(len_, Frames_); resample(0,dmin_,dmax_,r_);}
 
@@ -49,10 +54,10 @@ struct grade
     return success=l2score<l2worst_; // conditioning on average frame error
   }
 
-  inline bool isbetter(grade * rcomp_)
+  inline bool isbetter(record * rcomp_)
   {return l2score<rcomp_->l2score;}
 
-  inline bool isworse(grade * rcomp_)
+  inline bool isworse(record * rcomp_)
   {return !(isbetter(rcomp_));}
 
   inline double w(double min_res_)
@@ -60,7 +65,7 @@ struct grade
 
 };
 
-class walker: public swirl
+class runner: public swirl
 {
     public:
       const int thread_id;
@@ -72,7 +77,7 @@ class walker: public swirl
       const double tol;
       const double t_phys;
       const double dt_sim;
-      const double t_wheels; // rycroft's default is 0.012
+      const double alpha_tol=100.0;
 
       int frame;
 
@@ -83,30 +88,51 @@ class walker: public swirl
               *frame_res_data, // [pos_res|max_err|pos_res_dead|pos_res_alive]
               *param_mean;
 
-      walker(swirl_param &sp_, proximity_grid * pg_, wall_list &wl_, int n_, int thread_id_, int param_len_, int Frames_, double tol_, double t_phys_, double dt_sim_, double t_wheels_, double *ts_, double *xs_, double *d_ang_, int ic_index_, int nlead_, int npool_);
-      ~walker();
+      runner(swirl_param &sp_, proximity_grid * pg_, wall_list &wl_, int n_, int thread_id_, int param_len_, int Frames_, double tol_, double t_phys_, double dt_sim_, double t_wheels_, double *ts_, double *xs_, double *d_ang_, int ic_index_, int nlead_, int npool_);
+      ~runner();
 
       void reset_sim(double *ptest_);
 
-      int start_walking(grade * gra_, int frscore_min_, double l2score_min_);
+      int run_relay(record * gra_, int frscore_min_, double l2score_min_);
+      void detect_events(record* rec_, int start_, int end_);
 
       void reset_diagnostics();
       void consolidate_diagnostics();
       void update_diagnostics(int *frame_kill_count_, double *gen_frame_res_data_);
 
     private:
-      bool dead;
-      int frame_kill,
-          n_test;
+      bool  dead;
+
+      int   n_test,
+            *kill_frames,
+            **event_frame_count;
 
       double  *pvals,
               *ts, *xs, *d_ang,
-              t0, *x0, ctheta0, t0_raw;
+              **pos_res, **alpha_INTpos_res,
+              **INTpos_res;
 
       void compute_error(double *f_, double dur_);
+
+
+      inline double advance_runner()
+      {
+        double dur=(ts[frame]-ts[frame-1])/t_phys, ctheta=d_ang[frame-1], comega=d_ang[frame]-d_ang[frame-1];
+        if(comega>M_PI) comega-=2*M_PI; else if(comega<-M_PI) comega+=2*M_PI; comega/=dur;
+        advance(dur, ctheta, comega, dt_sim);
+        return dur;
+      }
+      inline void clear_event_data()
+      {for (int i = 0; i < n*Frames; i++) event_frame_count[0][i] = 0;}
+      inline double alpha_comp(double *a_, double t_m1, double t_p1)
+      {
+        double alpha_val = log(a_[0]/a_[2])/log(t_p1/t_m1);
+        a_[2] = a_[1]; a_[1] = a_[0]; // shift the integral history along
+        return alpha_val;
+      }
 };
 
-struct guide
+struct referee
 {
   /** The maximum simulation timestep to use. */
   const double dt_sim;
@@ -117,16 +143,15 @@ struct guide
   const int nA;
   const int param_len;
 
-  grade **grades,
-        **leaders, **pool,
-        **classA, **classB,
-        **leader_board, **candidates;
+  record  **records,
+          **leaders, **pool,
+          **leader_board, **candidates;
 
   // memory chunks to store parameters associated with particles
   double  **param_chunk;
 
-  int *lead_dup_count, // length = nlead
-      *frame_kill_count; // length = Frames
+  int *lead_dup_count,
+      *global_event_frame_count;
 
   double  *sample_weights, // length = nlead
           *gen_frame_res_data, // [pos_res|max_err|pos_res_dead|pos_res_alive]
@@ -137,19 +162,19 @@ struct guide
 
   bool alloc_flag=false;
 
-  guide(int nlead_, int npool_, int nA_, int param_len_, double dt_sim_, double t_wheels_): nlead(nlead_), npool(npool_), nA(nA_), param_len(param_len_), dt_sim(dt_sim_), t_wheels(t_wheels_) {}
-  guide(guide &gui_): nlead(gui_.nlead), npool(gui_.npool), nA(gui_.nA), param_len(gui_.param_len), dt_sim(gui_.dt_sim), t_wheels(gui_.t_wheels) {}
+  referee(int nlead_, int npool_, int nA_, int param_len_, double dt_sim_, double t_wheels_): nlead(nlead_), npool(npool_), nA(nA_), param_len(param_len_), dt_sim(dt_sim_), t_wheels(t_wheels_) {}
+  referee(referee &ref_): nlead(ref_.nlead), npool(ref_.npool), nA(ref_.nA), param_len(ref_.param_len), dt_sim(ref_.dt_sim), t_wheels(ref_.t_wheels) {}
 
-  ~guide();
+  ~referee();
 
-  void alloc_grades(int nt_, int Frames_);
+  void alloc_records(int nt_, int Frames_);
 };
 
-class pedestrian : public ODR_struct
+class reporter : public ODR_struct
 {
   public:
     bool staged_flag = false;
-    int walk_id;
+    int relay_id;
     int nlead, npool, nA, param_len;
 
     int *lead_dup_count,
@@ -160,20 +185,20 @@ class pedestrian : public ODR_struct
             *gen_param_mean,
             *gen_param_var;
 
-    grade ** leaders;
+    record ** leaders;
 
-    pedestrian() : ODR_struct() {}
-    ~pedestrian() {}
-    void init_walk(char * proc_loc_, char * rydat_dir_, char * file_name_, int walk_id_);
-      void init_walk(const char *proc_loc_, const char *rydat_dir_, const char *file_name_, int walk_id_)
-        {init_walk((char*)proc_loc_,(char*)rydat_dir_,(char*)file_name_, walk_id_);}
+    reporter() : ODR_struct() {}
+    ~reporter() {}
+    void init_relay(char * proc_loc_, char * rydat_dir_, char * file_name_, int relay_id_);
+      void init_relay(const char *proc_loc_, const char *rydat_dir_, const char *file_name_, int relay_id_)
+        {init_relay((char*)proc_loc_,(char*)rydat_dir_,(char*)file_name_, relay_id_);}
 
     void write_gen_diagnostics(int gen_count_, int leader_count_, int worst_leader_, int best_leader_, int dup_count_, int resample_count_, int dup_unique_, int repl_count_, double t_wheels_, double min_res_);
     void close_diagnostics(int gen_count_, int worst_leader_, int best_leader_, double t_wheels_, double min_res_);
     ODR_struct * spawn_swirlODR(char *name_);
 };
 
-class walk : public guide
+class relay : public referee
 {
   public:
     /** The minimum parameters. */
@@ -210,13 +235,13 @@ class walk : public guide
             rs_full_factor=1.0;
 
 
-    pedestrian * ped;
+    reporter * rep;
 
-    walk(guide &gui_, swirl_param &sp_min_, swirl_param &sp_max_, wall_list &wl_,double t_phys_,pedestrian * ped_,int ic_index_=0);
-    ~walk();
+    relay(referee &ref_, swirl_param &sp_min_, swirl_param &sp_max_, wall_list &wl_,double t_phys_,reporter * ped_,int ic_index_=0);
+    ~relay();
 
-    void init_walk();
-    void start_walk(int gen_max_, bool verbose_=true);
+    void init_relay();
+    void start_relay(int gen_max_, bool verbose_=true);
 
     void make_best_swirl(char * name_);
       void make_best_swirl(const char *name_)
@@ -242,17 +267,20 @@ class walk : public guide
       /** The array of proximity grids. */
       proximity_grid** const pg;
 
-      walker ** walkers;
+      runner ** runners;
 
       void stage_diagnostics();
 
-      void train_classA(int gen_max_, bool verbose_);
+      void learn_first_leg(int gen_max_, bool verbose_);
 
       bool check_pool_results();
       int collect_candidates();
 
       double compute_leader_statistics();
       void resample_pool();
+
+      inline void clear_global_event_data()
+      {for (int i = 0; i < n*Frames; i++) global_event_frame_count[0][i] = 0;}
 
 #ifdef _OPENMP
         inline int thread_num() {return omp_get_thread_num();}
@@ -261,7 +289,7 @@ class walk : public guide
 #endif
 };
 
-int find_worst_grade(grade ** r, int ncap);
-int find_best_grade(grade ** r, int ncap);
+int find_worst_record(record ** r, int ncap);
+int find_best_record(record ** r, int ncap);
 
 #endif

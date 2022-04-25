@@ -26,8 +26,8 @@ error_plots.plot_residual_stats(fig_all.ax_tile(1), fig_all.ax_tile(2), fig_all.
 
 error_plots.plot_alphaINTres_vs_time(fig_all.ax_tile(4), orange1, stat);
 
-flim =[1, contact_f(1)];
-limind=flim(1):(contact_f(1)-5);
+flim =[1, contact_f(1)+5];
+limind=flim(1):(contact_f(1)-2);
 
 tlim = reshape(t_vec(flim), 1,[]);
 ylim_mat = [error_plots.lims_minmax(INTpos_res(:,limind)); error_plots.lims_minmax(Dpos_res(:,limind)); error_plots.lims_minmax(alpha_INTpos_res(:,limind))];

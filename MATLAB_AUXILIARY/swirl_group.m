@@ -65,13 +65,14 @@ classdef swirl_group
             end
         end
         function alpha_mat = compute_alpha_logD(t_vec_, x_mat_)
-            [M,N] = size(x_mat_);
-            tlog = log(t_vec_);
-            xlog = log(x_mat_);
-            alpha_mat = nan(M,N);
-            for i = 1:M
-                alpha_mat(i,:) = approx_deriv_weighted_central(tlog,xlog(i,:));
-            end
+            alpha_mat = swirl_group.compute_D(log(t_vec_), log(x_mat_));
+            % [M,N] = size(x_mat_);
+            % tlog = log(t_vec_);
+            % xlog = log(x_mat_);
+            % alpha_mat = nan(M,N);
+            % for i = 1:M
+            %     alpha_mat(i,:) = approx_deriv_weighted_central(tlog,xlog(i,:));
+            % end
         end
         function [pos, dish] = cellrow2posdish(gp_cell_, i_, beads, len_pos)
             pos=reshape(gp_cell_{i_,1},[beads,len_pos,size(gp_cell_{i_,1},2)]);
