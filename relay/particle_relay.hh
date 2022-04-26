@@ -192,9 +192,9 @@ class reporter : public ODR_struct
       void init_relay(const char *proc_loc_, const char *rydat_dir_, const char *file_name_, int relay_id_)
         {init_relay((char*)proc_loc_,(char*)rydat_dir_,(char*)file_name_, relay_id_);}
 
-    void write_startup_diagnostics();
+    void write_startup_diagnostics(int gen_max_);
     void write_event_diagnostics(int event_);
-    void write_postevent_diagnostics(int event_, int event_observations_, int latest_event, double gau_scale_sqrt_)
+    void write_postevent_diagnostics(int event_);
     void close_diagnostics(int gen_count_, int worst_leader_, int best_leader_, double t_wheels_, double min_res_);
     ODR_struct * spawn_swirlODR(char *name_);
 };

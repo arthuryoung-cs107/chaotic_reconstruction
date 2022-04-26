@@ -35,10 +35,10 @@ void reporter::init_relay( char * proc_loc_, char * rydat_dir_, char * file_name
   sml_stream.close();
 }
 
-void reporter::write_startup_diagnostics()
+void reporter::write_startup_diagnostics(int gen_max_)
 {
-  int header[] = {9,5}; // {int_len, double_len}
-  int int_params[] = {nlead, npool, param_len, beads, Frames, record_int_len, record_double_len, record_int_chunk_count, record_double_chunk_count};
+  int header[] = {10,5}; // {int_len, double_len}
+  int int_params[] = {gen_max_, nlead, npool, param_len, beads, Frames, record_int_len, record_double_len, record_int_chunk_count, record_double_chunk_count};
   double double_params[] = {dt_sim, noise_tol, alpha_tol, max_weight_ceiling, t_phys};
 
   char * buf_it = out_buf+obuf_end; sprintf(buf_it, "%s.re%d_startup.redat", file_name, relay_id, gen_count_);

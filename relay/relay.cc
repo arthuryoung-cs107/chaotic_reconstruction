@@ -58,7 +58,7 @@ relay::~relay()
   delete [] runners;
 }
 
-void relay::stage_diagnostics()
+void relay::stage_diagnostics(int gen_max_)
 {
   rep_->nlead=nlead;
   rep_->npool=npool;
@@ -88,7 +88,7 @@ void relay::stage_diagnostics()
   rep_->pool = pool;
 
   rep->staged_flag = true;
-  rep->write_startup_diagnostics();
+  rep->write_startup_diagnostics(gen_max_);
 }
 
 void relay::init_relay()
@@ -109,6 +109,7 @@ void relay::init_relay()
 
 void relay::start_relay(int gen_max_, bool verbose_)
 {
+  gen_max=gen_max_;
   if (debugging_flag) stage_diagnostics();
   bool relay_underway=true;
   learn_first_leg(gen_max_, verbose_);
