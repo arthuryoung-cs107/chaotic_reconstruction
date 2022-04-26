@@ -9,7 +9,7 @@ FIOBJS:= $(SWOBJS) $(addprefix $(FI_DIR), $(addsuffix .o, $(FILTER)))
 
 RAOBJS:= $(SWOBJS) $(addprefix $(RA_DIR), $(addsuffix .o, $(RACE)))
 
-WAOBJS:= $(SWOBJS) $(addprefix $(RA_DIR), $(addsuffix .o, $(WALK)))
+WAOBJS:= $(SWOBJS) $(addprefix $(WA_DIR), $(addsuffix .o, $(WALK)))
 
 REOBJS:= $(SWOBJS) $(addprefix $(RE_DIR), $(addsuffix .o, $(RELAY)))
 
@@ -28,6 +28,9 @@ $(FI_DIR)%.o: $(FI_SRC)%.cc | $(FI_DIR)
 	$(CXX) $(IDIR) $(CFLAGS) -c $< -o $@
 
 $(RA_DIR)%.o: $(RA_SRC)%.cc | $(RA_DIR)
+	$(CXX) $(IDIR) $(CFLAGS) -c $< -o $@
+
+$(WA_DIR)%.o: $(WA_SRC)%.cc | $(WA_DIR)
 	$(CXX) $(IDIR) $(CFLAGS) -c $< -o $@
 
 $(RE_DIR)%.o: $(RE_SRC)%.cc | $(RE_DIR)
@@ -53,7 +56,7 @@ race_test: $(TEST_SRC)race_test.cc $(RAOBJS)
 walk_test: $(TEST_SRC)walk_test.cc $(WAOBJS)
 	$(CXX) $(IDIR) $(CFLAGS) $(LINK) $^ $(LIBS) -o $@
 
-race_test: $(TEST_SRC)relay_test.cc $(REOBJS)
+relay_test: $(TEST_SRC)relay_test.cc $(REOBJS)
 	$(CXX) $(IDIR) $(CFLAGS) $(LINK) $^ $(LIBS) -o $@
 
 $(AY_DIR) $(SW_DIR) $(FI_DIR) $(RA_DIR) $(WA_DIR) $(RE_DIR):

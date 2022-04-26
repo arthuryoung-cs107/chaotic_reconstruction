@@ -8,16 +8,15 @@ runner::runner(swirl_param &sp_, proximity_grid * pg_, wall_list &wl_, int n_, i
 thread_id(thread_id_), param_len(param_len_), Frames(Frames_), nlead(nlead_), npool(npool_),
 t_phys(t_phys_), dt_sim(dt_sim_), alpha_tol(alpha_tol_),
 ts(ts_), xs(xs_), d_ang(d_ang_), comega_s(comega_s_),
-lead_dup_count(new int[nlead_]), kill_frames(new int[n_]), event_frame_count(AYimatrix(n_, Frames_)),
-param_acc(new double[param_len_]), pos_res(AYdmatrix(Frames_, n_)), alpha_INTpos_res(AYdmatrix(Frames_, n_)), INTpos_res(AYdmatrix(n_, 3))
-{
-  pvals = &Kn;
-  t0_raw=*ts;
-  t0=t0_raw/t_phys, x0=xs, ctheta0=*d_ang;
-}
+lead_dup_count(new int[nlead_]), kill_frames(new int[n_]),
+event_frame_count(AYimatrix(n_, Frames_)),
+param_acc(new double[param_len_]), alpha_kill(new double[n_]),
+pos_res(AYdmatrix(Frames_, n_)), alpha_INTpos_res(AYdmatrix(Frames_, n_)), INTpos_res(AYdmatrix(n_, 3))
+{pvals = &Kn;}
+
 runner::~runner()
 {
-  delete [] lead_dup_count; delete [] kill_frames; delete [] param_acc;
+  delete [] lead_dup_count; delete [] kill_frames; delete [] param_acc; delete [] alpha_kill;
   free_AYimatrix(event_frame_count); free_AYdmatrix(pos_res);
   free_AYdmatrix(alpha_INTpos_res); free_AYdmatrix(INTpos_res);
 }
@@ -68,10 +67,10 @@ void runner::detect_events(record * rec_, int start_, int end_)
   for (int i = 0; i < n; i++) kill_frames[i] = 0;
 
   frame = start_detection(start_);
-  double t_i=ts[frame-1], t_m1=ts[frame-2], res_acc_local=pos_res_acc;;
+  double t_i=ts[frame-1], t_m1=ts[frame-2], res_acc_local=pos_res_acc;
   do
   {
-    double t_p1 = ts[frame];
+    double t_p1 = ts[frame], dur;
     advance(dur=(t_p1-t_i)/t_phys, d_ang[frame-1], comega_s[frame], dt_sim);
     double * f = xs+(2*n*frame);
 
@@ -110,7 +109,7 @@ void runner::detect_events(record * rec_, int start_, int end_)
   rec_->record_event_data(pos_res_acc=res_acc_local, kill_frames, INTpos_res, alpha_kill);
 }
 
-void runner::run_relay(record * rec_, int start_, int * end_, int latest_, double residual_worst_)
+int runner::run_relay(record * rec_, int start_, int * end_, int latest_, double residual_worst_)
 {
   reset_sim(rec_->params, ts[start_]/t_phys, d_ang[start_], comega_s[start_], xs + 2*n*start_);
   for (int i = 0; i < n; i++) pos_res[start_][i]= 0.0;

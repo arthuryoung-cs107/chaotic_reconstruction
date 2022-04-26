@@ -46,6 +46,8 @@ struct record
   void duplicate(record *parent_, int gen_, double *dmin_, double *dmax_, AYrng * r_, double * var_);
   void take_vals(record * rtake_);
 
+  void record_event_data(double res_acc_, int *kill_frames_, double ** INTpos_res_, double *alpha_kill_);
+
   inline void init_leader()
   {reset_record(0);}
   inline void init_pool(double * dmin_, double *dmax_, AYrng * r_)
@@ -83,25 +85,23 @@ class runner: public swirl
           **event_frame_count;
 
       double  *pvals, *ts, *xs, *d_ang, *comega_s,
-              *param_acc,
+              *param_acc, *alpha_kill, 
               **pos_res, **alpha_INTpos_res,
               **INTpos_res;
 
       runner(swirl_param &sp_, proximity_grid * pg_, wall_list &wl_, int n_, int thread_id_, int param_len_, int Frames_, int nlead_, int npool_, double t_phys_, double dt_sim_, double alpha_tol_, double *ts_, double *xs_, double *d_ang_, double *comega_s);
       ~runner();
 
-      void reset_sim(double *ptest_);
+      void reset_sim(double *ptest_, double t0_, double ctheta0_, double comega0_, double *x0_);
 
-      int run_relay(record * gra_, int frscore_min_, double residual_min_);
+      int run_relay(record * rec_, int start_, int * end_, int latest_, double residual_worst_);
+      int start_detection(int start_);
       void detect_events(record* rec_, int start_, int end_);
 
-      void reset_diagnostics();
-      void consolidate_diagnostics();
-      void update_diagnostics(int *frame_kill_count_, double *gen_frame_res_data_);
-
-    private:
       inline void clear_event_data()
       {for (int i = 0; i < n*Frames; i++) event_frame_count[0][i] = 0;}
+
+    private:
       inline double alpha_comp(double *a_, double t_m1, double t_p1)
       {
         double alpha_val = log(a_[0]/a_[2])/log(t_p1/t_m1);
@@ -154,16 +154,10 @@ class reporter : public ODR_struct
     bool staged_flag = false;
     int relay_id;
 
-
-    const int n;
-    /** The total number of snapshots. */
-    const int Frames;
-
     int nlead,
         npool,
         param_len,
-        beads,
-        Frames;
+        beads;
 
     double  dt_sim,
             noise_tol,
@@ -195,7 +189,8 @@ class reporter : public ODR_struct
     void write_startup_diagnostics(int gen_max_);
     void write_event_diagnostics(int event_);
     void write_postevent_diagnostics(int event_);
-    void close_diagnostics(int gen_count_, int worst_leader_, int best_leader_, double t_wheels_, double min_res_);
+    void write_gen_diagnostics(int gen_count_, int leader_count_);
+    void close_diagnostics(int gen_count_);
     ODR_struct * spawn_swirlODR(char *name_);
 };
 
@@ -223,6 +218,8 @@ class relay : public referee
     double* xs;
     /** The dish angle data at the snapshots. */
     double* d_ang;
+    /** The dish average rotational speed. */
+    double* comega_s;
 
     int gen_count;
     int leader_count;
@@ -271,9 +268,11 @@ class relay : public referee
 
       runner ** runners;
 
-      void stage_diagnostics();
+      void stage_diagnostics(int gen_max_);
 
       void learn_first_leg(int gen_max_, bool verbose_);
+
+      void check_gen0();
 
       bool check_pool_results();
       int collect_candidates();

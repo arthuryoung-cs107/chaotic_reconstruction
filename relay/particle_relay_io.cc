@@ -41,7 +41,7 @@ void reporter::write_startup_diagnostics(int gen_max_)
   int int_params[] = {gen_max_, nlead, npool, param_len, beads, Frames, record_int_len, record_double_len, record_int_chunk_count, record_double_chunk_count};
   double double_params[] = {dt_sim, noise_tol, alpha_tol, max_weight_ceiling, t_phys};
 
-  char * buf_it = out_buf+obuf_end; sprintf(buf_it, "%s.re%d_startup.redat", file_name, relay_id, gen_count_);
+  char * buf_it = out_buf+obuf_end; sprintf(buf_it, "%s.re%d_startup.redat", file_name, relay_id);
   FILE * out_dat = fopen(out_buf, "wb");
   fwrite(header, sizeof(int), 2, out_dat);
   fwrite(int_params, sizeof(int), header[0], out_dat);
@@ -82,10 +82,10 @@ void reporter::write_postevent_diagnostics(int event_)
   fwrite(postevent_int_vec, sizeof(int), header[0], out_dat);
   fwrite(postevent_double_vec, sizeof(double), header[1], out_dat);
   fwrite(event_end, sizeof(int), beads, out_dat);
-  for (int i = 0; i < leader_count_; i++)
+  for (int i = 0; i < npool; i++)
   {
     // write the parameter
-    fwrite(leaders[i]->params, sizeof(double), param_len, out_dat);
+    fwrite(pool[i]->params, sizeof(double), param_len, out_dat);
   }
   fclose(out_dat);
 }

@@ -35,8 +35,8 @@ SW_DIR:=$(addsuffix objs/, $(SW_SRC))
 FI_DIR:=$(addsuffix objs/, $(FI_SRC))
 RA_DIR:=$(addsuffix objs/, $(RA_SRC))
 WA_DIR:=$(addsuffix objs/, $(WA_SRC))
-RA_DIR:=$(addsuffix objs/, $(RE_SRC))
+RE_DIR:=$(addsuffix objs/, $(RE_SRC))
 
 TEST_SRC:=tests/
 
-IDIR:=$(IBASIC) -I$(AY_SRC) -I$(SW_SRC) -I$(FI_SRC) -I$(RA_SRC) -I$(RE_SRC)
+IDIR:=$(IBASIC) -I$(AY_SRC) -I$(SW_SRC) -I$(FI_SRC) -I$(RA_SRC) -I$(WA_SRC) -I$(RE_SRC)
