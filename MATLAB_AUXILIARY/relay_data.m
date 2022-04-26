@@ -5,9 +5,8 @@ classdef relay_data
         dat_name;
         relay_id;
 
-        gen_count;
-
-        F;
+        specs;
+        event0; 
 
         gen;
     end
@@ -25,26 +24,24 @@ classdef relay_data
             double_params_end = fread(dat_end,[1, header_end(2)], 'double=>double');
             fclose(dat_end);
 
-            gen_max = int_params_start(1);
-            nlead = int_params_start(2);
-            npool = int_params_start(3);
-            parem_len = int_params_start(4);
-            beads = int_params_start(5);
-            Frames = int_params_start(6);
-            record_int_len = int_params_start(7);
-            record_double_len = int_params_start(8);
-            record_int_chunk_len = int_params_start(9);
-            record_double_chunk_len = int_params_start(10);
+            specs = struct('gen_max', int_params_start(1), ...
+            'nlead', int_params_start(2), ...
+            'npool', int_params_start(3), ...
+            'param_len', int_params_start(4), ...
+            'beads', int_params_start(5), ...
+            'Frames', int_params_start(6), ...
+            'record_int_len', int_params_start(7), ...
+            'record_double_len', int_params_start(8), ...
+            'record_int_chunk_len', int_params_start(9), ...
+            'record_double_chunk_len', int_params_start(10),  ...
+            'gen_last', int_params_end(1));
 
-            gen_count = int_params_end(1);
-
-            event0 = event(dat_dir_name_, exp_name_, dat_name_, relay_id_, 0, param_len, beads, Frames, record_int_len, record_double_len, record_int_chunk_len,record_double_chunk_len);
+            event0 = event(dat_dir_name_, exp_name_, dat_name_, relay_id_, 0, specs);
 
             % gen = relay_generation.empty(gen_count, 0);
             % for i=1:gen_count
             %     gen(i) = generation(dat_dir_name_, exp_name_, dat_name_, i, relay_id_, );
             % end
-
 
             %%% assignments
 
@@ -52,8 +49,9 @@ classdef relay_data
             obj.exp_name = exp_name_;
             obj.dat_name = dat_name_;
             obj.relay_id = relay_id_;
-            obj.gen_count = gen_count;
 
+            obj.specs = specs;
+            obj.event0 = event0;
         end
     end
 end
