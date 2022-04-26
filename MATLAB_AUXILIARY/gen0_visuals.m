@@ -8,8 +8,6 @@ fig_all.init_tiles([2, 3]);
 nbeads = 3;
 test = 'maxmin'; %% parameter perturbation
 ran_id = 1;
-nlead = 500;
-
 
 tic
 stat = read_stat(nbeads,test,ran_id);
@@ -27,7 +25,6 @@ error_plots.plot_Dres_vs_time(fig_all.ax_tile(3), green4, stat);
 error_plots.plot_residual_stats(fig_all.ax_tile(1), fig_all.ax_tile(2), fig_all.ax_tile(3), t_vec, contact_f, frame_stats);
 
 error_plots.plot_alphaINTres_vs_time(fig_all.ax_tile(4), orange1, stat);
-error_plots.plot_alphaINTres_vs_time(fig_all.ax_tile(5), green4, stat);
 
 pause
 

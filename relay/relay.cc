@@ -9,7 +9,8 @@ extern "C"
   #include "AYaux.h"
 }
 
-relay::relay(referee &ref_,swirl_param &sp_min_,swirl_param &sp_max_,wall_list &wl_,double t_phys_, reporter *rep_, int ic_index_): referee(ref_), sp_min(sp_min_), sp_max(sp_max_), t_phys(t_phys_), rep(rep_), ic_index(ic_index_), n(rep_->P), Frames(rep_->Frames), ts(new double[Frames]), xs(new double[2*n*Frames]), d_ang(new double[Frames]), wl(wl_),
+relay::relay(referee &ref_, swirl_param &sp_min_, swirl_param &sp_max_, wall_list &wl_,double t_phys_,reporter * rep_): referee(ref_), sp_min(sp_min_), sp_max(sp_max_), wl(wl_), t_phys(t_phys_), rep(rep_), n(rep_->P), Frames(rep_->Frames),
+ts(new double[Frames]), xs(new double[2*n*Frames]), d_ang(new double[Frames]), comega_s(new double[Frames]),
 #ifdef _OPENMP
 nt(omp_get_max_threads()), // each thread is a runner
 #else
@@ -17,10 +18,17 @@ nt(1), // only one runner
 #endif
 pg(new proximity_grid*[nt]), rng(new AYrng*[nt]), runners(new runner*[nt])
 {
-  alloc_grades(nt, Frames);
+  alloc_records(nt, Frames, n);
   rep->load_filter(ts, xs, d_ang);
 
-
+  // initialize the dish velocity data. Will save time on calculations later
+  comega_s[0]=0.0;
+  for (int i = 1; i < Frames; i++)
+  {
+    double comega=d_ang[i]-d_ang[i-1];
+    if(comega>M_PI) comega-=2*M_PI; else if(comega<-M_PI) comega+=2*M_PI; comega/=dur;
+    comega_s[i] = t_phys*comega/(ts[i]-ts[i-1]);
+  }
 
   // Set up each runner's personal data
 #pragma omp parallel
@@ -29,7 +37,7 @@ pg(new proximity_grid*[nt]), rng(new AYrng*[nt]), runners(new runner*[nt])
     pg[t]=new proximity_grid();
     rng[t]=new AYrng();
     rng[t]->rng_init_gsl(t+1);
-    runners[t]=new runner(sp_min, pg[t], wl, n, t, param_len, Frames, sp_max.cl_im, t_phys, dt_sim, t_wheels, ts, xs, d_ang, ic_index, nlead, npool);
+    runners[t]=new runner(sp_min, pg[t], wl, n, t, param_len, Frames, nlead, npool, t_phys, dt_sim, alpha_tol, ts, xs, d_ang, comega_s);
   }
 }
 
@@ -38,6 +46,7 @@ relay::~relay()
   delete [] ts;
   delete [] xs;
   delete [] d_ang;
+  delete [] comega_s;
   for (int i = 0; i < nt; i++)
   {
     delete pg[i];
@@ -51,23 +60,35 @@ relay::~relay()
 
 void relay::stage_diagnostics()
 {
-  rep->nlead = nlead;
-  rep->npool = npool;
-  rep->nA = nA;
-  rep->param_len = param_len;
-  rep->Frames = Frames;
+  rep_->nlead=nlead;
+  rep_->npool=npool;
+  rep_->param_len=param_len;
+  rep_->beads=n;
+  rep_->Frames=Frames;
 
-  rep->lead_dup_count = lead_dup_count;
-  rep->frame_kill_count = frame_kill_count;
+  rep_->dt_sim = dt_sim;
+  rep_->noise_tol = noise_tol;
+  rep_->alpha_tol = alpha_tol;
+  rep_->max_weight_ceiling = max_weight_ceiling;
+  rep_->t_phys = t_phys;
 
-  rep->sample_weights = sample_weights;
-  rep->gen_frame_res_data = gen_frame_res_data;
-  rep->lead_par_w_mean = lead_par_w_mean;
-  rep->lead_par_w_var = lead_par_w_var;
+  rep_->lead_dup_count = lead_dup_count;
+  rep_->global_event_frame_count = *global_event_frame_count;
+  rep_->event_end = event_end;
+  rep_->gen_int_vec = &(gen_count);
+  rep_->postevent_int_vec = &(event_observations);
 
-  rep->leaders = leaders;
+  rep_->sample_weights = sample_weights;
+  rep_->lead_par_w_mean = lead_par_w_mean;
+  rep_->lead_par_w_var = lead_par_w_var;
+  rep_->gen_double_vec = &(residual_best);
+  rep_->postevent_double_vec = &(gau_scale_sqrt);
+
+  rep_->leaders = leaders;
+  rep_->pool = pool;
 
   rep->staged_flag = true;
+  rep->write_startup_diagnostics();
 }
 
 void relay::init_relay()
@@ -80,10 +101,10 @@ void relay::init_relay()
     double *dmin=&sp_min.Kn, *dmax=&sp_max.Kn;
 #pragma omp for
     for (int i = 0; i < npool; i++)
-      pool[i]->init_pool(param_len, Frames, dmin, dmax, r);
+      pool[i]->init_pool(dmin, dmax, r);
   }
   for (int i = 0; i < nlead; i++)
-    leaders[i]->init_leader(param_len, Frames);
+    leaders[i]->init_leader();
 }
 
 void relay::start_relay(int gen_max_, bool verbose_)
@@ -112,26 +133,17 @@ void relay::learn_first_leg(int gen_max_, bool verbose_)
     {
       if (first2finish)
       {
-        for (int i = 0; i < n*Frames; i++) global_event_frame_count[i] = rt->event_frame_count[i];
+        for (int i = 0; i < n*Frames; i++) global_event_frame_count[0][i] = rt->event_frame_count[0][i];
         first2finish=false;
       }
-      else for (int i = 0; i < n*Frames; i++) global_event_frame_count[i] += rt->event_frame_count[i];
+      else for (int i = 0; i < n*Frames; i++) global_event_frame_count[0][i] += rt->event_frame_count[0][i];
     }
   }
-  printf("(gen 0) First events identified. Event frames: ");
-  latest_event = event_observations = 0;
-  for (int i = 0; i < n; i++) for (int j = 0; j < Frames; j++)
-    if (global_event_frame_count[i][j])
-    {
-      event_end[i] = j-1;
-      event_observations+=2*event_end[i];
-      if (event_end[i]>latest_event) latest_event = event_end[i];
-      printf("%d ", j-1);
-      break;
-    }
-  printf("\n");
-
+  if (debugging_flag) rep->write_event_diagnostics(0);
+  check_gen0();
   gau_scale_sqrt = noise_tol*sqrt((double)(event_observations-1));
+  if (debugging_flag) rep->write_postevent_diagnostics(0);
+
   residual_worst = DBL_MAX;
   do // train off of the first events
   {
@@ -150,10 +162,62 @@ void relay::learn_first_leg(int gen_max_, bool verbose_)
     if (check_pool_results()) training_underway=false; // we win
     else if (gen_count == gen_max_) training_underway=false; // we give up
     else resample_pool(); // we try again
-    if (debugging_flag) rep->write_gen_diagnostics(gen_count, leader_count, worst_leader, best_leader, dup_count, dup_unique, repl_count);
+    if (debugging_flag) rep->write_gen_diagnostics(gen_count, leader_count);
   } while (training_underway);
-  if (debugging_flag) rep->close_diagnostics(gen_count, worst_leader, best_leader, t_wheels, min_res);
+  if (debugging_flag) rep->close_diagnostics(gen_count);
   printf("\n");
+}
+
+void relay::check_gen0()
+{
+  int nresamp = npool-nlead;
+  printf("(gen 0: First events identified. Event frames - ");
+  latest_event = event_observations = 0;
+  for (int i = 0; i < n; i++) for (int j = 0; j < Frames; j++)
+    if (global_event_frame_count[i][j])
+    {
+      event_end[i] = j-1;
+      event_observations+=2*event_end[i];
+      if (event_end[i]>latest_event) latest_event = event_end[i];
+      printf("%d ", j-1);
+      break;
+    }
+  printf("\n. Resampling %d weakest particles - \n", nresamp);
+
+  for (int i = 0; i < nlead; i++) leader_board[i] = pool[i];
+  int worst_best = find_worst_record(pool, nlead);
+  for (int i = nlead; i < nresamp; i++)
+  {
+    if (leader_board[worst_best]->isworse(pool[i]))
+    {
+      candidates[i-nlead] = leader_board[worst_best];
+      leader_board[worst_best] = pool[i];
+      worst_best = find_worst_record(leader_board, nlead);
+    }
+    else candidates[i-nlead] = pool[i];
+  }
+  int best_surviving = find_best_record(leader_board, nlead),
+      best_killed = find_best_record(candidates, nresamp),
+      worst_killed = find_worst_record(candidates, nresamp),
+      i_bs = leader_board[best_surviving]->global_index,
+      i_ws = leader_board[worst_best]->global_index,
+      i_bk = candidates[best_killed]->global_index,
+      i_wk = candidates[worst_killed]->global_index;
+
+  double  r_bs = leader_board[best_surviving]->residual,
+          r_ws = leader_board[worst_best]->residual,
+          r_bk = candidates[best_killed]->residual,
+          r_wk = candidates[worst_killed]->residual;
+
+  #pragma omp parallel
+    {
+      AYrng *r = rng[thread_num()];
+      double *dmin=&sp_min.Kn, *dmax=&sp_max.Kn;
+  #pragma omp for
+      for (int i = 0; i < nresamp; i++)
+        candidates[i]->resample(0, dmin, dmax, r);
+    }
+  printf("Done. Residuals %e to %e (%d, %d) kept. Residuals %e to %e (%d, %d) resampled. Beginning training:\n", r_bs, r_ws, i_bs, i_ws, r_bk, r_wk, i_bk, i_wk);
 }
 
 double relay::compute_leader_statistics()
@@ -172,12 +236,12 @@ double relay::compute_leader_statistics()
   #pragma omp parallel
   {
     runner *rt = runners[thread_num()];
-    double * param_buf = rt->param_mean;
+    double * param_buf = rt->param_acc;
     for (int i = 0; i < param_len; i++) param_buf[i] = 0.0;
     #pragma omp for nowait
     for (int i = 0; i < leader_count; i++)
     {
-      for (int j = 0; j < param_len; j++) param_buf[j]+=(sample_weights[i])*(leaders[i]->params[j])/(w_sum);
+      for (int j = 0; j < param_len; j++) param_buf[j]+=(sample_weights[i]*(leaders[i]->params[j]))/w_sum;
     }
     #pragma omp critical
     {
@@ -271,22 +335,22 @@ int relay::collect_candidates()
 
 bool relay::check_pool_results()
 {
-  pool_candidates = collect_candidates();
+  int pool_candidates_local = pool_candidates = collect_candidates();
   // if we now have a full leader roster
   repl_count=0;
-  if (leader_count + pool_candidates >= nlead)
+  if (leader_count + pool_candidates_local >= nlead)
   {
     // fill up remainder of leaders
     for (int i = 0, gap = nlead-leader_count; i < gap; i++)
     {
       leader_board[leader_count] = leaders[leader_count];
-      leaders[leader_count++]->take_vals(candidates[--pool_candidates]);
+      leaders[leader_count++]->take_vals(candidates[--pool_candidates_local]);
     }
 
     int worst_best = find_worst_record(leader_board, nlead);
 
     // consider the pool candidates, which are positioned adjacent to the current leaders on the leaderboard
-    for (int i = nlead; i < nlead + pool_candidates; i++)
+    for (int i = nlead; i < nlead + pool_candidates_local; i++)
       if (leader_board[worst_best]->isworse(leader_board[i]))
       {
         leader_board[worst_best] = leader_board[i];
@@ -315,47 +379,6 @@ bool relay::check_pool_results()
   best_leader = find_best_record(leaders, leader_count);
   residual_best = leaders[best_leader]->residual;
   printf("Best: (ID, gen, parents, residual) = (%d %d %d %e), %d replacements. ", best_leader, leaders[best_leader]->gen, leaders[best_leader]->parent_count, residual_best, repl_count);
-  if (sqrt(residual_best)<) return true;
+  if (sqrt(residual_best)<gau_scale_sqrt) return true;
   return false;
-}
-void relay::collect_gen0_leaders()
-{
-  int worst_best;
-  pool_success_count = 0;
-  for (int i = 0; i < npool; i++) candidates[pool_success_count++] = pool[i];
-  if (pool_success_count > nlead) // if we have lots of good candidates
-  {
-    // we seek to pick the nlead best grades for comparison.
-    worst_best = find_worst_record(candidates, nlead);
-    for (int i = nlead; i < pool_success_count; i++)
-      if (candidates[worst_best]->isworse(candidates[i]))
-      {
-        candidates[worst_best] = candidates[i];
-        worst_best = find_worst_record(candidates, nlead);
-      }
-    pool_candidates = nlead;
-  }
-  else pool_candidates = pool_success_count;
-
-  // fill up remainder of leaders
-  for (int i = 0, gap = nlead-leader_count; i < gap; i++)
-  {
-    leader_board[leader_count] = leaders[leader_count];
-    leaders[leader_count++]->take_vals(candidates[--pool_candidates]);
-  }
-
-  worst_best = find_worst_record(leader_board, nlead);
-
-  worst_leader = worst_best; // this will be the worst leader
-  residual_worst = leader_board[worst_best]->residual;
-
-  for (int i = 0; i < nlead; i++)
-    if (leaders[i]->global_index != leader_board[i]->global_index)
-    {
-      leaders[i]->take_vals(leader_board[i]);
-      leader_board[i] = leaders[i];
-    }
-  best_leader = find_best_record(leaders, leader_count);
-  residual_best = leaders[best_leader]->residual;
-  printf("Best: (ID, residual) = (%d %e). ", best_leader, residual_best);
 }

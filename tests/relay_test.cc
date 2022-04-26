@@ -14,6 +14,10 @@ const int nlead = 500;
 const int npool = 1000;
 const int param_len = 12;
 const double dt_sim = 0.002;
+const double t_wheels = 0.012; // should we crank this up?
+const double noise_tol = 1e-8;
+const double weight_ceiling = 1e10;
+const double alpha_tol=100.0;
 char proc_loc[] = "./dat_dir/";
 int main()
 {
@@ -47,11 +51,11 @@ int main()
   reporter rep;
   rep.init_relay(proc_loc, rydat_dir, file_name, relay_id);
 
-  referee ref(nlead, npool, nA, param_len, dt_sim);
+  referee ref(nlead, npool, param_len, dt_sim, noise_tol, alpha_tol, weight_ceiling);
   relay prelay(ref, sp_min,sp_max,wl,t_phys,&rep);
   prelay.init_relay();
   prelay.start_relay(generations);
-  prelay.make_best_swirl(swbest_name);
+  // prelay.make_best_swirl(swbest_name);
 
   return 0;
 }

@@ -44,21 +44,6 @@ classdef swirl_plots
             ylabel(ax_, 'accumulated position error', 'Interpreter', 'Latex', 'Fontsize', 14)
             title(ax_, '\textbf{plot frame error}', 'Interpreter', 'Latex', 'Fontsize', 14)
         end
-        function plot_param_error( ax_, base_color, par_err_, par_true, I_best, I_truest, I_leader)
-            par_err = par_err_./abs(par_true);
-            [len_par, len_gp] = size(par_err);
-            box(ax_,'on');
-            hold(ax_, 'on');
-            for i=1:len_gp
-                plot(ax_, 1:len_par, par_err(:,i), ' -', 'Color', [base_color, 0.1], 'LineWidth', 1);
-            end
-            plot(ax_, 1:len_par, par_err(:,I_best), ' -', 'Color', [0 0 0], 'LineWidth', 1);
-            plot(ax_, 1:len_par, par_err(:,I_truest), ' :', 'Color', [0 0 0], 'LineWidth', 1);
-            plot(ax_, 1:len_par, par_err(:,I_leader), ' -.', 'Color', [0 0 0], 'LineWidth', 1);
-            xlabel(ax_, 'parameter index', 'Interpreter', 'Latex', 'Fontsize', 14)
-            ylabel(ax_, 'parameter error', 'Interpreter', 'Latex', 'Fontsize', 14)
-            title(ax_, '\textbf{plot param error}', 'Interpreter', 'Latex', 'Fontsize', 14)
-        end
         function plot_param_error_leaders( ax_, base_color, par_err_, par_true, I_best, I_truest, I_leaders, nlead)
             par_err = par_err_./abs(par_true);
             [len_par, len_gp] = size(par_err);

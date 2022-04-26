@@ -1,20 +1,26 @@
 #ifndef PARTICLE_RELAY_HH
 #define PARTICLE_RELAY_HH
 
+#include "swirl.hh"
+#include "RYdat2AYdat.hh"
+
 #ifdef _OPENMP
 #include "omp.h"
 #endif
 
-const int record_int_len=7;
-const int record_double_len=2;
+const int record_int_len=6;
+const int record_double_len=3;
+
+const int record_int_chunk_count = 1;
+const int record_double_chunk_count = 2;
 
 struct record
 {
   bool success;
-  int len,Frames;
 
   const int beads;
-
+  const int Frames;
+  const int len;
   const int global_index;
         int gen; // generation in which this particle was generated
         int parent_gen; // generation this particle comes from
@@ -22,9 +28,9 @@ struct record
         int parent_global_index; // index position of parent particle
         int dup_count; // number of times this particle has been duplicated
 
-  double  residual,
-          event_residual,
-          weight;
+  double residual;
+  double event_residual;
+  double weight;
 
   int * const event_positions;
 
@@ -32,20 +38,18 @@ struct record
   double * const residual_data;
   double * const alpha_data;
 
-  record(int i_, double * params_): global_index(i_), params(params_) {}
+  record(int beads_, int Frames_, int len_, int i_, int * int_chunk_, double * params_, double * double_chunk_): beads(beads_), Frames(Frames_), len(len_), global_index(i_), event_positions(int_chunk_), params(params_), residual_data(double_chunk_), alpha_data(double_chunk_+beads_) {}
   ~record() {}
 
-  void reset_record(int gen_);
+  void reset_record(int gen_, int p_gen_=-1, int p_count_=0, int p_gi_=-1);
   void resample(int gen_, double * dmin_, double *dmax_, AYrng * r_);
   void duplicate(record *parent_, int gen_, double *dmin_, double *dmax_, AYrng * r_, double * var_);
   void take_vals(record * rtake_);
 
-  inline void init(int len_, int Frames_)
-  {len=len_; Frames=Frames_;}
-  inline void init_leader(int len_, int Frames_)
-  {init(len_, Frames_); reset_record(0);}
-  inline void init_pool(int len_, int Frames_, double * dmin_, double *dmax_, AYrng * r_)
-  {init(len_, Frames_); resample(0,dmin_,dmax_,r_);}
+  inline void init_leader()
+  {reset_record(0);}
+  inline void init_pool(double * dmin_, double *dmax_, AYrng * r_)
+  {resample(0,dmin_,dmax_,r_);}
   inline bool check_success(double residual_, double residual_worst_)
   {residual = residual_; return success=residual<residual_worst_;}
   inline bool isbetter(record * rcomp_)
@@ -65,21 +69,25 @@ class runner: public swirl
       const int nlead;
       const int npool;
 
-      const double tol;
+
       const double t_phys;
       const double dt_sim;
-      const double alpha_tol=100.0;
+      const double alpha_tol;
 
       int frame;
 
-      int *lead_dup_count, // length = nlead
-          *frame_kill_count; // length = Frames
+      double  pos_res_acc;
 
-      double  pos_res_acc,
-              *frame_res_data, // [pos_res|max_err|pos_res_dead|pos_res_alive]
-              *param_mean;
+      int *lead_dup_count,
+          *kill_frames,
+          **event_frame_count;
 
-      runner(swirl_param &sp_, proximity_grid * pg_, wall_list &wl_, int n_, int thread_id_, int param_len_, int Frames_, double tol_, double t_phys_, double dt_sim_, double t_wheels_, double *ts_, double *xs_, double *d_ang_, int ic_index_, int nlead_, int npool_);
+      double  *pvals, *ts, *xs, *d_ang, *comega_s,
+              *param_acc,
+              **pos_res, **alpha_INTpos_res,
+              **INTpos_res;
+
+      runner(swirl_param &sp_, proximity_grid * pg_, wall_list &wl_, int n_, int thread_id_, int param_len_, int Frames_, int nlead_, int npool_, double t_phys_, double dt_sim_, double alpha_tol_, double *ts_, double *xs_, double *d_ang_, double *comega_s);
       ~runner();
 
       void reset_sim(double *ptest_);
@@ -92,27 +100,6 @@ class runner: public swirl
       void update_diagnostics(int *frame_kill_count_, double *gen_frame_res_data_);
 
     private:
-      bool  dead;
-
-      int   n_test,
-            *kill_frames,
-            **event_frame_count;
-
-      double  *pvals,
-              *ts, *xs, *d_ang,
-              **pos_res, **alpha_INTpos_res,
-              **INTpos_res;
-
-      void compute_error(double *f_, double dur_);
-
-
-      inline double advance_runner()
-      {
-        double dur=(ts[frame]-ts[frame-1])/t_phys, ctheta=d_ang[frame-1], comega=d_ang[frame]-d_ang[frame-1];
-        if(comega>M_PI) comega-=2*M_PI; else if(comega<-M_PI) comega+=2*M_PI; comega/=dur;
-        advance(dur, ctheta, comega, dt_sim);
-        return dur;
-      }
       inline void clear_event_data()
       {for (int i = 0; i < n*Frames; i++) event_frame_count[0][i] = 0;}
       inline double alpha_comp(double *a_, double t_m1, double t_p1)
@@ -125,39 +112,40 @@ class runner: public swirl
 
 struct referee
 {
-  /** The maximum simulation timestep to use. */
-  const double dt_sim;
-  const double noise_tol; // of same order as standard deviation
-  const double max_weight_ceiling = 1e13;
-
   const int nlead;
   const int npool;
-  const int nA;
   const int param_len;
+
+  /** The maximum simulation timestep to use. */
+  const double dt_sim;
+  const double noise_tol; // projected standard deviation of noised data
+  const double alpha_tol; // threshold for event detection
+  const double max_weight_ceiling;
 
   record  **records,
           **leaders, **pool,
           **leader_board, **candidates;
 
-  // memory chunks to store parameters associated with particles
-  double  **param_chunk;
+  int **record_int_chunk,
+      **global_event_frame_count,
+      *lead_dup_count,
+      *event_end; // conservative estimate for pre-collision frame
 
-  int *lead_dup_count,
-      *global_event_frame_count;
 
-  double  *sample_weights, // length = nlead
-          *gen_frame_res_data, // [pos_res|max_err|pos_res_dead|pos_res_alive]
+  double  **param_chunk,
+          **record_double_chunk,
+          *sample_weights,
           *lead_par_w_mean,
           *lead_par_w_var;
 
   bool alloc_flag=false;
 
-  referee(int nlead_, int npool_, int nA_, int param_len_, double dt_sim_, double t_wheels_): nlead(nlead_), npool(npool_), nA(nA_), param_len(param_len_), dt_sim(dt_sim_), t_wheels(t_wheels_) {}
-  referee(referee &ref_): nlead(ref_.nlead), npool(ref_.npool), nA(ref_.nA), param_len(ref_.param_len), dt_sim(ref_.dt_sim), t_wheels(ref_.t_wheels) {}
+  referee(int nlead_, int npool_, int param_len_, double dt_sim_, double noise_tol_, double alpha_tol_, double max_weight_ceiling_): nlead(nlead_), npool(npool_), param_len(param_len_), dt_sim(dt_sim_), noise_tol(noise_tol_), alpha_tol(alpha_tol_), max_weight_ceiling(max_weight_ceiling_) {}
+  referee(referee &ref_): nlead(ref_.nlead), npool(ref_.npool), param_len(ref_.param_len), dt_sim(ref_.dt_sim), noise_tol(ref_.noise_tol), alpha_tol(ref_.alpha_tol), max_weight_ceiling(ref_.max_weight_ceiling) {}
 
   ~referee();
 
-  void alloc_records(int nt_, int Frames_);
+  void alloc_records(int nt_, int Frames_, int beads_);
 };
 
 class reporter : public ODR_struct
@@ -165,17 +153,38 @@ class reporter : public ODR_struct
   public:
     bool staged_flag = false;
     int relay_id;
-    int nlead, npool, nA, param_len;
+
+
+    const int n;
+    /** The total number of snapshots. */
+    const int Frames;
+
+    int nlead,
+        npool,
+        param_len,
+        beads,
+        Frames;
+
+    double  dt_sim,
+            noise_tol,
+            alpha_tol,
+            max_weight_ceiling,
+            t_phys;
 
     int *lead_dup_count,
-        *frame_kill_count;
+        *global_event_frame_count,
+        *event_end,
+        *gen_int_vec,
+        *postevent_int_vec;
 
     double  *sample_weights,
-            *gen_frame_res_data,
-            *gen_param_mean,
-            *gen_param_var;
+            *lead_par_w_mean,
+            *lead_par_w_var,
+            *gen_double_vec,
+            *postevent_double_vec;
 
     record ** leaders;
+    record ** pool;
 
     reporter() : ODR_struct() {}
     ~reporter() {}
@@ -183,10 +192,17 @@ class reporter : public ODR_struct
       void init_relay(const char *proc_loc_, const char *rydat_dir_, const char *file_name_, int relay_id_)
         {init_relay((char*)proc_loc_,(char*)rydat_dir_,(char*)file_name_, relay_id_);}
 
-    void write_gen_diagnostics(int gen_count_, int leader_count_, int worst_leader_, int best_leader_, int dup_count_, int resample_count_, int dup_unique_, int repl_count_, double t_wheels_, double min_res_);
+    void write_startup_diagnostics();
+    void write_event_diagnostics(int event_);
+    void write_postevent_diagnostics(int event_, int event_observations_, int latest_event, double gau_scale_sqrt_)
     void close_diagnostics(int gen_count_, int worst_leader_, int best_leader_, double t_wheels_, double min_res_);
     ODR_struct * spawn_swirlODR(char *name_);
 };
+
+const int event_int_len=2;
+const int event_double_len=2;
+const int gen_int_len=10;
+const int gen_double_len=2;
 
 class relay : public referee
 {
@@ -196,11 +212,11 @@ class relay : public referee
     /** The maximum parameters. */
     swirl_param sp_max;
     /** The simulation time in seconds. */
-    double t_phys;
+    const double t_phys;
     /** The total number of beads. */
-    int n;
+    const int n;
     /** The total number of snapshots. */
-    int Frames;
+    const int Frames;
     /** The time points of the snapshots. */
     double* ts;
     /** The bead positions at the snapshots. */
@@ -208,22 +224,29 @@ class relay : public referee
     /** The dish angle data at the snapshots. */
     double* d_ang;
 
-    /** the data index we take to be the initial conditions of the experiment */
-    const int ic_index;
+    int gen_count;
+    int leader_count;
+    int pool_success_count;
+    int pool_candidates;
+    int best_leader;
+    int worst_leader;
+    int repl_count;
+    int dup_count;
+    int dup_unique;
+    int resample_count;
 
-    int leader_count,
-        pool_success_count,
-        pool_candidates,
-        gen_count;
+    int event_observations;
+    int latest_event;
 
-    double  residual_worst,
-            residual_best,
-            gau_scale_sqrt,
-            max_weight_factor;
+    double residual_best;
+    double residual_worst;
+
+    double gau_scale_sqrt;
+    double max_weight_factor;
 
     reporter * rep;
 
-    relay(referee &ref_, swirl_param &sp_min_, swirl_param &sp_max_, wall_list &wl_,double t_phys_,reporter * ped_,int ic_index_=0);
+    relay(referee &ref_, swirl_param &sp_min_, swirl_param &sp_max_, wall_list &wl_,double t_phys_,reporter * rep_);
     ~relay();
 
     void init_relay();
@@ -236,15 +259,6 @@ class relay : public referee
     private:
       /** The number of threads. */
       const int nt;
-
-      int best_leader,
-          worst_leader,
-          dup_count,
-          resample_count,
-          dup_unique,
-          repl_count,
-          latest_event,
-          event_observations;
 
       bool debugging_flag=true;
 

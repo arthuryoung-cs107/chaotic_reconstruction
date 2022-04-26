@@ -114,6 +114,13 @@ classdef error_plots < swirl_plots
             apply_plot_labels(ax_, 'Frames', 'change in position error', 'plot_delerr_vs_frames');
             % set(ax_, 'YScale', 'log');
         end
+
+        function plot_param_error( ax_, base_color, par_err_, par_true, I_best, I_truest, I_leader)
+            [x_vec, pos_err, I_best, I_truest, I_leader] = deal(1:st.sw0.len_par, (st.par_err./reshape(abs(st.sw0.params), 1,[]))', st.I_best(1), st.I_truest(1), st.I_leader(1));
+            plot_generic_frame_data(ax_, x_vec, Y_mat, struct('base_color', base_color, 'I1', I_best, 'I2', I_truest, 'I3', I_leader));
+            apply_plot_labels(ax_, 'index', 'parameter error', 'plot_param_error');
+            % set(ax_, 'YScale', 'log');
+        end
     end
 end
 
