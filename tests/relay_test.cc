@@ -8,11 +8,10 @@
 
 const int nbeads=3;
 const int param_id=0;
-const int relay_id=0;
+const int relay_id=1;
 const int generations=100;
 const int nlead = 500;
 const int npool = 1000;
-// const int param_len = 7;
 const int param_len = 12;
 const double dt_sim = 0.002;
 const double t_wheels = 0.012;

@@ -180,42 +180,46 @@ void relay::check_gen0()
       printf("%d ", j-1);
       break;
     }
-  printf("\n Resampling %d weakest particles - \n", nresamp);
-
-  for (int i = 0; i < nlead; i++) leader_board[i] = pool[i];
-  int worst_best = find_worst_record(pool, nlead);
-  for (int i = nlead; i < npool; i++)
+  if (gen0_resample_flag)
   {
-    if (leader_board[worst_best]->isworse(pool[i]))
+    printf(". Resampling %d weakest particles - \n", nresamp);
+
+    for (int i = 0; i < nlead; i++) leader_board[i] = pool[i];
+    int worst_best = find_worst_record(pool, nlead);
+    for (int i = nlead; i < npool; i++)
     {
-      candidates[i-nlead] = leader_board[worst_best];
-      leader_board[worst_best] = pool[i];
-      worst_best = find_worst_record(leader_board, nlead);
+      if (leader_board[worst_best]->isworse(pool[i]))
+      {
+        candidates[i-nlead] = leader_board[worst_best];
+        leader_board[worst_best] = pool[i];
+        worst_best = find_worst_record(leader_board, nlead);
+      }
+      else candidates[i-nlead] = pool[i];
     }
-    else candidates[i-nlead] = pool[i];
+    int best_surviving = find_best_record(leader_board, nlead),
+        best_killed = find_best_record(candidates, nresamp),
+        worst_killed = find_worst_record(candidates, nresamp),
+        i_bs = leader_board[best_surviving]->global_index,
+        i_ws = leader_board[worst_best]->global_index,
+        i_bk = candidates[best_killed]->global_index,
+        i_wk = candidates[worst_killed]->global_index;
+
+    double  r_bs = leader_board[best_surviving]->residual,
+            r_ws = leader_board[worst_best]->residual,
+            r_bk = candidates[best_killed]->residual,
+            r_wk = candidates[worst_killed]->residual;
+
+    #pragma omp parallel
+      {
+        AYrng *r = rng[thread_num()];
+        double *dmin=&sp_min.Kn, *dmax=&sp_max.Kn;
+    #pragma omp for
+        for (int i = 0; i < nresamp; i++)
+          candidates[i]->resample(0, dmin, dmax, r);
+      }
+    printf("Done. Residuals %e to %e (%d, %d) kept. Residuals %e to %e (%d, %d) resampled. Beginning training:\n", r_bs, r_ws, i_bs, i_ws, r_bk, r_wk, i_bk, i_wk);
   }
-  int best_surviving = find_best_record(leader_board, nlead),
-      best_killed = find_best_record(candidates, nresamp),
-      worst_killed = find_worst_record(candidates, nresamp),
-      i_bs = leader_board[best_surviving]->global_index,
-      i_ws = leader_board[worst_best]->global_index,
-      i_bk = candidates[best_killed]->global_index,
-      i_wk = candidates[worst_killed]->global_index;
-
-  double  r_bs = leader_board[best_surviving]->residual,
-          r_ws = leader_board[worst_best]->residual,
-          r_bk = candidates[best_killed]->residual,
-          r_wk = candidates[worst_killed]->residual;
-
-  #pragma omp parallel
-    {
-      AYrng *r = rng[thread_num()];
-      double *dmin=&sp_min.Kn, *dmax=&sp_max.Kn;
-  #pragma omp for
-      for (int i = 0; i < nresamp; i++)
-        candidates[i]->resample(0, dmin, dmax, r);
-    }
-  printf("Done. Residuals %e to %e (%d, %d) kept. Residuals %e to %e (%d, %d) resampled. Beginning training:\n", r_bs, r_ws, i_bs, i_ws, r_bk, r_wk, i_bk, i_wk);
+  else printf(". Skipping gen0 resampling. Beginning training\n");
 }
 
 double relay::compute_leader_statistics()

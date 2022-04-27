@@ -22,7 +22,7 @@ diagnostics_fig.init_tiles([3, 3]);
 
 nbeads = 3;
 par_id = 0;
-relay_id = 0;
+relay_id = 1;
 test = 'maxmin'; %% parameter perturbation
 ran_id = 1;
 

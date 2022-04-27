@@ -251,7 +251,7 @@ class relay : public referee
     double residual_best;
     double residual_worst;
     double pos_res_global;
-    double gau_scale = 2.0; 
+    double gau_scale = 2.0;
 
     double gau_scale_sqrt;
     double max_weight_factor;
@@ -272,8 +272,8 @@ class relay : public referee
       /** The number of threads. */
       const int nt;
 
-      bool debugging_flag=true;
-
+      bool  debugging_flag=true,
+            gen0_resample_flag=false;
 
       /** A reference to the list of walls for the swirling simulation. */
       wall_list &wl;
