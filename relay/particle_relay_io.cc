@@ -123,7 +123,7 @@ void reporter::close_diagnostics(int gen_count_)
 {
   int header[] = {gen_int_len,gen_double_len}; // {int_len, double_len}
 
-  char * buf_it = out_buf+obuf_end; sprintf(buf_it, "%s.re%d_end.redat", file_name, relay_id, gen_count_);
+  char * buf_it = out_buf+obuf_end; sprintf(buf_it, "%s.re%d_end.redat", file_name, relay_id);
   FILE * out_dat = fopen(out_buf, "wb");
 
   fwrite(header, sizeof(int), 2, out_dat);
