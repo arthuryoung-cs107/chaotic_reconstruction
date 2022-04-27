@@ -85,6 +85,6 @@ clean_relay:
 
 clean_process: clean_swirl
 
-clean: clean_ clean_swirl clean_filter clean_race clean_relay
+clean: clean_ clean_swirl clean_filter clean_race clean_walk clean_relay
 
-clean_all: clean_ clean_AY clean_swirl clean_filter clean_race clean_relay
+clean_all: clean_ clean_AY clean_swirl clean_filter clean_race clean_walk clean_relay
