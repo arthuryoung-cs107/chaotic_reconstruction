@@ -226,7 +226,7 @@ double relay::compute_leader_statistics()
   double w_sum = 0.0;
   for (int i = 0; i < leader_count; i++)
   {
-    w_sum += sample_weights[i] = leaders[i]->w(max_weight_factor,gau_scale_sqrt);
+    w_sum += sample_weights[i] = leaders[i]->w(pos_res_global, gau_scale);
     lead_dup_count[i] = 0;
   }
 
@@ -358,13 +358,18 @@ bool relay::check_pool_results()
     worst_leader = worst_best; // this will be the worst leader
     residual_worst = leader_board[worst_best]->residual;
 
+    double resacc_local = 0.0;
     for (int i = 0; i < nlead; i++)
+    {
+      resacc_local+=leader_board[i]->residual;
       if (leaders[i]->global_index != leader_board[i]->global_index)
       {
         repl_count++;
         leaders[i]->take_vals(leader_board[i]);
         leader_board[i] = leaders[i];
       }
+    }
+    pos_res_global=resacc_local/((double)(leader_count-1));
   }
   // otherwise, we can just fill in the leaderboard
   else for (int i = 0; i < pool_candidates; i++)
@@ -375,8 +380,9 @@ bool relay::check_pool_results()
   }
 
   best_leader = find_best_record(leaders, leader_count);
-  residual_best = leaders[best_leader]->residual;
-  printf("Best: (ID, gen, parents, residual) = (%d %d %d %e), %d replacements. ", best_leader, leaders[best_leader]->gen, leaders[best_leader]->parent_count, residual_best, repl_count);
+  record * wl_rec = leaders[worst_leader], * bl_rec = leaders[best_leader];
+  residual_best = bl_rec->residual;
+  printf("Best/Worst: (ID, gen, parents, residual) = (%d/%d %d/%d %d/%d %e/%e), %d replacements. ", bl_rec->global_index, wl_rec->global_index, bl_rec->gen, wl_rec->gen, bl_rec->parent_count, wl_rec->parent_count, residual_best, residual_worst, repl_count);
   if (sqrt(residual_best)<gau_scale_sqrt) return true;
   return false;
 }

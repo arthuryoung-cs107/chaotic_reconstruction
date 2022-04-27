@@ -8,6 +8,7 @@
 #include <gsl/gsl_vector.h>
 #include <gsl/gsl_linalg.h>
 #include <gsl/gsl_rng.h>
+#include <gsl/gsl_randist.h>
 
 class AYrng
 {
@@ -29,9 +30,15 @@ class AYrng
         virtual double rand_gen() {return 0.0;}
         virtual double rand_gen_gsl() {return 0.0;}
         double rand_uni_gsl(double low_, double high_);
-        double rand_gau_gsl(double mu_, double var_);
+        double rand_gau_gsl_old(double mu_, double var_);
         double dseed();
         double dcarry();
+        inline double rand_gau_gsl(double mu_, double std_)
+        {
+          if (gsl_gen==NULL) rng_init_gsl();
+          return mu_+gsl_ran_gaussian(gsl_gen,std_);
+        }
+
 };
 
 class AYuniform : public AYrng

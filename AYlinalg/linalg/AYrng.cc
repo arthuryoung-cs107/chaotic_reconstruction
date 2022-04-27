@@ -25,7 +25,7 @@ double AYrng::rand_uni_gsl(double low_, double high_)
   if (gsl_gen==NULL) rng_init_gsl();
   return (gsl_rng_uniform(gsl_gen)-0.5)*(high_-low_) + ((high_+low_)/2.0);
 }
-double AYrng::rand_gau_gsl(double mu_, double var_)
+double AYrng::rand_gau_gsl_old(double mu_, double var_)
 {
   if (gsl_gen==NULL) rng_init_gsl();
   double uni1=gsl_rng_uniform(gsl_gen), uni2=gsl_rng_uniform(gsl_gen);

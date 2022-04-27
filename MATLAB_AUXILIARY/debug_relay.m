@@ -17,17 +17,30 @@ pos_full = [1 1 1728 1000];
 pos_top_row = [1 551 1728 460];
 pos_bottom_row = [0 1 1728 460];
 
-relay_diagnostics_fig = AYfig(AYfig.specs_gen('relay_diagnostics',pos_full));
-relay_diagnostics_fig.init_tiles([3, 3]);
+diagnostics_fig = AYfig(AYfig.specs_gen('relay_diagnostics',pos_full));
+diagnostics_fig.init_tiles([3, 3]);
 
 nbeads = 3;
 par_id = 0;
 relay_id = 0;
+test = 'maxmin'; %% parameter perturbation
+ran_id = 1;
+
 
 relay = read_relay(nbeads, par_id, relay_id);
-relay_plots.plot_3bead_event_stats(relay_diagnostics_fig.ax_tile, blue5, red5, green4, relay);
-% relay_plots.plot_param_error()
+stat = read_stat(nbeads,'maxmin',0);
+swtrue = stat.sw0;
+gen_last = relay.specs.gen_last;
+true_params = swtrue.params(3:end);
+last_indices = (gen_last-length(diagnostics_fig.ax_tile)+1):gen_last;
+first_indices = 1:length(diagnostics_fig.ax_tile);
+plot_indices = first_indices;
 
+% relay_plots.plot_3bead_event_stats(diagnostics_fig.ax_tile, blue5, red5, green4, relay);
+relay_plots.plot_gen_param_error(diagnostics_fig.ax_tile, green4, relay, true_params, plot_indices);
+% relay_plots.plot_gen_weights(diagnostics_fig.ax_tile, pink1, relay, plot_indices);
+% relay_plots.plot_gen_duplication_count(diagnostics_fig.ax_tile, purple1, relay, plot_indices);
+% relay_plots.plot_gen_weight_vs_dup(diagnostics_fig.ax_tile, blue1, relay, plot_indices);
 
 %%%%%%%% ----------------------------------------------------------------------------------
 %%%%%%%% ------------------------------  end plots  ---------------------------------
@@ -38,5 +51,5 @@ if (write_figs)
   %   figs_to_write = 1:length(figs);
   % end
   % AYfig.save_figs(figs, figs_to_write, save_type, save_dir);
-  AYfig.save_fig(relay_diagnostics_fig.fig, save_type, save_dir);
+  AYfig.save_fig(diagnostics_fig.fig, save_type, save_dir);
 end

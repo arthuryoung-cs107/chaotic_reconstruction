@@ -38,6 +38,12 @@ classdef relay_data
 
             event0 = event(dat_dir_name_, exp_name_, dat_name_, relay_id_, 0, specs);
 
+            gen = relay_generation.empty(specs.gen_last, 0);
+
+            for i = 1:specs.gen_last
+                gen(i) = relay_generation(dat_dir_name_, exp_name_, dat_name_, relay_id_, i, specs);
+            end
+
             %%% assignments
 
             obj.dat_dir_name = dat_dir_name_;
@@ -47,6 +53,7 @@ classdef relay_data
 
             obj.specs = specs;
             obj.event0 = event0;
+            obj.gen = gen; 
         end
         function write_relay_test(obj, params_, test_)
             header=size(params_);

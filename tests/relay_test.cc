@@ -9,7 +9,7 @@
 const int nbeads=3;
 const int param_id=0;
 const int relay_id=0;
-const int generations=50;
+const int generations=100;
 const int nlead = 500;
 const int npool = 1000;
 // const int param_len = 7;
@@ -53,15 +53,14 @@ int main()
   rep.init_relay(proc_loc, rydat_dir, file_name, relay_id);
 
   referee ref(nlead, npool, param_len, dt_sim, noise_tol, alpha_tol, weight_ceiling);
-
-  // doctor doc(ref, sp_min,sp_max,wl,t_phys,&rep);
-  // doc.init_test(0);
-  // doc.run_test(180);
-
   relay prelay(ref, sp_min,sp_max,wl,t_phys,&rep);
   prelay.init_relay();
   prelay.start_relay(generations);
   // prelay.make_best_swirl(swbest_name);
+
+  // doctor doc(ref, sp_min,sp_max,wl,t_phys,&rep);
+  // doc.init_test(0);
+  // doc.run_test(1201);
 
   return 0;
 }

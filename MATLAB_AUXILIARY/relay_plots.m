@@ -33,11 +33,57 @@ classdef relay_plots
             apply_plot_labels(axs_(8), 'final alpha', 'count', 'bead_2_final_alpha');
             apply_plot_labels(axs_(9), 'final alpha', 'count', 'bead_3_final_alpha');
         end
+        function plot_gen_weights(axs_, base_color, re, indices_)
+            axi = 1;
+            for i = indices_
+                histogram(axs_(axi), re.gen(i).sample_weights, 'FaceColor', base_color)
+                apply_plot_labels(axs_(axi), 'weights', 'counts', ['gen_' num2str(i) '_weights']);
+                axi=axi+1;
+            end
+        end
+        function plot_gen_duplication_count(axs_, base_color, re, indices_)
+            axi = 1;
+            for i = indices_
+                histogram(axs_(axi), re.gen(i).lead_dup_count , 'FaceColor', base_color)
+                apply_plot_labels(axs_(axi), 'duplication count', 'counts', ['gen_' num2str(i) '_duplication_count']);
+                axi=axi+1;
+            end
+        end
+        function plot_gen_weight_vs_dup(axs_, base_color, re, indices_)
+            axi = 1;
+            for i = indices_
+                box(axs_(axi),'on');
+                hold(axs_(axi), 'on');
+                plot(axs_(axi),re.gen(i).sample_weights, re.gen(i).lead_dup_count, ' o', 'Color', base_color, 'LineWidth', 2);
+                xlim(axs_(axi), [min(re.gen(i).sample_weights), max(re.gen(i).sample_weights)]);
+                ylim(axs_(axi), [min(re.gen(i).lead_dup_count), max(re.gen(i).lead_dup_count)]);
+                apply_plot_labels(axs_(axi), 'weight', 'duplication count', ['gen_' num2str(i) '_weight_vs_duplication_count']);
+
+                set(axs_(axi), 'XScale', 'log');
+                % set(axs_(axi), 'YScale', 'log');
+                axi=axi+1;
+            end
+        end
+        function plot_gen_param_error(axs_, base_color, re, par_true_, indices_)
+            axi = 1;
+            for i = indices_
+                plot_generic_frame_data(axs_(axi), 1:length(par_true_), ((par_true_-re.gen(i).params)./abs(par_true_))', struct('base_color', base_color));
+                apply_plot_labels(axs_(axi), 'indices', 'param err', ['gen_' num2str(i) '_param_error']);
+                axi=axi+1;
+            end
+        end
         function plot_param_error( ax_, base_color, par_mat_, par_true_)
             plot_generic_frame_data(ax_, 1:length(par_true_), ((par_true_-par_mat_)./abs(par_true_))', struct('base_color', base_color));
             apply_plot_labels(ax_, 'indices', 'param err', 'plot_param_error');
         end
     end
+end
+function plot_simple(ax_, x, y, plotspecs_)
+    box(ax_,'on');
+    hold(ax_, 'on');
+    plot(ax_,x, y, ' -', 'Color', plotspecs_.base_color, 'LineWidth', 2);
+    xlim(ax_, [min(x), max(x)]);
+    ylim(ax_, [min(y), max(y)]);
 end
 function plot_generic_frame_data(ax_, x, Y, plotspecs_)
     [len_gp, Frames] = size(Y);

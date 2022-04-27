@@ -6,71 +6,75 @@ classdef relay_generation
         gen_count;
         relay_id;
 
+        gen_specs;
+        lead_dup_count;
+        sample_weights;
+        lead_par_w_mean;
+        lead_par_w_var;
 
+        rec;
+        leader_data;
+        params;
     end
     methods
-        function obj = relay_generation(dat_dir_name_, exp_name_, dat_name_, gen_count_, relay_id_)
+        function obj = relay_generation(dat_dir_name_, exp_name_, dat_name_, relay_id_, gen_count_, specs)
+            dat = fopen([dat_dir_name_ exp_name_ dat_name_ '.re' num2str(relay_id_) '_gen' num2str(gen_count_) '.redat']);
+            header = fread(dat,[1, 2], 'int=>int');
+            int_vec = fread(dat,[1, header(1)], 'int=>int');
+            double_vec = fread(dat,[1, header(2)], 'double=>double');
 
-            dat = fopen([obj.dat_dir_name obj.exp_name obj.dat_name '.rc' num2str(obj.race_id) '_gen' num2str(obj.gen_count) '.rcdat']);
-            obj.specs = fread( dat,[1, obj.specs_len], 'int=>int');
-            obj.gen_correct = obj.gen_count == obj.specs(1);
-            obj.leader_count = obj.specs(2);
-            obj.par_len = obj.specs(5);
-            obj.wleader_index = obj.specs(6);
-            obj.bleader_index = obj.specs(7);
+            gen_specs = struct('gen_count', int_vec(1), ...
+                            'leader_count',int_vec(2), ...
+                            'pool_success_count',int_vec(3), ...
+                            'pool_candidates',int_vec(4), ...
+                            'best_leader',int_vec(5), ...
+                            'worst_leader',int_vec(6), ...
+                            'repl_count',int_vec(7), ...
+                            'dup_count',int_vec(8), ...
+                            'dup_unique',int_vec(9), ...
+                            'resample_count',int_vec(10), ...
+                            'residual_best', double_vec(1), ...
+                            'residual_worst', double_vec(2), ...
+                            'pos_res_global', double_vec(3));
+                            % 'residual_worst', double_vec(2));
 
-            obj.sample_weights = fread( dat,[1, obj.leader_count], 'double=>double');
+            lead_dup_count = fread(dat, [1,gen_specs.leader_count], 'int=>int');
+            sample_weights = fread(dat, [1,gen_specs.leader_count], 'double=>double');
+            lead_par_w_mean = fread(dat, [1,specs.param_len], 'double=>double');
+            lead_par_w_var = fread(dat, [1,specs.param_len], 'double=>double');
 
-            obj.records = record.empty(obj.leader_count, 0);
-            obj.frscores = nan(obj.leader_count, 1);
-            obj.l2scores = nan(obj.leader_count, 1);
-            obj.dup_vec = nan(obj.leader_count, 1);
-            obj.zvec = nan(obj.leader_count, 1);
-            obj.param_mat = nan(obj.par_len,obj.leader_count);
-            for i=1:obj.leader_count
-                int_vec = fread( dat,[1, obj.specs(3)], 'int=>int');
-                double_vec = fread( dat,[1, obj.specs(4)], 'double=>double');
-                param_it = fread( dat,[1, obj.par_len], 'double=>double');
-                obj.records(i) = record(int_vec, double_vec, param_it);
-                obj.frscores(i) = obj.records(i).frscore;
-                obj.l2scores(i) = obj.records(i).l2score;
-                obj.dup_vec(i) = obj.records(i).dup_count;
-                obj.param_mat(:,i) = param_it';
+            rec = relay_record.empty(gen_specs.leader_count, 0);
+            leader_data = struct('int_data', nan(specs.record_int_len, specs.nlead), ...
+                                'residual', nan(1, specs.nlead), ...
+                                'bead_residuals', nan(specs.beads, specs.nlead));
+            params = nan(specs.param_len, specs.nlead);
+            for i = 1:specs.nlead
+                leader_data.int_data(:,i) = fread(dat, [specs.record_int_len,1], 'int=>int');
+                leader_data.residual(i) = fread(dat, [1,1], 'double=>double');
+                leader_data.bead_residuals(:,i) = fread(dat, [specs.beads,1], 'double=>double');
+                params(:,i) = fread(dat, [specs.param_len,1], 'double=>double');
+                rec(i) = relay_record(params(:,i));
             end
             fclose(dat);
 
-            frmin = min(obj.frscores);
-            obj.zvec = (1./(obj.frscores-frmin+1)).*(1./obj.frscores).*obj.l2scores;
-            obj.lambda_z = 1/(mean(obj.zvec));
-            obj.w = obj.lambda_z*exp(-obj.lambda_z*obj.zvec);
+            %%% assignments
 
-        end
-        function best = get_best_record(obj)
-            best = obj.records(obj.bleader_index+1);
-        end
-    end
-    methods (Static)
-        function plot_gen_scores(ax, frscores, fcount)
-            fworst = min(frscores);
-            fbest = max(frscores);
-            frame_bins = fworst:fbest;
-            P = fcount/(sum(fcount));
-            lambda = dot(frame_bins,P);
+            obj.dat_dir_name = dat_dir_name_;
+            obj.exp_name = exp_name_;
+            obj.dat_name = dat_name_;
+            obj.relay_id = relay_id_;
 
-            [fmode_count, i_mode] = max(fcount);
-            fmode = fworst+i_mode-1;
-            fcount_h = fcount(i_mode:end);
-            frame_bins_h = fmode:fbest;
-            P_h = fcount_h/(sum(fcount_h));
-            lambda_h = dot(frame_bins_h,P_h);
+            obj.gen_count = gen_count_;
 
-            yyaxis(ax, 'left');
-            histogram(ax, frscores, fbest-fworst+1);
-            yyaxis(ax, 'right');
-            plot(ax, frame_bins, poisspdf(frame_bins, lambda),' o -', 'Color', [0 0 1], 'LineWidth', 2);
-            hold(ax, 'on')
-            plot(ax, frame_bins, poisspdf(frame_bins, lambda_h),' o -', 'Color', [1 0 0], 'LineWidth', 2);
-            hold(ax, 'off')
+            obj.gen_specs=gen_specs;
+            obj.lead_dup_count = lead_dup_count;
+            obj.sample_weights = sample_weights;
+            obj.lead_par_w_mean = lead_par_w_mean;
+            obj.lead_par_w_var = lead_par_w_var;
+
+            obj.rec = rec;
+            obj.leader_data = leader_data;
+            obj.params = params;
         end
     end
 end

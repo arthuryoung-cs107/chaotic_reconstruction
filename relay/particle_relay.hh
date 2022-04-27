@@ -58,8 +58,12 @@ struct record
   {return residual<rcomp_->residual;}
   inline bool isworse(record * rcomp_)
   {return !(isbetter(rcomp_));}
-  inline double w(double c_, double b_)
-  {return weight = exp(c_-0.5*(residual/b_)*(residual/b_));}
+  inline double w(double b_, double sca_)
+  {return weight = exp(-0.5*((sca_*residual)/b_));}
+  // inline double w(double b_)
+  // {return weight = exp(-0.5*(residual/b_));}
+  // inline double w(double c_, double b_)
+  // {return weight = exp(c_-(0.5*(residual/b_)/b_));}
 };
 
 class runner: public swirl
@@ -206,7 +210,7 @@ class reporter : public ODR_struct
 const int event_int_len=2;
 const int event_double_len=2;
 const int gen_int_len=10;
-const int gen_double_len=2;
+const int gen_double_len=3;
 
 class relay : public referee
 {
@@ -246,6 +250,8 @@ class relay : public referee
 
     double residual_best;
     double residual_worst;
+    double pos_res_global;
+    double gau_scale = 10.0; 
 
     double gau_scale_sqrt;
     double max_weight_factor;
@@ -267,6 +273,7 @@ class relay : public referee
       const int nt;
 
       bool debugging_flag=true;
+
 
       /** A reference to the list of walls for the swirling simulation. */
       wall_list &wl;
