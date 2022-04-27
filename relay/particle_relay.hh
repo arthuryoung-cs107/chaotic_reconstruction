@@ -251,7 +251,7 @@ class relay : public referee
     double residual_best;
     double residual_worst;
     double pos_res_global;
-    double gau_scale = 10.0; 
+    double gau_scale = 2.0; 
 
     double gau_scale_sqrt;
     double max_weight_factor;
