@@ -85,7 +85,7 @@ class runner: public swirl
           **event_frame_count;
 
       double  *pvals, *ts, *xs, *d_ang, *comega_s,
-              *param_acc, *alpha_kill, 
+              *param_acc, *alpha_kill,
               **pos_res, **alpha_INTpos_res,
               **INTpos_res;
 
@@ -100,6 +100,15 @@ class runner: public swirl
 
       inline void clear_event_data()
       {for (int i = 0; i < n*Frames; i++) event_frame_count[0][i] = 0;}
+
+      // testing quantities for our relay doctor
+
+      // double *TEST_pos, *TEST_ref_pos, *TEST_pos_res, *TEST_alpha_INTpos_res, *TEST_INTpos_res;
+      // void init_test_run(int Frame_end_);
+      // int start_test_detection(int start_);
+      // void test_run(record * rec_, int start_, int end_);
+      // void write_test_run(int Frame_end_);
+      // void conclude_test_run(int Frame_end_);
 
     private:
       inline double alpha_comp(double *a_, double t_m1, double t_p1)
@@ -253,7 +262,7 @@ class relay : public referee
       void make_best_swirl(const char *name_)
         {make_best_swirl((char*)name_);}
 
-    private:
+    protected:
       /** The number of threads. */
       const int nt;
 
@@ -289,6 +298,19 @@ class relay : public referee
         inline int thread_num() {return 0;}
 #endif
 };
+
+// class doctor : public relay
+// {
+//   public:
+//
+//     doctor(referee &ref_, swirl_param &sp_min_, swirl_param &sp_max_, wall_list &wl_,double t_phys_,reporter * rep_): relay(ref_, sp_min_, sp_max_, wl_,t_phys_,rep_) {}
+//     ~doctor() {}
+//
+//     void init_test(int test_id_);
+//     void run_test(int Frame_end_);
+//
+//
+// };
 
 int find_worst_record(record ** r, int ncap);
 int find_best_record(record ** r, int ncap);

@@ -9,6 +9,7 @@ classdef stat_data < swirl_group
         par_err;
         pos_err;
         pos_res;
+        pos_res_bead;
         pos_err_acc;
         par_mean;
 
@@ -61,6 +62,7 @@ classdef stat_data < swirl_group
             obj.par_err = -params_mat+params_true;
             obj.pos_err = cell2mat(cellfun(@(pos) frame_pos_err(swtrue.pos(:,1:2,:),reshape(pos,[beads,len_pos,Frames])), gp_cell(:,1), 'UniformOutput', false));
             obj.pos_res = cell2mat(cellfun(@(pos) frame_pos_res(swtrue.pos(:,1:2,:),reshape(pos,[beads,len_pos,Frames])), gp_cell(:,1), 'UniformOutput', false));
+            obj.pos_res_bead = pos_res_bead_struct(cellfun(@(pos) frame_pos_res_bead(swtrue.pos(:,1:2,:),reshape(pos,[beads,len_pos,Frames])), gp_cell(:,1), 'UniformOutput', false), beads, Frames, noise_len);
             obj.pos_err_acc = sum(obj.pos_err, 2);
             obj.par_mean = mean(params_mat, 2);
             [~,obj.I_best]=mink(obj.pos_err_acc, noise_len);
@@ -101,10 +103,23 @@ classdef stat_data < swirl_group
 end
 function pos_err_out = frame_pos_err(pos0,posi)
     diff = pos0-posi(:,1:2,:);
-    % pos_err_out = sum(sqrt(squeeze(sum(diff.*diff, 2)))./sqrt(squeeze(sum(pos0.*pos0, 2))), 1);
     pos_err_out = sum(sqrt(squeeze(sum(diff.*diff, 2))), 1);
 end
 function pos_res_out = frame_pos_res(pos0,posi)
     diff = pos0-posi(:,1:2,:);
     pos_res_out = sum(squeeze(sum(diff.*diff, 2)), 1);
+end
+function pos_res_out = frame_pos_res_bead(pos0,posi)
+    diff = pos0-posi(:,1:2,:);
+    pos_res_out = squeeze(sum(diff.*diff, 2));
+end
+function out = pos_res_bead_struct(in_, beads_, Frames_, len_)
+    % out = in_;
+    out = cell([beads_,1]);
+    [out{:}] = deal(nan(len_,Frames_));
+    for i = 1:len_
+        for j = 1:beads_
+            out{j}(i,:) = in_{i}(j,:);
+        end
+    end
 end

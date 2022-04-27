@@ -43,10 +43,9 @@ int runner::start_detection(int start_)
   for (int i=0, j=0; i < n; i++, j+=2)
   {
     double xt=(q[i].x-cx)*cl_im+cx_im-f[j], yt=(q[i].y-cy)*cl_im+cy_im-f[j+1], rsq=xt*xt+yt*yt;
-    pos_res[start_][i]=INTpos_res[start_][i]=0.0; // zero out the first frame
+    pos_res[start_][i]=0.0; // zero out the first frame
     res_acc_local += pos_res[frame_local][i]=rsq;
     INTpos_res[i][2] = 0.5*rsq*dur;
-    // for now, still assuming that we start on the dot
   }
   frame_local++;
   advance(dur=(ts[frame_local]-ts[frame_local-1])/t_phys, d_ang[frame_local-1], comega_s[frame_local], dt_sim);
@@ -55,7 +54,7 @@ int runner::start_detection(int start_)
   {
     double xt=(q[i].x-cx)*cl_im+cx_im-f[j], yt=(q[i].y-cy)*cl_im+cy_im-f[j+1], rsq=xt*xt+yt*yt;
     res_acc_local += pos_res[frame_local][i] = rsq;
-    INTpos_res[i][1] = INTpos_res[i][2] + 0.5*(rsq)*dur;
+    INTpos_res[i][1] = INTpos_res[i][2] + 0.5*(pos_res[frame_local-1][i]+rsq)*dur;
   }
   pos_res_acc+=res_acc_local;
   return frame_local+1;
@@ -83,7 +82,7 @@ void runner::detect_events(record * rec_, int start_, int end_)
         double xt=(q[i].x-cx)*cl_im + cx_im - f[j], yt=(q[i].y-cy)*cl_im + cy_im - f[j+1], rsq=xt*xt+yt*yt;
 
         pos_res[frame][i] = rsq;
-        INTpos_res[i][0] = INTpos_res[i][1] + 0.5*(rsq)*dur;
+        INTpos_res[i][0] = INTpos_res[i][1] + 0.5*(pos_res[frame-1][i]+rsq)*dur;
         double alpha_it=alpha_INTpos_res[frame-1][i]=alpha_comp(INTpos_res[i], t_m1, t_p1);
         if (alpha_it > alpha_tol) // if we just had a collision
         {

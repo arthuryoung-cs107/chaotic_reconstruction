@@ -20,7 +20,8 @@ movie_data = cell([1,2]);
 movie_data{:,1} = sw.pos(:,1:2,:);
 movie_data{:,2} = ones(sw.beads,3).*green4;
 
-movie_specs = struct('Frame_vec', contact_f, 'dish', sw.dish);
+% movie_specs = struct('Frame_vec', contact_f, 'dish', sw.dish);
+movie_specs = struct('Frame_vec', 1:sw.Frames, 'dish', sw.dish);
 
 swirl_group.make_movie_comp(movie1, movie_data, movie_specs, 'watch');
 pause

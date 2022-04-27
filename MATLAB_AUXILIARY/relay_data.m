@@ -48,5 +48,12 @@ classdef relay_data
             obj.specs = specs;
             obj.event0 = event0;
         end
+        function write_relay_test(obj, params_, test_)
+            header=size(params_);
+            file_id = fopen([obj.dat_dir_name obj.exp_name obj.dat_name '.re' num2str(obj.relay_id) '_test' num2str(test_) '.redat'], 'w+');
+            fwrite(file_id, header, 'int');
+            fwrite(file_id, params_(:), 'double');
+            fclose(file_id);
+        end
     end
 end

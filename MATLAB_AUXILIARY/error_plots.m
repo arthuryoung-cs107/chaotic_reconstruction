@@ -29,6 +29,17 @@ classdef error_plots < swirl_plots
             apply_plot_labels(ax_, 'time', '$$\alpha$$', 'plot_alphaINTres_vs_time');
             % set(ax_, 'YScale', 'log');
         end
+        function plot_alphaINTres_vs_time_bead(axs_, base_color, st)
+            [t_vec, bead_res_cell, I_best, I_truest, I_leader] = deal(st.sw0.t_vec, st.pos_res_bead, st.I_best(1), st.I_truest(1), st.I_leader(1));
+
+            for i = 1:st.sw0.beads
+                posresINTi = swirl_group.compute_INT(t_vec,bead_res_cell{i});
+                plot_generic_frame_data(axs_(i), t_vec, swirl_group.compute_alpha_logD(t_vec,posresINTi), struct('base_color', base_color, 'I1', I_best, 'I2', I_truest, 'I3', I_leader));
+                apply_plot_labels(axs_(i), 'time', '$$\alpha$$', ['plot_alphaINTres_vs_time_bead' num2str(i)]);
+            end
+
+            % set(ax_, 'YScale', 'log');
+        end
 
         %% error bar plots
         function plot_residual_stats(ax1_, ax2_, ax3_, t_vec_, frames_, frame_stats_)

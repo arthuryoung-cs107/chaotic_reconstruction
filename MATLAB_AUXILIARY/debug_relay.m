@@ -2,7 +2,7 @@ clear
 close all
 run AYfigprops.m
 
-write_figs = false;
+write_figs = true;
 write_all_figs = true;
 figs_to_write = 0;
 save_dir = [getenv('HOME') '/Desktop/MATLAB_OUTPUT/'];
@@ -18,22 +18,15 @@ pos_top_row = [1 551 1728 460];
 pos_bottom_row = [0 1 1728 460];
 
 relay_diagnostics_fig = AYfig(AYfig.specs_gen('relay_diagnostics',pos_full));
-event0_par_err_fig = AYfig(AYfig.specs_gen('relay_diagnostics',pos_top_row));
-
-relay_diagnostics_fig.init_tiles([2, 3]);
-event0_par_err_fig.init_tiles([1 3]);
+relay_diagnostics_fig.init_tiles([3, 3]);
 
 nbeads = 3;
 par_id = 0;
 relay_id = 0;
 
 relay = read_relay(nbeads, par_id, relay_id);
-stat = read_stat(nbeads,'maxmin',0);
-swtrue = stat.sw0;
-event0 = relay.event0;
-
-relay_plots.plot_3bead_event_stats(relay_diagnostics_fig.ax_tile, blue5, red5, relay);
-relay_plots.plot_param_error(event0_par_err_fig.ax_tile(1), green4, event0.params, swtrue.params(3:end))
+relay_plots.plot_3bead_event_stats(relay_diagnostics_fig.ax_tile, blue5, red5, green4, relay);
+% relay_plots.plot_param_error()
 
 
 %%%%%%%% ----------------------------------------------------------------------------------
