@@ -6,7 +6,7 @@ classdef relay_data
         relay_id;
 
         specs;
-        event0; 
+        event0;
 
         gen;
     end
@@ -37,11 +37,6 @@ classdef relay_data
             'gen_last', int_params_end(1));
 
             event0 = event(dat_dir_name_, exp_name_, dat_name_, relay_id_, 0, specs);
-
-            % gen = relay_generation.empty(gen_count, 0);
-            % for i=1:gen_count
-            %     gen(i) = generation(dat_dir_name_, exp_name_, dat_name_, i, relay_id_, );
-            % end
 
             %%% assignments
 
