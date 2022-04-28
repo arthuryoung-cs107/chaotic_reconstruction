@@ -11,16 +11,15 @@ const int param_id=0;
 const int relay_id=1;
 const int generations=100;
 // const int nlead = 500;
-const int nlead = 800;
+const int nlead = 900;
 const int npool = 1000;
 const int param_len = 12;
 const double dt_sim = 0.002;
 const double t_wheels = 0.012;
-const double noise_tol = 1e-8;
-const double weight_ceiling = 1e10;
+const double noise_tol = 1e-6;
 const double alpha_tol=100.0;
-const bool test_generation=true;
-const bool run_relay=false;
+const bool test_generation=false;
+const bool run_relay=true;
 char proc_loc[] = "./dat_dir/";
 int main()
 {
@@ -49,7 +48,7 @@ int main()
   wl.add_wall(&wf); wl.add_wall(&wp0); wl.add_wall(&wp1); wl.add_wall(&wp2);
 
   reporter rep; rep.init_relay(proc_loc, rydat_dir, file_name, relay_id);
-  referee ref(nlead, npool, param_len, dt_sim, noise_tol, alpha_tol, weight_ceiling);
+  referee ref(nlead, npool, param_len, dt_sim, noise_tol, alpha_tol);
 
   if (test_generation)
   {

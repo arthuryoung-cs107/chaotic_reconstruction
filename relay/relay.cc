@@ -30,6 +30,10 @@ pg(new proximity_grid*[nt]), rng(new AYrng*[nt]), runners(new runner*[nt])
     comega_s[i] = t_phys*comega/(ts[i]-ts[i-1]);
   }
 
+  param_acc_factor = new double[param_len];
+  double *dmax=&sp_max.Kn, d_tn = (double)(omp_get_max_threads());
+  for (int i = 0; i < param_len; i++) param_acc_factor[i] = ((par_acc_P*0.1)/(((double)nlead)*dmax[i]))*(d_tn);
+
   // Set up each runner's personal data
 #pragma omp parallel
   {
@@ -56,6 +60,8 @@ relay::~relay()
   delete [] pg;
   delete [] rng;
   delete [] runners;
+
+  delete param_acc_factor;
 }
 
 void relay::stage_diagnostics(int gen_max_)
@@ -68,7 +74,6 @@ void relay::stage_diagnostics(int gen_max_)
   rep->dt_sim = dt_sim;
   rep->noise_tol = noise_tol;
   rep->alpha_tol = alpha_tol;
-  rep->max_weight_ceiling = max_weight_ceiling;
   rep->t_phys = t_phys;
 
   rep->lead_dup_count = lead_dup_count;
@@ -81,7 +86,7 @@ void relay::stage_diagnostics(int gen_max_)
   rep->lead_par_w_mean = lead_par_w_mean;
   rep->lead_par_w_var = lead_par_w_var;
   rep->gen_double_vec = &(residual_best);
-  rep->postevent_double_vec = &(gau_scale_sqrt);
+  rep->postevent_double_vec = &(tau);
 
   rep->leaders = leaders;
   rep->pool = pool;
@@ -139,7 +144,6 @@ void relay::learn_first_leg(int gen_max_, bool verbose_)
   }
   if (debugging_flag) rep->write_event_diagnostics(0);
   check_gen0();
-  gau_scale_sqrt = noise_tol*sqrt((double)(event_observations-1));
   if (debugging_flag) rep->write_postevent_diagnostics(0);
 
   residual_worst = DBL_MAX;
@@ -168,8 +172,7 @@ void relay::learn_first_leg(int gen_max_, bool verbose_)
 
 void relay::check_gen0()
 {
-  int nresamp = npool-nlead;
-  printf("(gen 0): First events identified. Event frames - ");
+  printf("(gen 0): First events identified. Event frames -");
   latest_event = event_observations = 0;
   for (int i = 0; i < n; i++) for (int j = 0; j < Frames; j++)
     if (global_event_frame_count[i][j])
@@ -177,38 +180,43 @@ void relay::check_gen0()
       event_end[i] = j-1;
       event_observations+=2*event_end[i];
       if (event_end[i]>latest_event) latest_event = event_end[i];
-      printf("%d ", j-1);
+      printf(" %d", j-1);
       break;
     }
+
+  tau = noise_tol*sqrt((double)(event_observations));
+  tau_sqr = tau*tau;
+
   if (gen0_resample_flag)
   {
-    printf(". Resampling %d weakest particles - \n", nresamp);
-
+    int nresamp = npool-nlead;
     for (int i = 0; i < nlead; i++) leader_board[i] = pool[i];
-    int worst_best = find_worst_record(pool, nlead);
-    for (int i = nlead; i < npool; i++)
-    {
-      if (leader_board[worst_best]->isworse(pool[i]))
+      int worst_best = find_worst_record(pool, nlead);
+      for (int i = nlead; i < npool; i++)
       {
-        candidates[i-nlead] = leader_board[worst_best];
-        leader_board[worst_best] = pool[i];
-        worst_best = find_worst_record(leader_board, nlead);
+        if (leader_board[worst_best]->isworse(pool[i]))
+        {
+          candidates[i-nlead] = leader_board[worst_best];
+          leader_board[worst_best] = pool[i];
+          worst_best = find_worst_record(leader_board, nlead);
+        }
+        else candidates[i-nlead] = pool[i];
       }
-      else candidates[i-nlead] = pool[i];
-    }
-    int best_surviving = find_best_record(leader_board, nlead),
-        best_killed = find_best_record(candidates, nresamp),
-        worst_killed = find_worst_record(candidates, nresamp),
-        i_bs = leader_board[best_surviving]->global_index,
-        i_ws = leader_board[worst_best]->global_index,
-        i_bk = candidates[best_killed]->global_index,
-        i_wk = candidates[worst_killed]->global_index;
 
-    double  r_bs = leader_board[best_surviving]->residual,
-            r_ws = leader_board[worst_best]->residual,
-            r_bk = candidates[best_killed]->residual,
-            r_wk = candidates[worst_killed]->residual;
+      int best_surviving = find_best_record(leader_board, nlead),
+          best_killed = find_best_record(candidates, nresamp),
+          worst_killed = find_worst_record(candidates, nresamp),
+          i_bs = leader_board[best_surviving]->global_index,
+          i_ws = leader_board[worst_best]->global_index,
+          i_bk = candidates[best_killed]->global_index,
+          i_wk = candidates[worst_killed]->global_index;
 
+      double  r_bs = leader_board[best_surviving]->residual,
+              r_ws = leader_board[worst_best]->residual,
+              r_bk = candidates[best_killed]->residual,
+              r_wk = candidates[worst_killed]->residual;
+
+    printf(". Resampling %d weakest particles - \n", nresamp);
     #pragma omp parallel
       {
         AYrng *r = rng[thread_num()];
@@ -217,24 +225,31 @@ void relay::check_gen0()
         for (int i = 0; i < nresamp; i++)
           candidates[i]->resample(0, dmin, dmax, r);
       }
-    printf("Done. Residuals %e to %e (%d, %d) kept. Residuals %e to %e (%d, %d) resampled. Beginning training:\n", r_bs, r_ws, i_bs, i_ws, r_bk, r_wk, i_bk, i_wk);
+      printf("Done. Residuals %e to %e (%d, %d) kept. Residuals %e to %e (%d, %d) resampled. Beginning training:\n", r_bs, r_ws, i_bs, i_ws, r_bk, r_wk, i_bk, i_wk);
   }
-  else printf(". Skipping gen0 resampling. Beginning training\n");
+  else
+  {
+    int w_gen0 = find_worst_record(pool, npool),
+        b_gen0 = find_best_record(pool, npool);
+    printf(". Residual range: [%e,%e]. Skipping gen0 resampling. Beginning training\n", pool[b_gen0]->residual, pool[w_gen0]->residual);
+  }
 }
 
-double relay::compute_leader_statistics()
+void relay::compute_leader_statistics()
 {
-  double res_scale = sqrt(residual_best)/gau_scale_sqrt;
-  max_weight_factor = log(max_weight_ceiling/((double)(leader_count)))+0.5*(res_scale)*(res_scale);
+  lambda=1.0/((double)leader_count);
+  beta=(root_res_best/tau)*(0.5*(root_res_best/tau));
 
-  double w_sum = 0.0;
+  w_max = w_sum = 0.0;
+  #pragma omp parallel for reduction(+:w_sum) reduction(max:w_max)
   for (int i = 0; i < leader_count; i++)
   {
-    w_sum += sample_weights[i] = leaders[i]->w(pos_res_global, gau_scale);
-    lead_dup_count[i] = 0;
+    w_sum += sample_weights[i] = leaders[i]->w(lambda,beta,tau);
+    if (sample_weights[i]>w_max) w_max=sample_weights[i];
   }
 
   for (int i = 0; i < param_len; i++) lead_par_w_mean[i] = lead_par_w_var[i] = 0.0;
+
   #pragma omp parallel
   {
     runner *rt = runners[thread_num()];
@@ -243,8 +258,11 @@ double relay::compute_leader_statistics()
     #pragma omp for nowait
     for (int i = 0; i < leader_count; i++)
     {
-      for (int j = 0; j < param_len; j++) param_buf[j]+=(sample_weights[i]*(leaders[i]->params[j]))/w_sum;
+      for (int j = 0; j < param_len; j++) param_buf[j]+=(sample_weights[i]*(param_acc_factor[j]/w_max))*(leaders[i]->params[j]);
     }
+
+    for (int j = 0; j < param_len; j++) param_buf[j]*=(w_max/w_sum)/param_acc_factor[j];
+
     #pragma omp critical
     {
       for (int i = 0; i < param_len; i++) lead_par_w_mean[i] += param_buf[i];
@@ -261,20 +279,23 @@ double relay::compute_leader_statistics()
       for (int j = 0; j < param_len; j++)
       {
         double z = (params_i[j] - lead_par_w_mean[j]);
-        param_buf[j]+=(sample_weights[i])*(z*z)/(w_sum);
+        param_buf[j]+=(sample_weights[i]*(param_acc_factor[j]/w_max))*(z*z);
       }
     }
+    for (int j = 0; j < param_len; j++) param_buf[j]*=(w_max/(w_sum-1.0))/param_acc_factor[j];
     #pragma omp critical
     {
       for (int i = 0; i < param_len; i++) lead_par_w_var[i] += param_buf[i];
     }
   }
-  return w_sum;
 }
 
 void relay::resample_pool()
 {
-  double w_sum = compute_leader_statistics();
+  compute_leader_statistics();
+
+  for (int i = 0; i < leader_count; i++) lead_dup_count[i] = 0;
+
   dup_count=resample_count=dup_unique=0;
   #pragma omp parallel
     {
@@ -387,6 +408,6 @@ bool relay::check_pool_results()
   record * wl_rec = leaders[worst_leader], * bl_rec = leaders[best_leader];
   residual_best = bl_rec->residual;
   printf("Best/Worst: (ID, gen, parents, residual) = (%d/%d %d/%d %d/%d %e/%e), %d replacements. ", bl_rec->global_index, wl_rec->global_index, bl_rec->gen, wl_rec->gen, bl_rec->parent_count, wl_rec->parent_count, residual_best, residual_worst, repl_count);
-  if (sqrt(residual_best)<gau_scale_sqrt) return true;
+  if (sqrt(residual_best)<tau) return true;
   return false;
 }

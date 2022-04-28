@@ -9,10 +9,13 @@
 #endif
 
 const int record_int_len=6;
-const int record_double_len=3;
+const int record_double_len=4;
 
 const int record_int_chunk_count = 1;
 const int record_double_chunk_count = 2;
+
+const double log_P = log(1e14);
+const double par_acc_P = 1e14;
 
 struct record
 {
@@ -29,15 +32,17 @@ struct record
         int dup_count; // number of times this particle has been duplicated
 
   double residual;
-  double event_residual;
+  double root_residual;
   double weight;
+  double event_residual;
 
   int * const event_positions;
 
-  double * const params;
   double * const residual_data;
   double * const alpha_data;
 
+  double * const params;
+  
   record(int beads_, int Frames_, int len_, int i_, int * int_chunk_, double * params_, double * double_chunk_): beads(beads_), Frames(Frames_), len(len_), global_index(i_), event_positions(int_chunk_), params(params_), residual_data(double_chunk_), alpha_data(double_chunk_+beads_) {}
   ~record() {}
 
@@ -53,17 +58,15 @@ struct record
   inline void init_pool(double * dmin_, double *dmax_, AYrng * r_)
   {resample(0,dmin_,dmax_,r_);}
   inline bool check_success(double residual_, double residual_worst_)
-  {residual = residual_; return success=residual<residual_worst_;}
+  {residual=residual_; root_residual=sqrt(residual_); return success=(residual_<residual_worst_);}
   inline bool isbetter(record * rcomp_)
   {return residual<rcomp_->residual;}
   inline bool isworse(record * rcomp_)
   {return !(isbetter(rcomp_));}
-  inline double w(double b_, double sca_)
-  {return weight = exp(-0.5*((sca_*residual)/b_));}
-  // inline double w(double b_)
-  // {return weight = exp(-0.5*(residual/b_));}
-  // inline double w(double c_, double b_)
-  // {return weight = exp(c_-(0.5*(residual/b_)/b_));}
+
+  // being as careful as possible for floating point precision
+  inline double w(double lambda_, double b_, double tau_)
+  {return weight = lambda_*exp(b_ + (log_P-((0.5*(root_residual/tau_))*(root_residual/tau_))));}
 };
 
 class runner: public swirl
@@ -132,7 +135,6 @@ struct referee
   const double dt_sim;
   const double noise_tol; // projected standard deviation of noised data
   const double alpha_tol; // threshold for event detection
-  const double max_weight_ceiling;
 
   record  **records,
           **leaders, **pool,
@@ -152,8 +154,8 @@ struct referee
 
   bool alloc_flag=false;
 
-  referee(int nlead_, int npool_, int param_len_, double dt_sim_, double noise_tol_, double alpha_tol_, double max_weight_ceiling_): nlead(nlead_), npool(npool_), param_len(param_len_), dt_sim(dt_sim_), noise_tol(noise_tol_), alpha_tol(alpha_tol_), max_weight_ceiling(max_weight_ceiling_) {}
-  referee(referee &ref_): nlead(ref_.nlead), npool(ref_.npool), param_len(ref_.param_len), dt_sim(ref_.dt_sim), noise_tol(ref_.noise_tol), alpha_tol(ref_.alpha_tol), max_weight_ceiling(ref_.max_weight_ceiling) {}
+  referee(int nlead_, int npool_, int param_len_, double dt_sim_, double noise_tol_, double alpha_tol_): nlead(nlead_), npool(npool_), param_len(param_len_), dt_sim(dt_sim_), noise_tol(noise_tol_), alpha_tol(alpha_tol_) {}
+  referee(referee &ref_): nlead(ref_.nlead), npool(ref_.npool), param_len(ref_.param_len), dt_sim(ref_.dt_sim), noise_tol(ref_.noise_tol), alpha_tol(ref_.alpha_tol) {}
 
   ~referee();
 
@@ -174,7 +176,6 @@ class reporter : public ODR_struct
     double  dt_sim,
             noise_tol,
             alpha_tol,
-            max_weight_ceiling,
             t_phys;
 
     int *lead_dup_count,
@@ -209,7 +210,7 @@ class reporter : public ODR_struct
 const int event_int_len=2;
 const int event_double_len=2;
 const int gen_int_len=10;
-const int gen_double_len=3;
+const int gen_double_len=9;
 
 class relay : public referee
 {
@@ -249,11 +250,16 @@ class relay : public referee
 
     double residual_best;
     double residual_worst;
+    double root_res_best;
+    double root_res_worst;
     double pos_res_global;
-    double gau_scale = 1.0;
+    double lambda;
+    double beta;
+    double w_sum;
+    double w_max;
 
-    double gau_scale_sqrt;
-    double max_weight_factor;
+    double tau;
+    double tau_sqr;
 
     reporter * rep;
 
@@ -283,6 +289,8 @@ class relay : public referee
 
       runner ** runners;
 
+      double * param_acc_factor; // for overflow resolution
+
       void stage_diagnostics(int gen_max_);
 
       void learn_first_leg(int gen_max_, bool verbose_);
@@ -292,7 +300,7 @@ class relay : public referee
       bool check_pool_results();
       int collect_candidates();
 
-      double compute_leader_statistics();
+      void compute_leader_statistics();
       void resample_pool();
 
       inline void clear_global_event_data()

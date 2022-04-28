@@ -36,13 +36,17 @@ pos_top_row = [1 551 1728 460];
 pos_bottom_row = [0 1 1728 460];
 
 diagnostics_fig = AYfig(AYfig.specs_gen('relay_diagnostics',pos_full));
-diagnostics_fig.init_tiles([3, 3]);
+diagnostics_fig.init_tiles([2, 3]);
 
-gen_last = relay.specs.gen_last;
-true_params = swtrue.params(3:end);
-last_indices = (gen_last-length(diagnostics_fig.ax_tile)+1):gen_last;
-first_indices = 1:length(diagnostics_fig.ax_tile);
-plot_indices = last_indices;
+
+% diagnostics_fig = AYfig(AYfig.specs_gen('relay_diagnostics',pos_full));
+% diagnostics_fig.init_tiles([3, 3]);
+%
+% gen_last = relay.specs.gen_last;
+% true_params = swtrue.params(3:end);
+% last_indices = (gen_last-length(diagnostics_fig.ax_tile)+1):gen_last;
+% first_indices = 1:length(diagnostics_fig.ax_tile);
+% plot_indices = last_indices;
 
 
 

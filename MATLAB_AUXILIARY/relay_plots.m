@@ -9,6 +9,10 @@ classdef relay_plots
     end
     methods (Static)
 
+        function plot_posres_vs_time(ax_, base_color, te)
+            
+        end
+
         %% error bar plots
         function plot_3bead_event_stats(axs_, color1, color2, color3, re_)
 
