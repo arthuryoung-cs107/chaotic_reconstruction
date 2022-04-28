@@ -185,7 +185,7 @@ void relay::check_gen0()
       printf(" %d", j-1);
       break;
     }
-  event_observations = n*2*earliest_event; 
+  event_observations = n*2*earliest_event;
   printf(". Earliest: %d, latest: %d ", earliest_event, latest_event);
 
   tau = noise_tol*sqrt((double)(event_observations));
@@ -254,42 +254,75 @@ void relay::compute_leader_statistics()
 
   for (int i = 0; i < param_len; i++) lead_par_w_mean[i] = lead_par_w_var[i] = 0.0;
 
-  #pragma omp parallel
+#pragma omp parallel
   {
     runner *rt = runners[thread_num()];
     double * param_buf = rt->param_acc;
     for (int i = 0; i < param_len; i++) param_buf[i] = 0.0;
-    #pragma omp for nowait
-    for (int i = 0; i < leader_count; i++)
+
+    if (weight_stats_flag)
     {
-      for (int j = 0; j < param_len; j++) param_buf[j]+=(sample_weights[i]*(param_acc_factor[j]/w_max))*(leaders[i]->params[j]);
-    }
-
-    for (int j = 0; j < param_len; j++) param_buf[j]*=(w_max/w_sum)/param_acc_factor[j];
-
-    #pragma omp critical
-    {
-      for (int i = 0; i < param_len; i++) lead_par_w_mean[i] += param_buf[i];
-    }
-
-    for (int i = 0; i < param_len; i++) param_buf[i] = 0.0;
-
-    #pragma omp barrier
-
-    #pragma omp for nowait
-    for (int i = 0; i < leader_count; i++)
-    {
-      double * params_i = leaders[i]->params;
-      for (int j = 0; j < param_len; j++)
+      #pragma omp for nowait
+      for (int i = 0; i < leader_count; i++)
       {
-        double z = (params_i[j] - lead_par_w_mean[j]);
-        param_buf[j]+=(sample_weights[i]*(param_acc_factor[j]/w_max))*(z*z);
+        for (int j = 0; j < param_len; j++) param_buf[j]+=(sample_weights[i]*(param_acc_factor[j]/w_max))*(leaders[i]->params[j]);
+      }
+      for (int j = 0; j < param_len; j++) param_buf[j]*=(w_max/w_sum)/param_acc_factor[j];
+      #pragma omp critical
+      {
+        for (int i = 0; i < param_len; i++) lead_par_w_mean[i] += param_buf[i];
+      }
+      for (int i = 0; i < param_len; i++) param_buf[i] = 0.0;
+
+      #pragma omp barrier
+
+      #pragma omp for nowait
+      for (int i = 0; i < leader_count; i++)
+      {
+        double * params_i = leaders[i]->params;
+        for (int j = 0; j < param_len; j++)
+        {
+          double z = (params_i[j] - lead_par_w_mean[j]);
+          param_buf[j]+=(sample_weights[i]*(param_acc_factor[j]/w_max))*(z*z);
+        }
+      }
+      for (int j = 0; j < param_len; j++) param_buf[j]*=(w_max/(w_sum-1.0))/param_acc_factor[j];
+      #pragma omp critical
+      {
+        for (int i = 0; i < param_len; i++) lead_par_w_var[i] += param_buf[i];
       }
     }
-    for (int j = 0; j < param_len; j++) param_buf[j]*=(w_max/(w_sum-1.0))/param_acc_factor[j];
-    #pragma omp critical
+    else
     {
-      for (int i = 0; i < param_len; i++) lead_par_w_var[i] += param_buf[i];
+      #pragma omp for nowait
+      for (int i = 0; i < leader_count; i++)
+      {
+        for (int j = 0; j < param_len; j++) param_buf[j]+=leaders[i]->params[j];
+      }
+      for (int j = 0; j < param_len; j++) param_buf[j]/=((double)nlead);
+      #pragma omp critical
+      {
+        for (int i = 0; i < param_len; i++) lead_par_w_mean[i] += param_buf[i];
+      }
+      for (int i = 0; i < param_len; i++) param_buf[i] = 0.0;
+
+      #pragma omp barrier
+
+      #pragma omp for nowait
+      for (int i = 0; i < leader_count; i++)
+      {
+        double * params_i = leaders[i]->params;
+        for (int j = 0; j < param_len; j++)
+        {
+          double z = (params_i[j] - lead_par_w_mean[j]);
+          param_buf[j]+=(z*z);
+        }
+      }
+      for (int j = 0; j < param_len; j++) param_buf[j]/=((double)(nlead-1));
+      #pragma omp critical
+      {
+        for (int i = 0; i < param_len; i++) lead_par_w_var[i] += param_buf[i];
+      }
     }
   }
 }

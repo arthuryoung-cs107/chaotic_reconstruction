@@ -279,6 +279,7 @@ class relay : public referee
       const int nt;
 
       bool  debugging_flag=true,
+            weight_stats_flag=false,
             gen0_resample_flag=false;
 
       /** A reference to the list of walls for the swirling simulation. */

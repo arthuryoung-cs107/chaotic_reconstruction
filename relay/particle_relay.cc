@@ -39,11 +39,12 @@ void record::duplicate(record *parent_, int gen_, double *dmin_, double *dmax_, 
   reset_record(gen_, parent_->gen, parent_->parent_count+1, parent_->global_index);
   for (int i = 0; i < len; i++)
   {
-    double lim_high=dmax_[i]-parent_->params[i], lim_low=parent_->params[i]-dmin_[i],
-      lim_std = ((lim_high)<(lim_low))? lim_high:lim_low,
-      std_use = (lim_std<16.0*sqrt(var_[i]))? 0.25*lim_std : sqrt(var_[i]);
+    // double lim_high=dmax_[i]-parent_->params[i], lim_low=parent_->params[i]-dmin_[i],
+    //   lim_std = ((lim_high)<(lim_low))? lim_high:lim_low,
+    //   std_use = (lim_std<16.0*sqrt(var_[i]))? 0.25*lim_std : sqrt(var_[i]);
 
-    params[i] = parent_->params[i]*(r_->rand_gau_gsl(1.0, std_use)); // do we account for the displacement relative to mean?
+    double std_use = sqrt(var_[i]); 
+    params[i] = parent_->params[i]*(r_->rand_gau_gsl(1.0, std_use));
     if (params[i] > dmax_[i]) params[i]=dmax_[i];
     else if (params[i] < dmin_[i]) params[i]=dmin_[i];
   }
