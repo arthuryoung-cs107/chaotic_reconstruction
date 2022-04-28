@@ -185,6 +185,7 @@ void relay::check_gen0()
       printf(" %d", j-1);
       break;
     }
+  event_observations = n*2*earliest_event; 
   printf(". Earliest: %d, latest: %d ", earliest_event, latest_event);
 
   tau = noise_tol*sqrt((double)(event_observations));
