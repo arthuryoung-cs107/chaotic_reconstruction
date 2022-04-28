@@ -109,7 +109,7 @@ void reporter::write_gen_diagnostics(int gen_count_, int leader_count_)
     // write the integer records
     fwrite(&(leaders[i]->global_index), sizeof(int), record_int_len, out_dat);
     // write the integer records
-    fwrite(&(leaders[i]->residual), sizeof(double), 1, out_dat);
+    fwrite(&(leaders[i]->residual), sizeof(double), record_double_len, out_dat);
     // write the parameter
 
     fwrite(leaders[i]->residual_data, sizeof(double), beads, out_dat);
