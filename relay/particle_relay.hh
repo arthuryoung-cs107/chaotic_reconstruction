@@ -42,7 +42,7 @@ struct record
   double * const alpha_data;
 
   double * const params;
-  
+
   record(int beads_, int Frames_, int len_, int i_, int * int_chunk_, double * params_, double * double_chunk_): beads(beads_), Frames(Frames_), len(len_), global_index(i_), event_positions(int_chunk_), params(params_), residual_data(double_chunk_), alpha_data(double_chunk_+beads_) {}
   ~record() {}
 
@@ -101,7 +101,7 @@ class runner: public swirl
 
       void reset_sim(double *ptest_, double t0_, double ctheta0_, double comega0_, double *x0_);
 
-      int run_relay(record * rec_, int start_, int * end_, int latest_, double residual_worst_);
+      int run_relay(record * rec_, int start_, int * end_, int earliest_, int latest_, double residual_worst_);
       int start_detection(int start_);
       void detect_events(record* rec_, int start_, int end_);
 
@@ -207,7 +207,7 @@ class reporter : public ODR_struct
     ODR_struct * spawn_swirlODR(char *name_);
 };
 
-const int event_int_len=2;
+const int event_int_len=3;
 const int event_double_len=2;
 const int gen_int_len=10;
 const int gen_double_len=9;
@@ -246,6 +246,7 @@ class relay : public referee
     int resample_count;
 
     int event_observations;
+    int earliest_event;
     int latest_event;
 
     double residual_best;

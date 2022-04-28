@@ -108,20 +108,21 @@ void runner::detect_events(record * rec_, int start_, int end_)
   rec_->record_event_data(pos_res_acc=res_acc_local, kill_frames, INTpos_res, alpha_kill);
 }
 
-int runner::run_relay(record * rec_, int start_, int * end_, int latest_, double residual_worst_)
+int runner::run_relay(record * rec_, int start_, int * end_, int earliest_, int latest_, double residual_worst_)
 {
   reset_sim(rec_->params, ts[start_]/t_phys, d_ang[start_], comega_s[start_], xs + 2*n*start_);
   for (int i = 0; i < n; i++) pos_res[start_][i]= 0.0;
   double res_acc_local = 0.0;
-  for (frame = start_+1; frame < latest_; frame++)
+  for (frame = start_+1; frame < earliest_; frame++)
   {
     advance((ts[frame]-ts[frame-1])/t_phys, d_ang[frame-1], comega_s[frame], dt_sim);
     double * f = xs+(2*n*frame);
-    for (int i=0, j=0; i < n; i++, j+=2) if (i<end_[i])
-      {
-        double xt=(q[i].x-cx)*cl_im + cx_im - f[j], yt=(q[i].y-cy)*cl_im + cy_im - f[j+1];
-        res_acc_local += pos_res[frame][i] = xt*xt+yt*yt;
-      }
+    for (int i=0, j=0; i < n; i++, j+=2)
+    {
+      // if (i<end_[i])
+      double xt=(q[i].x-cx)*cl_im + cx_im - f[j], yt=(q[i].y-cy)*cl_im + cy_im - f[j+1];
+      res_acc_local += pos_res[frame][i] = xt*xt+yt*yt;
+    }
     if (res_acc_local>residual_worst_) break;
   }
   return (int)rec_->check_success(pos_res_acc=res_acc_local,residual_worst_);

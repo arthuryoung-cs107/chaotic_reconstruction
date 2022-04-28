@@ -156,7 +156,7 @@ void relay::learn_first_leg(int gen_max_, bool verbose_)
 #pragma omp for reduction(+:success_local) nowait
       for (int i = 0; i < npool; i++)
       {
-        success_local += rt->run_relay(pool[i], 0, event_end, latest_event, residual_worst);
+        success_local += rt->run_relay(pool[i], 0, event_end, earliest_event, latest_event, residual_worst);
       }
     }
     gen_count++;
@@ -174,15 +174,18 @@ void relay::check_gen0()
 {
   printf("(gen 0): First events identified. Event frames -");
   latest_event = event_observations = 0;
+  earliest_event = Frames;
   for (int i = 0; i < n; i++) for (int j = 0; j < Frames; j++)
     if (global_event_frame_count[i][j])
     {
       event_end[i] = j-1;
       event_observations+=2*event_end[i];
       if (event_end[i]>latest_event) latest_event = event_end[i];
+      if (event_end[i]<earliest_event) earliest_event = event_end[i];
       printf(" %d", j-1);
       break;
     }
+  printf(". Earliest: %d, latest: %d ", earliest_event, latest_event);
 
   tau = noise_tol*sqrt((double)(event_observations));
   tau_sqr = tau*tau;
