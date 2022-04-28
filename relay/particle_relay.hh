@@ -105,16 +105,15 @@ class runner: public swirl
       inline void clear_event_data()
       {for (int i = 0; i < n*Frames; i++) event_frame_count[0][i] = 0;}
 
-      // testing quantities for our relay doctor
 
-      // double *TEST_pos, *TEST_ref_pos, *TEST_pos_res, *TEST_alpha_INTpos_res, *TEST_INTpos_res;
-      // void init_test_run(int Frame_end_);
-      // int start_test_detection(int start_);
-      // void test_run(record * rec_, int start_, int end_);
-      // void write_test_run(int Frame_end_);
-      // void conclude_test_run(int Frame_end_);
+      // debugging stuff
+      double *TEST_sim_pos, *TEST_pos, *TEST_ref_pos, *TEST_pos_res, *TEST_alpha_INTpos_res, *TEST_INTpos_res;
+      void init_test_run(int Frame_end_);
+      double run_test(record * rec_, int start_, int end_);
+      void conclude_test_run();
 
     private:
+
       inline double alpha_comp(double *a_, double t_m1, double t_p1)
       {
         double alpha_val = log(a_[0]/a_[2])/log(t_p1/t_m1);
@@ -251,7 +250,7 @@ class relay : public referee
     double residual_best;
     double residual_worst;
     double pos_res_global;
-    double gau_scale = 2.0;
+    double gau_scale = 1.0;
 
     double gau_scale_sqrt;
     double max_weight_factor;
@@ -306,18 +305,38 @@ class relay : public referee
 #endif
 };
 
-// class doctor : public relay
-// {
-//   public:
-//
-//     doctor(referee &ref_, swirl_param &sp_min_, swirl_param &sp_max_, wall_list &wl_,double t_phys_,reporter * rep_): relay(ref_, sp_min_, sp_max_, wl_,t_phys_,rep_) {}
-//     ~doctor() {}
-//
-//     void init_test(int test_id_);
-//     void run_test(int Frame_end_);
-//
-//
-// };
+struct medic
+{
+  const int Frame_end;
+  const int beads;
+
+  runner * rt;
+
+  char* test_directory;
+  size_t = buf_end;
+
+  medic(int Frame_end_, runner * rt_, char * test_directory_): Frame_end(Frame_end_), beads(rt_->n), rt(rt_), test_directory(new char[strlen(test_directory_)+100])
+  {strcpy(test_directory, test_directory_); buf_end = strlen(test_directory);}
+
+  ~medic()
+  {delete [] test_directory;}
+
+  void write_test_run(double accres_, int i_);
+};
+
+class doctor : public relay
+{
+  public:
+
+    char * test_buffer=NULL;
+
+    doctor(referee &ref_, swirl_param &sp_min_, swirl_param &sp_max_, wall_list &wl_,double t_phys_,reporter * rep_): relay(ref_, sp_min_, sp_max_, wl_,t_phys_,rep_) {}
+    ~doctor() {if (test_buffer!=NULL) delete [] test_buffer;}
+
+    void init_test(int test_id_);
+    void run_test(int Frame_end_);
+
+};
 
 int find_worst_record(record ** r, int ncap);
 int find_best_record(record ** r, int ncap);
