@@ -109,7 +109,7 @@ class runner: public swirl
       // debugging stuff
       double *TEST_sim_pos, *TEST_pos, *TEST_ref_pos, *TEST_pos_res, *TEST_alpha_INTpos_res, *TEST_INTpos_res;
       void init_test_run(int Frame_end_);
-      double run_test(record * rec_, int start_, int end_);
+      double run_test(record * rec_, int start_, int end_, int i_);
       void conclude_test_run();
 
     private:
@@ -313,7 +313,7 @@ struct medic
   runner * rt;
 
   char* test_directory;
-  size_t = buf_end;
+  size_t buf_end;
 
   medic(int Frame_end_, runner * rt_, char * test_directory_): Frame_end(Frame_end_), beads(rt_->n), rt(rt_), test_directory(new char[strlen(test_directory_)+100])
   {strcpy(test_directory, test_directory_); buf_end = strlen(test_directory);}
@@ -333,8 +333,8 @@ class doctor : public relay
     doctor(referee &ref_, swirl_param &sp_min_, swirl_param &sp_max_, wall_list &wl_,double t_phys_,reporter * rep_): relay(ref_, sp_min_, sp_max_, wl_,t_phys_,rep_) {}
     ~doctor() {if (test_buffer!=NULL) delete [] test_buffer;}
 
-    void init_test(int test_id_);
-    void run_test(int Frame_end_);
+    void init_test(int test_id_, int test_relay_id_);
+    void test_run(int Frame_end_);
 
 };
 

@@ -19,6 +19,8 @@ const double t_wheels = 0.012;
 const double noise_tol = 1e-8;
 const double weight_ceiling = 1e10;
 const double alpha_tol=100.0;
+const bool test_generation=true;
+const bool run_relay=false;
 char proc_loc[] = "./dat_dir/";
 int main()
 {
@@ -44,23 +46,28 @@ int main()
   const double fa=sqrt(0.75);
   wall_floor wf(0.);
   wall_par_planes wp0(0,1,0,r),wp1(fa,0.5,0,r),wp2(fa,-0.5,0,r);
-  wl.add_wall(&wf);
-  wl.add_wall(&wp0);
-  wl.add_wall(&wp1);
-  wl.add_wall(&wp2);
+  wl.add_wall(&wf); wl.add_wall(&wp0); wl.add_wall(&wp1); wl.add_wall(&wp2);
 
-  reporter rep;
-  rep.init_relay(proc_loc, rydat_dir, file_name, relay_id);
-
+  reporter rep; rep.init_relay(proc_loc, rydat_dir, file_name, relay_id);
   referee ref(nlead, npool, param_len, dt_sim, noise_tol, alpha_tol, weight_ceiling);
-  relay prelay(ref, sp_min,sp_max,wl,t_phys,&rep);
-  prelay.init_relay();
-  prelay.start_relay(generations);
-  // prelay.make_best_swirl(swbest_name);
 
-  // doctor doc(ref, sp_min,sp_max,wl,t_phys,&rep);
-  // doc.init_test(0);
-  // doc.run_test(1201);
+  if (test_generation)
+  {
+    int test_id=0, Frames_test=180, test_relay_id=0;
+    printf("Testing %d bead generation. Test id: %d, Frames : %d\n", nbeads, test_id, Frames_test);
+    doctor doc(ref, sp_min,sp_max,wl,t_phys,&rep);
+    doc.init_test(test_id, test_relay_id); doc.test_run(Frames_test);
+  }
+  if (run_relay)
+  {
+    printf("Running %d bead relay. Relay id: %d, parameter id: %d,  maximum generations: %d, leaders: %d, pool: %d \n", nbeads, relay_id, param_id, generations, nlead, npool);
+
+    relay prelay(ref, sp_min,sp_max,wl,t_phys,&rep);
+    prelay.init_relay();
+    prelay.start_relay(generations);
+    // prelay.make_best_swirl(swbest_name);
+  }
+
 
   return 0;
 }

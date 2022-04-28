@@ -19,7 +19,7 @@ RACE:= race particle_race particle_race_io reporter runner
 
 WALK:= walk particle_walk pedestrian particle_walk_io
 
-RELAY:= relay particle_relay relay_runner particle_relay_io 
+RELAY:= relay particle_relay relay_runner particle_relay_io doctor
 
 # directories
 AY_SRC:= AYlinalg/linalg/

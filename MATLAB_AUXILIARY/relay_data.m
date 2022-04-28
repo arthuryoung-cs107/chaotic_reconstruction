@@ -9,6 +9,8 @@ classdef relay_data
         event0;
 
         gen;
+
+        test;
     end
     methods
         function obj = relay_data(dat_dir_name_, exp_name_, dat_name_, relay_id_)
@@ -53,7 +55,7 @@ classdef relay_data
 
             obj.specs = specs;
             obj.event0 = event0;
-            obj.gen = gen; 
+            obj.gen = gen;
         end
         function write_relay_test(obj, params_, test_)
             header=size(params_);
@@ -61,6 +63,39 @@ classdef relay_data
             fwrite(file_id, header, 'int');
             fwrite(file_id, params_(:), 'double');
             fclose(file_id);
+        end
+        function test_out = read_relay_test(obj, test_, relay_id_)
+            dat_test_in_name = [obj.dat_dir_name obj.exp_name obj.dat_name '.re' num2str(relay_id_) '_test' num2str(test_) '.redat']
+            dat_test_in = fopen(dat_test_in_name);
+            header_in = fread(dat_test_in, [1,2], 'int=>int');
+            [param_len,npool] = deal(header_in(1),header_in(2));
+            params = fread(dat_test_in,[param_len,npool], 'double=>double');
+            fclose(dat_test_in);
+
+
+            test_directory = [obj.dat_dir_name obj.exp_name obj.dat_name '.re' num2str(relay_id_) '_test' num2str(test_) '_results/'];
+
+            dat_test_specs = fopen([test_directory, 'results_specs.redat']);
+            results_specs = fread(dat_test_specs, [1,3], 'int=>int');
+            [Frame_end, beads, dof] = deal(results_specs(1), results_specs(2), results_specs(3));
+            fclose(dat_test_specs);
+
+            accres_vec = nan(npool, 1);
+            [sim_pos_mat, pos_mat, ref_pos_mat] = deal(nan(Frame_end*beads*dof, npool));
+            [pos_res_mat, alpha_mat, INTmat] = deal(nan(Frame_end*beads, npool));
+            for i = 1:npool
+                dat = fopen([test_directory 'par' num2str(i-1) '.redat']);
+                header = fread(dat, [1,2], 'int=>int');
+                sim_pos_mat(:,i) = fread(dat, [Frame_end*beads*dof,1], 'double=>double');
+                pos_mat(:,i) = fread(dat, [Frame_end*beads*dof,1], 'double=>double');
+                ref_pos_mat(:,i) = fread(dat, [Frame_end*beads*dof,1], 'double=>double');
+                pos_res_mat(:,i) = fread(dat, [Frame_end*beads,1], 'double=>double');
+                alpha_mat(:,i) = fread(dat, [Frame_end*beads,1], 'double=>double');
+                INTmat(:,i) = fread(dat, [Frame_end*beads,1], 'double=>double');
+                fclose(dat);
+            end
+
+            test_out = struct('param_len', param_len,'npool', npool,'Frame_end', Frame_end,'beads', beads,'dof', dof, 'sim_pos_mat', sim_pos_mat, 'pos_mat', pos_mat, 'ref_pos_mat', ref_pos_mat, 'pos_res_mat', pos_res_mat, 'alpha_mat', alpha_mat, 'INTmat', INTmat);
         end
     end
 end
