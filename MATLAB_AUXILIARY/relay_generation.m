@@ -56,7 +56,7 @@ classdef relay_generation
             params = nan(specs.param_len, specs.nlead);
             for i = 1:specs.nlead
                 leader_data.int_data(:,i) = fread(dat, [specs.record_int_len,1], 'int=>int');
-                leader_data.double_data(i) = fread(dat, [specs.record_double_len,1], 'double=>double');
+                leader_data.double_data(:, i) = fread(dat, [specs.record_double_len,1], 'double=>double');
                 leader_data.bead_residuals(:,i) = fread(dat, [specs.beads,1], 'double=>double');
                 params(:,i) = fread(dat, [specs.param_len,1], 'double=>double');
                 rec(i) = relay_record(params(:,i));

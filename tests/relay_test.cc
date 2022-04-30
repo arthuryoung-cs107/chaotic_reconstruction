@@ -18,8 +18,8 @@ const double dt_sim = 0.002;
 const double t_wheels = 0.012;
 const double noise_tol = 1e-6;
 const double alpha_tol=100.0;
-const bool test_generation=false;
-const bool run_relay=true;
+const bool test_generation=true;
+const bool run_relay=false;
 char proc_loc[] = "./dat_dir/";
 int main()
 {

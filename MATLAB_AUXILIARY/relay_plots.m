@@ -9,8 +9,10 @@ classdef relay_plots
     end
     methods (Static)
 
-        function plot_posres_vs_time(ax_, base_color, te)
-            
+        function plot_posres_vs_time(ax_, base_color, re_)
+            plot_generic_frame_data(ax_, 1:re_.test.Frame_end, re_.sum_bead_res, struct('base_color', base_color));
+            apply_plot_labels(ax_, 'Frames', 'position residual', 'plot_res_vs_frames');
+            % set(ax_, 'YScale', 'log');
         end
 
         %% error bar plots

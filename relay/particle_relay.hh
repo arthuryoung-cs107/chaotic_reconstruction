@@ -83,7 +83,7 @@ class runner: public swirl
       const double dt_sim;
       const double alpha_tol;
 
-      int frame;
+      int frame,earliest_event,latest_event;
 
       double  pos_res_acc;
 
@@ -110,19 +110,20 @@ class runner: public swirl
 
 
       // debugging stuff
-      double *TEST_sim_pos, *TEST_pos, *TEST_ref_pos, *TEST_pos_res, *TEST_alpha_INTpos_res, *TEST_INTpos_res;
+      double *TEST_sim_pos, *TEST_pos, *TEST_pos_res, *TEST_alpha_INTpos_res, *TEST_INTpos_res;
+      int start_test_detection(int start_, double * params_, double *t_history_);
+      double test_detection(record * rec_, int start_, int end_, int i_);
+
       void init_test_run(int Frame_end_);
-      double run_test(record * rec_, int start_, int end_, int i_);
-      void conclude_test_run();
+      void free_test_buffers();
 
     private:
 
-      inline double alpha_comp(double *a_, double t_m1, double t_p1)
-      {
-        double alpha_val = log(a_[0]/a_[2])/log(t_p1/t_m1);
-        a_[2] = a_[1]; a_[1] = a_[0]; // shift the integral history along
-        return alpha_val;
-      }
+      inline double alpha_comp(double *a_, double t_p1, double t_m1)
+      {return log(a_[0]/a_[2])/log(t_p1/t_m1);}
+      inline double alpha_comp(double a_p1, double a_m1, double t_p1, double t_m1)
+      {return log(a_p1/a_m1)/log(t_p1/t_m1);}
+
 };
 
 struct referee
@@ -279,7 +280,7 @@ class relay : public referee
       const int nt;
 
       bool  debugging_flag=true,
-            weight_stats_flag=false,
+            weight_stats_flag=true,
             gen0_resample_flag=false;
 
       /** A reference to the list of walls for the swirling simulation. */
@@ -327,11 +328,10 @@ struct medic
 
   medic(int Frame_end_, runner * rt_, char * test_directory_): Frame_end(Frame_end_), beads(rt_->n), rt(rt_), test_directory(new char[strlen(test_directory_)+100])
   {strcpy(test_directory, test_directory_); buf_end = strlen(test_directory);}
-
   ~medic()
   {delete [] test_directory;}
 
-  void write_test_run(double accres_, int i_);
+  void write_test_run(double accresfull_, int i_);
 };
 
 class doctor : public relay
@@ -346,6 +346,8 @@ class doctor : public relay
     void init_test(int test_id_, int test_relay_id_);
     void test_run(int Frame_end_);
 
+
+    double *TEST_ref_pos=NULL;
 };
 
 int find_worst_record(record ** r, int ncap);

@@ -57,6 +57,11 @@ classdef relay_data
             obj.event0 = event0;
             obj.gen = gen;
         end
+
+        function pos_res_out = sum_bead_res(obj)
+            [test, Frame_end, beads, npool] = deal(obj.test, obj.test.Frame_end, obj.test.beads, obj.test.npool);
+            pos_res_out = reshape(sum(reshape(test.pos_res_mat, [beads,Frame_end,npool])), [Frame_end, npool])';
+        end
         function write_relay_test(obj, params_, test_)
             header=size(params_);
             file_id = fopen([obj.dat_dir_name obj.exp_name obj.dat_name '.re' num2str(obj.relay_id) '_test' num2str(test_) '.redat'], 'w+');
@@ -65,7 +70,7 @@ classdef relay_data
             fclose(file_id);
         end
         function test_out = read_relay_test(obj, test_, relay_id_)
-            dat_test_in_name = [obj.dat_dir_name obj.exp_name obj.dat_name '.re' num2str(relay_id_) '_test' num2str(test_) '.redat']
+            dat_test_in_name = [obj.dat_dir_name obj.exp_name obj.dat_name '.re' num2str(relay_id_) '_test' num2str(test_) '.redat'];
             dat_test_in = fopen(dat_test_in_name);
             header_in = fread(dat_test_in, [1,2], 'int=>int');
             [param_len,npool] = deal(header_in(1),header_in(2));

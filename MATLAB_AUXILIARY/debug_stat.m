@@ -10,7 +10,6 @@ test = 'maxmin'; %% parameter perturbation
 ran_id = 1;
 nlead = 500;
 
-
 tic
 stat = read_stat(nbeads,test,ran_id);
 toc
