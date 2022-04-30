@@ -52,7 +52,7 @@ int main()
 
   if (test_generation)
   {
-    int test_id=0, Frames_test=180, test_relay_id=0;
+    int test_id=0, Frames_test=400, test_relay_id=0;
     printf("Testing %d bead generation. Test id: %d, Frames : %d\n", nbeads, test_id, Frames_test);
     doctor doc(ref, sp_min,sp_max,wl,t_phys,&rep);
     doc.init_test(test_id, test_relay_id); doc.test_run(Frames_test);

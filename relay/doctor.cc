@@ -228,6 +228,8 @@ double runner::test_detection(record * rec_, int start_, int end_, int i_)
     if (kill_frames[i]>latest_event) latest_event=kill_frames[i];
     event_frame_count[i][kill_frames[i]]++;
   }
+  printf("(thread %d) Tested parameters %d.\n", thread_id, i_);
+
   return res_acc_local_full;
 }
 
