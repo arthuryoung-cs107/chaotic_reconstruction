@@ -17,10 +17,11 @@ par_id = 0;
 relay_id = 1;
 
 relay = read_relay(nbeads, par_id, relay_id);
-stat = read_stat(nbeads,'maxmin',0);
+stat = read_stat(nbeads,'maxmin',1);
 swtrue = stat.sw0;
 
-% relay.test = relay.read_relay_test(0,0);
+relay.write_relay_test(stat.params_mat(3:end, :), 0,0);
+
 
 %%%%%%%% ----------------------------------------------------------------------------------
 %%%%%%%% ------------------------------  begin plots  ---------------------------------
@@ -30,13 +31,6 @@ fig_pos = AYfig.fig_pos_gen(2, 3);
 pos_full = [1 1 1728 1000];
 pos_top_row = [1 551 1728 460];
 pos_bottom_row = [0 1 1728 460];
-
-% test_fig = AYfig(AYfig.specs_gen('test_diagnostics',pos_full));
-% test_fig.init_tiles([2, 3]);
-%
-% relay_plots.plot_posres_vs_time(test_fig.ax_tile(2), blue5, relay)
-%
-% pause
 
 diagnostics_fig = AYfig(AYfig.specs_gen('relay_diagnostics',pos_full));
 diagnostics_fig.init_tiles([3, 3]);
@@ -52,8 +46,6 @@ relay_plots.plot_gen_param_error(diagnostics_fig.ax_tile, green4, relay, true_pa
 % relay_plots.plot_gen_weights(diagnostics_fig.ax_tile, pink1, relay, plot_indices);
 % relay_plots.plot_gen_duplication_count(diagnostics_fig.ax_tile, purple1, relay, plot_indices);
 % relay_plots.plot_gen_weight_vs_dup(diagnostics_fig.ax_tile, blue1, relay, plot_indices);
-
-
 
 %%%%%%%% ----------------------------------------------------------------------------------
 %%%%%%%% ------------------------------  end plots  ---------------------------------

@@ -9,10 +9,35 @@ classdef relay_plots
     end
     methods (Static)
 
-        function plot_posres_vs_time(ax_, base_color, re_)
-            plot_generic_frame_data(ax_, 1:re_.test.Frame_end, re_.sum_bead_res, struct('base_color', base_color));
-            apply_plot_labels(ax_, 'Frames', 'position residual', 'plot_res_vs_frames');
-            % set(ax_, 'YScale', 'log');
+        function plot_cell_vs_frames(axs_, base_color, x, Ycell, xname, yname, titlename, xind_)
+            plot_struct = struct('base_color', base_color);
+            if nargin==8
+                for i = 1:length(axs_)
+                    plot_generic_frame_data(axs_(i), x(xind_), Ycell{i}(:, xind_), plot_struct);
+                    apply_plot_labels(axs_(i), xname, yname, [titlename num2str(i)]);
+                    set(axs_(i), 'YScale', 'log');
+                end
+            else
+                for i = 1:length(axs_)
+                    plot_generic_frame_data(axs_(i), x, Ycell{i}, plot_struct);
+                    apply_plot_labels(axs_(i), xname, yname, [titlename num2str(i)]);
+                    set(axs_(i), 'YScale', 'log');
+                end
+            end
+        end
+        function plot_posres_vs_frames_statcomp(axs_, base_color, det_, stat_)
+            plot_struct = struct('base_color', base_color);
+            for i = 1:det_.beads
+                plot_generic_frame_data(axs_(i), 1:det_.Frame_end, det_.sim_beadres{i}, plot_struct);
+                apply_plot_labels(axs_(i), 'Frames', 'position residual', ['detect_res_vs_frame_bead' num2str(i)]);
+                set(axs_(i), 'YScale', 'log');
+            end
+            for i = 1:det_.beads
+                plot_generic_frame_data(axs_(i+det_.beads), 1:det_.Frame_end, stat_.pos_res_bead{i}(:,1:det_.Frame_end), plot_struct);
+                apply_plot_labels(axs_(i+det_.beads), 'Frames', 'position residual', ['stat_res_vs_frame_bead' num2str(i)]);
+                set(axs_(i+det_.beads), 'YScale', 'log');
+            end
+
         end
 
         %% error bar plots

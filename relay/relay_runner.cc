@@ -37,72 +37,92 @@ void runner::reset_sim(double *ptest_, double t0_, double ctheta0_, double comeg
 // take two steps so that we can start off the event diagnostics collection
 int runner::start_detection(int start_)
 {
-  int frame_local = start_+1;
-  double dur, *f = xs+(2*n*frame_local), res_acc_local=0.0;
-  advance(dur=(ts[frame_local]-ts[frame_local-1])/t_phys, d_ang[frame_local-1], comega_s[frame_local], dt_sim);
+  for (int i = 0; i < n*Frames; i++) pos_res[0][i]=alpha_INTpos_res[0][i]=0.0;
+
+  reset_sim(params_, ts[start_]/t_phys, d_ang[start_], comega_s[start_], xs + 2*n*start_);
+  int frame_local = start_, poffset = 2*n*frame_local, foffset=n*frame_local;
+  double res_acc_local = 0.0, *f = xs+poffset;
+
+  // initialize t=tstart data
+  t_history_[0]=t_history_[1]=ts[frame_local];
+  for (int i=0,j=0; i < n; i++,j+=2)
+  {
+    kill_frames[i] = 0;
+    pos_res[frame_local][i]=alpha_INTpos_res[frame_local][i]=INTpos_res[i][0]=INTpos_res[i][1]=INTpos_res[i][2]=0.0;
+
+    // write test outputs
+    double  x_sim = q[i].x, y_sim = q[i].y,
+            x_now = (x_sim-cx)*cl_im + cx_im, y_now = (y_sim-cy)*cl_im + cy_im;
+  }
+  // step to frame 1, begin computing divergence from data
+  frame_local++; poffset+=2*n; foffset+=n; f = xs+poffset;
+  advance((ts[frame_local]-ts[frame_local-1])/t_phys, d_ang[frame_local-1], comega_s[frame_local], dt_sim);
+  t_history_[2]=t_history_[1]; t_history_[1]=t_history_[0]; t_history_[0]=ts[frame_local];
   for (int i=0, j=0; i < n; i++, j+=2)
   {
-    double xt=(q[i].x-cx)*cl_im+cx_im-f[j], yt=(q[i].y-cy)*cl_im+cy_im-f[j+1], rsq=xt*xt+yt*yt;
-    pos_res[start_][i]=0.0; // zero out the first frame
-    res_acc_local += pos_res[frame_local][i]=rsq;
-    INTpos_res[i][2] = 0.5*rsq*dur;
+    double  xt=(q[i].x-cx)*cl_im + cx_im-f[j],yt=(q[i].y-cy)*cl_im + cy_im-f[j+1], rsq=xt*xt+yt*yt;
+    res_acc_local+=pos_res[frame_local][i]=rsq;
+    INTpos_res[i][2]=INTpos_res[i][1]; INTpos_res[i][1]=INTpos_res[i][0];
+    INTpos_res[i][0]+=0.5*(rsq+pos_res[frame_local-1][i])*(t_history_[0]-t_history_[1]);
+    alpha_INTpos_res[frame_local][i]=0.0;
   }
-  frame_local++;
-  advance(dur=(ts[frame_local]-ts[frame_local-1])/t_phys, d_ang[frame_local-1], comega_s[frame_local], dt_sim);
-  f = xs+(2*n*frame_local);
+
+  // step to frame 2, compute divergence from data as we will in the body of the detection
+  frame_local++; poffset+=2*n; foffset+=n; f = xs+poffset;
+  advance((ts[frame_local]-ts[frame_local-1])/t_phys, d_ang[frame_local-1], comega_s[frame_local], dt_sim);
+  t_history_[2]=t_history_[1]; t_history_[1]=t_history_[0]; t_history_[0]=ts[frame_local];
   for (int i=0, j=0; i < n; i++, j+=2)
   {
-    double xt=(q[i].x-cx)*cl_im+cx_im-f[j], yt=(q[i].y-cy)*cl_im+cy_im-f[j+1], rsq=xt*xt+yt*yt;
-    res_acc_local += pos_res[frame_local][i] = rsq;
-    INTpos_res[i][1] = INTpos_res[i][2] + 0.5*(pos_res[frame_local-1][i]+rsq)*dur;
+    double  xt=(q[i].x-cx)*cl_im + cx_im-f[j],yt=(q[i].y-cy)*cl_im + cy_im-f[j+1], rsq=xt*xt+yt*yt;
+    res_acc_local+=pos_res[frame_local][i]=rsq;
+    INTpos_res[i][2]=INTpos_res[i][1]; INTpos_res[i][1]=INTpos_res[i][0];
+    INTpos_res[i][0]+=0.5*(rsq+pos_res[frame_local-1][i])*(t_history_[0]-t_history_[1]);
+    alpha_INTpos_res[frame_local][i]=0.0;
   }
-  pos_res_acc+=res_acc_local;
-  return frame_local+1;
+  pos_res_acc=res_acc_local;
+  return frame_local;
 }
 
 void runner::detect_events(record * rec_, int start_, int end_)
 {
-  reset_sim(rec_->params, ts[start_]/t_phys, d_ang[start_], comega_s[start_], xs + 2*n*start_);
-  for (int i = 0; i < n; i++) kill_frames[i] = 0;
-
-  frame = start_detection(start_);
-  double t_i=ts[frame-1], t_m1=ts[frame-2], res_acc_local=pos_res_acc;
+  double t_history[3];
+  int frame_local = start_test_detection(start_, rec_->params, t_history);
+  int poffset = 2*n*frame_local, foffset=n*frame_local;
+  double res_acc_local = pos_res_acc, res_acc_local_full = pos_res_acc, *f;
   do
   {
-    double t_p1 = ts[frame], dur;
-    advance(dur=(t_p1-t_i)/t_phys, d_ang[frame-1], comega_s[frame], dt_sim);
-    double * f = xs+(2*n*frame);
+    frame_local++; poffset+=2*n; foffset+=n; f = xs+poffset;
+    advance((ts[frame_local]-ts[frame_local-1])/t_phys, d_ang[frame_local-1], comega_s[frame_local], dt_sim);
+    t_history[2]=t_history[1]; t_history[1]=t_history[0]; t_history[0]=ts[frame_local];
 
     bool all_dead=true;
+
     for (int i=0, j=0; i < n; i++, j+=2)
     {
       if (!(kill_frames[i])) // if this bead does not yet have a kill frame, continue search
       {
-        all_dead=false; // then we still have at least one
-        double xt=(q[i].x-cx)*cl_im + cx_im - f[j], yt=(q[i].y-cy)*cl_im + cy_im - f[j+1], rsq=xt*xt+yt*yt;
+        all_dead=false;
 
-        pos_res[frame][i] = rsq;
-        INTpos_res[i][0] = INTpos_res[i][1] + 0.5*(pos_res[frame-1][i]+rsq)*dur;
-        double alpha_it=alpha_INTpos_res[frame-1][i]=alpha_comp(INTpos_res[i], t_m1, t_p1);
-        if (alpha_it > alpha_tol) // if we just had a collision
+        double  xt=(q[i].x-cx)*cl_im + cx_im-f[j],yt=(q[i].y-cy)*cl_im + cy_im-f[j+1], rsq=xt*xt+yt*yt;
+        res_acc_local+=pos_res[frame_local][i]=rsq;
+        INTpos_res[i][2]=INTpos_res[i][1]; INTpos_res[i][1]=INTpos_res[i][0];
+        INTpos_res[i][0]+=0.5*(rsq+pos_res[frame_local-1][i])*(t_history[0]-t_history[1]);
+        alpha_INTpos_res[frame_local-1][i]=alpha_comp(INTpos_res[i], t_history[0], t_history[2]);
+        if (alpha_INTpos_res[frame_local-1][i] > alpha_tol) // if we just had a collision
         {
-          kill_frames[i] = frame-1;
-          alpha_kill[i] = alpha_it;
+          kill_frames[i] = frame_local-1;
+          alpha_kill[i] = alpha_INTpos_res[frame_local-1][i];
         }
         else res_acc_local+=rsq;
       }
     }
     if (all_dead) break;
-    else if (++frame==end_)
+    else if ((frame_local+1)==end_)
     {
       for (int i=0; i < n; i++) if (!(kill_frames[i]))
-      {
-        kill_frames[i] = end_-1;
-        alpha_kill[i] = alpha_INTpos_res[end_-2][i];
-      }
+        {kill_frames[i] = end_-1; alpha_kill[i] = alpha_INTpos_res[frame_local-2][i];}
       break;
     }
-    t_m1 = t_i; t_i = t_p1;
   } while(true);
   for (int i = 0; i < n; i++) event_frame_count[i][kill_frames[i]]++;
   rec_->record_event_data(pos_res_acc=res_acc_local, kill_frames, INTpos_res, alpha_kill);
