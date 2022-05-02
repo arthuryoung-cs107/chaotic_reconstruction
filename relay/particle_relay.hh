@@ -9,13 +9,14 @@
 #endif
 
 const int record_int_len=6;
-const int record_double_len=4;
+const int record_double_len=6;
 
 const int record_int_chunk_count = 1;
 const int record_double_chunk_count = 2;
 
 const double log_P = log(1e14);
 const double par_acc_P = 1e14;
+const double log_C = log(1.0/sqrt(2.0*M_PI));
 
 struct record
 {
@@ -35,6 +36,14 @@ struct record
   double root_residual;
   double weight;
   double event_residual;
+  double px;
+  double zeta;
+
+  int * int_params;
+  double * double_params;
+
+  int * const int_chunk;
+  double * const double_chunk;
 
   int * const event_positions;
 
@@ -43,7 +52,9 @@ struct record
 
   double * const params;
 
-  record(int beads_, int Frames_, int len_, int i_, int * int_chunk_, double * params_, double * double_chunk_): beads(beads_), Frames(Frames_), len(len_), global_index(i_), event_positions(int_chunk_), params(params_), residual_data(double_chunk_), alpha_data(double_chunk_+beads_) {}
+  record(int beads_, int Frames_, int len_, int i_, int * int_chunk_, double * params_, double * double_chunk_): beads(beads_), Frames(Frames_), len(len_), global_index(i_), int_chunk(int_chunk_), double_chunk(double_chunk_), event_positions(int_chunk_), residual_data(double_chunk_), alpha_data(double_chunk_+beads_), params(params_)
+  {int_params=&(gen); double_params=&(residual);}
+
   ~record() {}
 
   void reset_record(int gen_, int p_gen_=-1, int p_count_=0, int p_gi_=-1);
@@ -65,8 +76,13 @@ struct record
   {return !(isbetter(rcomp_));}
 
   // being as careful as possible for floating point precision
-  inline double w(double lambda_, double b_, double tau_)
-  {return weight = lambda_*exp(b_ + (log_P-((0.5*(root_residual/tau_))*(root_residual/tau_))));}
+  inline double w(double lambda_, double beta_, double tau_)
+  {
+    double itau=1.0/tau_;
+    zeta = (0.5*(root_residual*itau))*(root_residual*itau);
+    px = exp(log_C+(log(itau)-zeta));
+    return weight = lambda_*exp(log_P+(beta_-zeta));
+  }
 };
 
 class runner: public swirl
@@ -102,7 +118,7 @@ class runner: public swirl
       void reset_sim(double *ptest_, double t0_, double ctheta0_, double comega0_, double *x0_);
 
       int run_relay(record * rec_, int start_, int * end_, int earliest_, int latest_, double residual_worst_);
-      int start_detection(int start_);
+      int start_detection(int start_, double * params_, double *t_history_);
       void detect_events(record* rec_, int start_, int end_);
 
       inline void clear_event_data()
@@ -110,6 +126,7 @@ class runner: public swirl
 
 
       // debugging stuff
+
       double *TEST_sim_pos, *TEST_pos, *TEST_pos_res, *TEST_alpha_INTpos_res, *TEST_INTpos_res;
       int start_test_detection(int start_, double * params_, double *t_history_);
       double test_detection(record * rec_, int start_, int end_, int i_);
@@ -280,8 +297,10 @@ class relay : public referee
       const int nt;
 
       bool  debugging_flag=true,
-            weight_stats_flag=true,
             gen0_resample_flag=false;
+
+      double  rs_full_factor = 1,
+              data_scale;
 
       /** A reference to the list of walls for the swirling simulation. */
       wall_list &wl;

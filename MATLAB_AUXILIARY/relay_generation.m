@@ -12,6 +12,10 @@ classdef relay_generation
         lead_par_w_mean;
         lead_par_w_var;
 
+        net_residuals;
+        pis;
+        zetas;
+
         rec;
         leader_data;
         params;
@@ -77,6 +81,10 @@ classdef relay_generation
             obj.sample_weights = sample_weights;
             obj.lead_par_w_mean = lead_par_w_mean;
             obj.lead_par_w_var = lead_par_w_var;
+
+            obj.net_residuals = leader_data.double_data(1,:);
+            obj.pis = leader_data.double_data(5,:);
+            obj.zetas = leader_data.double_data(6,:);
 
             obj.rec = rec;
             obj.leader_data = leader_data;

@@ -72,6 +72,30 @@ classdef relay_plots
                 axi=axi+1;
             end
         end
+        function plot_gen_netresiduals(axs_, base_color, re, indices_)
+            axi = 1;
+            for i = indices_
+                histogram(axs_(axi), re.gen(i).net_residuals, 'FaceColor', base_color)
+                apply_plot_labels(axs_(axi), 'residuals', 'counts', ['gen_' num2str(i) '_net_residuals']);
+                axi=axi+1;
+            end
+        end
+        function plot_gen_probabilities(axs_, base_color, re, indices_)
+            axi = 1;
+            for i = indices_
+                histogram(axs_(axi), re.gen(i).pis, 'FaceColor', base_color)
+                apply_plot_labels(axs_(axi), '$$\pi$$', 'counts', ['gen_' num2str(i) 'probabilities']);
+                axi=axi+1;
+            end
+        end
+        function plot_gen_zeta(axs_, base_color, re, indices_)
+            axi = 1;
+            for i = indices_
+                histogram(axs_(axi), re.gen(i).zetas, 'FaceColor', base_color)
+                apply_plot_labels(axs_(axi), '$$\zeta$$', 'counts', ['gen_' num2str(i) 'zeta_values']);
+                axi=axi+1;
+            end
+        end
         function plot_gen_duplication_count(axs_, base_color, re, indices_)
             axi = 1;
             for i = indices_

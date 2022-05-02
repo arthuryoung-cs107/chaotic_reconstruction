@@ -52,7 +52,6 @@ pos_bottom_row = [0 1 1728 460];
 test_fig = AYfig(AYfig.specs_gen('test_diagnostics',pos_full));
 test_fig.init_tiles([3, 3]);
 
-
 relay_plots.plot_cell_vs_frames(test_fig.ax_tile(1:3), blue5, Frame_vec, beadres, 'Frames', 'position residual', 'position_residual_vs_Frames_bead')
 relay_plots.plot_cell_vs_frames(test_fig.ax_tile(4:6), red5, Frame_vec, beadres_matcomp, 'Frames', 'matcomp position residual', 'posres_matcomp_vs_Frames_bead')
 relay_plots.plot_cell_vs_frames(test_fig.ax_tile(7:9), orange1, Frame_vec, beadalpha, 'Frames', 'alpha', 'alpha_vs_Frames')

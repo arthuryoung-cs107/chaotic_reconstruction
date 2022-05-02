@@ -35,7 +35,7 @@ void runner::reset_sim(double *ptest_, double t0_, double ctheta0_, double comeg
 }
 
 // take two steps so that we can start off the event diagnostics collection
-int runner::start_detection(int start_)
+int runner::start_detection(int start_, double * params_, double *t_history_)
 {
   for (int i = 0; i < n*Frames; i++) pos_res[0][i]=alpha_INTpos_res[0][i]=0.0;
 
@@ -86,7 +86,7 @@ int runner::start_detection(int start_)
 void runner::detect_events(record * rec_, int start_, int end_)
 {
   double t_history[3];
-  int frame_local = start_test_detection(start_, rec_->params, t_history);
+  int frame_local = start_detection(start_, rec_->params, t_history);
   int poffset = 2*n*frame_local, foffset=n*frame_local;
   double res_acc_local = pos_res_acc, res_acc_local_full = pos_res_acc, *f;
   do
@@ -133,15 +133,17 @@ int runner::run_relay(record * rec_, int start_, int * end_, int earliest_, int 
   reset_sim(rec_->params, ts[start_]/t_phys, d_ang[start_], comega_s[start_], xs + 2*n*start_);
   for (int i = 0; i < n; i++) pos_res[start_][i]= 0.0;
   double res_acc_local = 0.0;
-  for (frame = start_+1; frame < earliest_; frame++)
+  for (frame = start_+1; frame < latest_; frame++)
   {
     advance((ts[frame]-ts[frame-1])/t_phys, d_ang[frame-1], comega_s[frame], dt_sim);
     double * f = xs+(2*n*frame);
     for (int i=0, j=0; i < n; i++, j+=2)
     {
-      // if (i<end_[i])
-      double xt=(q[i].x-cx)*cl_im + cx_im - f[j], yt=(q[i].y-cy)*cl_im + cy_im - f[j+1];
-      res_acc_local += pos_res[frame][i] = xt*xt+yt*yt;
+      if (i<end_[i])
+      {
+        double xt=(q[i].x-cx)*cl_im + cx_im - f[j], yt=(q[i].y-cy)*cl_im + cy_im - f[j+1];
+        res_acc_local += pos_res[frame][i] = xt*xt+yt*yt;        
+      }
     }
     if (res_acc_local>residual_worst_) break;
   }

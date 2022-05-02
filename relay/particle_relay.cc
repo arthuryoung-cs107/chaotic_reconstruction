@@ -23,10 +23,7 @@ void record::reset_record(int gen_, int p_gen_, int p_count_, int p_gi_)
   parent_count=p_count_;
   parent_global_index=p_gi_; // negative value implies no parent
   dup_count=0;
-
-  residual=0.0;
-  event_residual=0.0;
-  weight=0.0;
+  for (int i = 0; i < record_double_len; i++) double_params[i] = 0.0;
 }
 void record::resample(int gen_, double * dmin_, double *dmax_, AYrng * r_)
 {
@@ -37,37 +34,22 @@ void record::resample(int gen_, double * dmin_, double *dmax_, AYrng * r_)
 void record::duplicate(record *parent_, int gen_, double *dmin_, double *dmax_, AYrng * r_, double * var_)
 {
   reset_record(gen_, parent_->gen, parent_->parent_count+1, parent_->global_index);
+  double sfac = 0.25*(1.0-parent_->px);
   for (int i = 0; i < len; i++)
   {
-    // double lim_high=dmax_[i]-parent_->params[i], lim_low=parent_->params[i]-dmin_[i],
-    //   lim_std = ((lim_high)<(lim_low))? lim_high:lim_low,
-    //   std_use = (lim_std<16.0*sqrt(var_[i]))? 0.25*lim_std : sqrt(var_[i]);
-
-    double std_use = sqrt(var_[i]);
-    // params[i] = parent_->params[i]*(r_->rand_gau_gsl(1.0, std_use));
-    params[i] = parent_->params[i] + parent_->params[i]*(r_->rand_gau_gsl(0.0, std_use));
+    double z = r_->rand_gau_gsl(0.0, 1.0);
+    params[i] = parent_->params[i] + sfac*z*((z>0.0)?(dmax_[i]-parent_->params[i]):(parent_->params[i]-dmin_[i]));
     if (params[i] > dmax_[i]) params[i]=dmax_[i];
     else if (params[i] < dmin_[i]) params[i]=dmin_[i];
   }
 }
 void record::take_vals(record * rtake_)
 {
-  gen=rtake_->gen;
-  parent_gen=rtake_->parent_gen;
-  parent_count=rtake_->parent_count;
-  parent_global_index=rtake_->parent_global_index;
-  dup_count=rtake_->dup_count;
-
-  residual=rtake_->residual;
-  event_residual=rtake_->event_residual;
-  weight=rtake_->weight;
-
+  for (int i = 0; i < record_int_len-1; i++) int_params[i] = rtake_->int_params[i];
+  for (int i = 0; i < record_double_len; i++) double_params[i] = rtake_->double_params[i];
+  for (int i = 0; i < record_int_chunk_count*beads; i++) int_chunk[i]=rtake_->int_chunk[i];
+  for (int i = 0; i < record_double_chunk_count*beads; i++) double_chunk[i]=rtake_->double_chunk[i];
   for (int i = 0; i < len; i++) params[i] = rtake_->params[i];
-  for (int i = 0; i < beads; i++)
-  {
-    params[i] = rtake_->params[i];
-    residual_data[i] = rtake_->residual_data[i];
-  }
 }
 
 referee::~referee()
