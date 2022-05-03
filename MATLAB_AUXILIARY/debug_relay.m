@@ -47,7 +47,6 @@ plot_indices =first_indices;
 % relay_plots.plot_gen_probabilities(diagnostics_fig.ax_tile, purple1, relay, plot_indices);
 relay_plots.plot_gen_zeta(diagnostics_fig.ax_tile, purple1, relay, plot_indices);
 % relay_plots.plot_gen_weights(diagnostics_fig.ax_tile, pink1, relay, plot_indices);
-% relay_plots.plot_gen_weights(diagnostics_fig.ax_tile, pink1, relay, plot_indices);
 % relay_plots.plot_gen_duplication_count(diagnostics_fig.ax_tile, purple1, relay, plot_indices);
 % relay_plots.plot_gen_weight_vs_dup(diagnostics_fig.ax_tile, blue1, relay, plot_indices);
 

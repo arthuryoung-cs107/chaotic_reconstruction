@@ -19,7 +19,7 @@ nt(1), // only one runner
 pg(new proximity_grid*[nt]), rng(new AYrng*[nt]), runners(new runner*[nt])
 {
   alloc_records(nt, Frames, n);
-  rep->load_filter(ts, xs, d_ang);
+  rep->load_relay(ts, xs, d_ang);
 
   data_scale = sp_min_.cl_im;
 

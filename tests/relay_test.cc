@@ -15,10 +15,11 @@ const int npool = 2000;
 const int param_len = 12;
 const double dt_sim = 0.002;
 const double t_wheels = 0.012;
-const double noise_tol = 1e-5;
+const double noise_tol = 1e-2;
 const double alpha_tol=100.0;
 const bool test_generation=false;
 const bool run_relay=true;
+const bool noise_data=true;
 char proc_loc[] = "./dat_dir/";
 int main()
 {
@@ -46,7 +47,9 @@ int main()
   wall_par_planes wp0(0,1,0,r),wp1(fa,0.5,0,r),wp2(fa,-0.5,0,r);
   wl.add_wall(&wf); wl.add_wall(&wp0); wl.add_wall(&wp1); wl.add_wall(&wp2);
 
-  reporter rep; rep.init_relay(proc_loc, rydat_dir, file_name, relay_id);
+
+  double cl = sp_min.cl_im; // this will do for now, assuming that we aren't learning cl_im
+  reporter rep; rep.init_relay(proc_loc, rydat_dir, file_name, relay_id, noise_data, noise_tol*cl);
   referee ref(nlead, npool, param_len, dt_sim, noise_tol, alpha_tol);
 
   if (test_generation)

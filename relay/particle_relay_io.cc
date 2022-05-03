@@ -6,9 +6,9 @@
 
 #include "particle_relay.hh"
 
-void reporter::init_relay( char * proc_loc_, char * rydat_dir_, char * file_name_, int relay_id_)
+void reporter::init_relay( char * proc_loc_, char * rydat_dir_, char * file_name_, int relay_id_, bool noise_data_, double noise_tol_)
 {
-  relay_id = relay_id_;
+  relay_id = relay_id_; noise_data = noise_data_; noise_tol = noise_tol_;
   reading_flag=true;
   rydat_dir=string_gen_pruned(rydat_dir_); file_name=string_gen_pruned(file_name_);
   size_t len_loc = strlen(proc_loc_) + strlen(rydat_dir);
@@ -33,6 +33,29 @@ void reporter::init_relay( char * proc_loc_, char * rydat_dir_, char * file_name
   dimline2 >> val1 >> P >> val3;
 
   sml_stream.close();
+}
+
+void reporter::load_relay(double *ts_, double *xs_, double *d_ang_)
+{
+  if (reading_flag)
+  {
+    int nsnaps = Frames;
+    char * file_name = in_buf + ibuf_end;
+    sprintf(file_name, ".filin");
+    FILE * inputs = fopen(in_buf, "r"); // or "rb"?
+    fread_safe(ts_, sizeof(double), nsnaps, inputs);
+    fread_safe(xs_, sizeof(double), 2*nsnaps*P, inputs);
+    fread_safe(d_ang_, sizeof(double), nsnaps, inputs);
+    fclose(inputs);
+
+    if (noise_data)
+    {
+      AYrng ran;
+      ran.rng_init_gsl(1);
+      for (int i = 2*P; i < 2*nsnaps*P; i++) xs_[i]+=ran.rand_gau_gsl(0.0,noise_tol);
+    }
+  }
+  else printf("ODR_struct: not staged for reading binary filter inputs\n");
 }
 
 void reporter::write_startup_diagnostics(int gen_max_)

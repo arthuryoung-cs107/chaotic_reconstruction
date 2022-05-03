@@ -217,12 +217,19 @@ class reporter : public ODR_struct
       void init_relay(const char *proc_loc_, const char *rydat_dir_, const char *file_name_, int relay_id_)
         {init_relay((char*)proc_loc_,(char*)rydat_dir_,(char*)file_name_, relay_id_);}
 
+
+    void load_relay(double *ts_, double *xs_, double *d_ang_, int offset_); 
     void write_startup_diagnostics(int gen_max_);
     void write_event_diagnostics(int event_);
     void write_postevent_diagnostics(int event_);
     void write_gen_diagnostics(int gen_count_, int leader_count_);
     void close_diagnostics(int gen_count_);
     ODR_struct * spawn_swirlODR(char *name_);
+
+  private:
+
+    bool noise_data;
+    double noise_tol;
 };
 
 const int event_int_len=3;
@@ -299,7 +306,7 @@ class relay : public referee
       bool  debugging_flag=true,
             gen0_resample_flag=false;
 
-      double  rs_full_factor = 1,
+      double  rs_full_factor = 0.5,
               data_scale;
 
       /** A reference to the list of walls for the swirling simulation. */

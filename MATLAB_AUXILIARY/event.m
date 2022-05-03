@@ -19,7 +19,9 @@ classdef event
         bead_events_full;
 
         bead_res;
-        bead_alpha; 
+        bead_alpha;
+
+        post_data; 
     end
     methods
         function obj = event(dat_dir_name_, exp_name_, dat_name_, relay_id_, event_count_, specs)
@@ -78,6 +80,8 @@ classdef event
 
             obj.bead_res = pool_data.double_chunk_data(1:specs.beads, :);
             obj.bead_alpha = pool_data.double_chunk_data(specs.beads:end, :);
+
+            obj.post_data = post_data;
         end
     end
 end
