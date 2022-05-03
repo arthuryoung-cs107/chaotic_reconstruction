@@ -43,10 +43,10 @@ first_indices = 1:length(diagnostics_fig.ax_tile);
 plot_indices =first_indices;
 
 % relay_plots.plot_3bead_event_stats(diagnostics_fig.ax_tile, blue5, red5, green4, relay);
-% relay_plots.plot_gen_param_error(diagnostics_fig.ax_tile, green4, relay, true_params, plot_indices);
+relay_plots.plot_gen_param_error(diagnostics_fig.ax_tile, green4, relay, true_params, plot_indices);
 % relay_plots.plot_gen_netresiduals(diagnostics_fig.ax_tile, red5, relay, plot_indices);
 % relay_plots.plot_gen_probabilities(diagnostics_fig.ax_tile, purple1, relay, plot_indices);
-relay_plots.plot_gen_zeta(diagnostics_fig.ax_tile, purple1, relay, plot_indices);
+% relay_plots.plot_gen_zeta(diagnostics_fig.ax_tile, purple1, relay, plot_indices);
 % relay_plots.plot_gen_weights(diagnostics_fig.ax_tile, pink1, relay, plot_indices);
 % relay_plots.plot_gen_duplication_count(diagnostics_fig.ax_tile, purple1, relay, plot_indices);
 % relay_plots.plot_gen_weight_vs_dup(diagnostics_fig.ax_tile, blue1, relay, plot_indices);

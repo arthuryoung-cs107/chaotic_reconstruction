@@ -16,9 +16,9 @@ const int param_len = 12;
 const double dt_sim = 0.002;
 const double t_wheels = 0.012;
 const double noise_tol = 1e-2;
-const double alpha_tol=100.0;
-const bool test_generation=true;
-const bool run_relay=false;
+const double alpha_tol=10.0;
+const bool test_generation=false;
+const bool run_relay=true;
 const bool noise_data=true;
 char proc_loc[] = "./dat_dir/";
 int main()
