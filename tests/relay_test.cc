@@ -10,15 +10,15 @@ const int nbeads=3;
 const int param_id=0;
 const int relay_id=1;
 const int generations=10;
-const int nlead = 1000;
-const int npool = 2000;
+const int nlead = 500;
+const int npool = 1000;
 const int param_len = 12;
 const double dt_sim = 0.002;
 const double t_wheels = 0.012;
 const double noise_tol = 1e-2;
 const double alpha_tol=100.0;
-const bool test_generation=false;
-const bool run_relay=true;
+const bool test_generation=true;
+const bool run_relay=false;
 const bool noise_data=true;
 char proc_loc[] = "./dat_dir/";
 int main()
@@ -54,7 +54,8 @@ int main()
 
   if (test_generation)
   {
-    int test_id=0, Frames_test=400, test_relay_id=0;
+    int test_id=0, Frames_test=600;
+    int test_relay_id=(noise_data)?1:0;
     printf("Testing %d bead generation. Test id: %d, Frames : %d\n", nbeads, test_id, Frames_test);
     doctor doc(ref, sp_min,sp_max,wl,t_phys,&rep);
     doc.init_test(test_id, test_relay_id); doc.test_run(Frames_test);

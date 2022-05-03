@@ -20,7 +20,8 @@ relay = read_relay(nbeads, par_id, relay_id);
 stat = read_stat(nbeads,'maxmin',0);
 swtrue = stat.sw0;
 
-% relay.write_relay_test(stat.params_mat(3:end, :), 0,0);
+% relay.write_relay_test(stat.params_mat(3:end, :),0,1);
+
 
 
 %%%%%%%% ----------------------------------------------------------------------------------

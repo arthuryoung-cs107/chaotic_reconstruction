@@ -8,59 +8,64 @@ figs_to_write = 0;
 save_dir = [getenv('HOME') '/Desktop/MATLAB_OUTPUT/'];
 save_type = 'pdf';
 
+plot_stuff = true;
 make_movie = false;
 
 %%%%%%%% ----------------------------------------------------------------------------------
 %%%%%%%% ------------------------------  get data  ---------------------------------
-%%%%%%%% ---------------------------------------------------------------------------
+%%%%%%%%
 
 nbeads = 3;
 par_id = 0;
 relay_id = 1;
 
 relay = read_relay(nbeads, par_id, relay_id);
-stat = read_stat(nbeads,'maxmin',1);
+stat = read_stat(nbeads,'maxmin',0);
 swtrue = stat.sw0;
-
-det = relay.read_relay_test(swtrue,0,0);
+det = relay.read_relay_test(swtrue,0,1);
 
 Frame_end = det.Frame_end;
 Frame_vec = 1:Frame_end;
 Frame_limvec = 1:170;
 swtrue_pos = swtrue.pos(:,1:2,Frame_vec);
-stat_parmat = stat.params_mat(3:end, :);
-swtrue_params = swtrue.params(3:end);
-
-det_bcell = det.frame_posmat2beadcell(det.sim_pos_mat);
-sim_beadres = det.frame_simbeadres(swtrue_pos,det_bcell);
-
-beadres = det.frame_resmat2beadcell(det.pos_res_mat);
-beadalpha = det.frame_resmat2beadcell(det.alpha_mat);
-beadINTres = det.frame_resmat2beadcell(det.INTmat);
-beadres_matcomp = det.beadres_matcomp();
 
 
 %%%%%%%% ----------------------------------------------------------------------------------
 %%%%%%%% ------------------------------  begin plots  ---------------------------------
 %%%%%%%% ---------------------------------------------------------------------------
 
-fig_pos = AYfig.fig_pos_gen(2, 3);
-pos_full = [1 1 1728 1000];
-pos_top_row = [1 551 1728 460];
-pos_bottom_row = [0 1 1728 460];
+if plot_stuff
 
-test_fig = AYfig(AYfig.specs_gen('test_diagnostics',pos_full));
-test_fig.init_tiles([3, 3]);
+    swtrue_pos = swtrue.pos(:,1:2,Frame_vec);
+    stat_parmat = stat.params_mat(3:end, :);
+    swtrue_params = swtrue.params(3:end);
 
-relay_plots.plot_cell_vs_frames(test_fig.ax_tile(1:3), blue5, Frame_vec, beadres, 'Frames', 'position residual', 'position_residual_vs_Frames_bead')
-relay_plots.plot_cell_vs_frames(test_fig.ax_tile(4:6), red5, Frame_vec, beadres_matcomp, 'Frames', 'matcomp position residual', 'posres_matcomp_vs_Frames_bead')
-relay_plots.plot_cell_vs_frames(test_fig.ax_tile(7:9), orange1, Frame_vec, beadalpha, 'Frames', 'alpha', 'alpha_vs_Frames')
+    det_bcell = det.frame_posmat2beadcell(det.sim_pos_mat);
+    sim_beadres = det.frame_simbeadres(swtrue_pos,det_bcell);
+
+    beadres = det.frame_resmat2beadcell(det.pos_res_mat);
+    beadalpha = det.frame_resmat2beadcell(det.alpha_mat);
+    beadINTres = det.frame_resmat2beadcell(det.INTmat);
+    beadres_matcomp = det.beadres_matcomp();
+
+    fig_pos = AYfig.fig_pos_gen(2, 3);
+    pos_full = [1 1 1728 1000];
+    pos_top_row = [1 551 1728 460];
+    pos_bottom_row = [0 1 1728 460];
+
+    test_fig = AYfig(AYfig.specs_gen('test_diagnostics',pos_full));
+    test_fig.init_tiles([3, 3]);
+
+    relay_plots.plot_cell_vs_frames(test_fig.ax_tile(1:3), blue5, Frame_vec, beadres, 'Frames', 'position residual', 'position_residual_vs_Frames_bead')
+    relay_plots.plot_cell_vs_frames(test_fig.ax_tile(4:6), red5, Frame_vec, beadres_matcomp, 'Frames', 'matcomp position residual', 'posres_matcomp_vs_Frames_bead')
+    relay_plots.plot_cell_vs_frames(test_fig.ax_tile(7:9), orange1, Frame_vec, beadalpha, 'Frames', 'alpha', 'alpha_vs_Frames')
 
 
-% relay_plots.plot
+    % relay_plots.plot_param_error(test_fig.ax_tile(7), green4,stat_parmat,swtrue_params)
+    % relay_plots.plot_param_error(test_fig.ax_tile(8), green4,det.params,swtrue_params)
 
-% relay_plots.plot_param_error(test_fig.ax_tile(7), green4,stat_parmat,swtrue_params)
-% relay_plots.plot_param_error(test_fig.ax_tile(8), green4,det.params,swtrue_params)
+end
+
 
 if (make_movie)
     det_pcell = det.frame_posmat2poolcell(det.sim_pos_mat);

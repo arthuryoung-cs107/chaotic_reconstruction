@@ -213,12 +213,12 @@ class reporter : public ODR_struct
 
     reporter() : ODR_struct() {}
     ~reporter() {}
-    void init_relay(char * proc_loc_, char * rydat_dir_, char * file_name_, int relay_id_);
-      void init_relay(const char *proc_loc_, const char *rydat_dir_, const char *file_name_, int relay_id_)
-        {init_relay((char*)proc_loc_,(char*)rydat_dir_,(char*)file_name_, relay_id_);}
+    void init_relay(char * proc_loc_, char * rydat_dir_, char * file_name_, int relay_id_, bool noise_data_, double noise_tol_in_);
+      void init_relay(const char *proc_loc_, const char *rydat_dir_, const char *file_name_, int relay_id_, bool noise_data_, double noise_tol_in_)
+        {init_relay((char*)proc_loc_,(char*)rydat_dir_,(char*)file_name_, relay_id_, noise_data_, noise_tol_in_);}
 
 
-    void load_relay(double *ts_, double *xs_, double *d_ang_, int offset_); 
+    void load_relay(double *ts_, double *xs_, double *d_ang_);
     void write_startup_diagnostics(int gen_max_);
     void write_event_diagnostics(int event_);
     void write_postevent_diagnostics(int event_);
@@ -229,7 +229,7 @@ class reporter : public ODR_struct
   private:
 
     bool noise_data;
-    double noise_tol;
+    double noise_tol_in;
 };
 
 const int event_int_len=3;

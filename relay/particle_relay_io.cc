@@ -6,9 +6,14 @@
 
 #include "particle_relay.hh"
 
-void reporter::init_relay( char * proc_loc_, char * rydat_dir_, char * file_name_, int relay_id_, bool noise_data_, double noise_tol_)
+extern "C"
 {
-  relay_id = relay_id_; noise_data = noise_data_; noise_tol = noise_tol_;
+  #include "AYaux.h"
+}
+
+void reporter::init_relay( char * proc_loc_, char * rydat_dir_, char * file_name_, int relay_id_, bool noise_data_, double noise_tol_in_)
+{
+  relay_id = relay_id_; noise_data = noise_data_; noise_tol_in = noise_tol_in_;
   reading_flag=true;
   rydat_dir=string_gen_pruned(rydat_dir_); file_name=string_gen_pruned(file_name_);
   size_t len_loc = strlen(proc_loc_) + strlen(rydat_dir);
@@ -52,7 +57,7 @@ void reporter::load_relay(double *ts_, double *xs_, double *d_ang_)
     {
       AYrng ran;
       ran.rng_init_gsl(1);
-      for (int i = 2*P; i < 2*nsnaps*P; i++) xs_[i]+=ran.rand_gau_gsl(0.0,noise_tol);
+      for (int i = 2*P; i < 2*nsnaps*P; i++) xs_[i]+=ran.rand_gau_gsl(0.0,noise_tol_in);
     }
   }
   else printf("ODR_struct: not staged for reading binary filter inputs\n");
