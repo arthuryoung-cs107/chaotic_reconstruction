@@ -11,7 +11,7 @@ ts(ts_), xs(xs_), d_ang(d_ang_), comega_s(comega_s_),
 lead_dup_count(new int[nlead_]), kill_frames(new int[n_]),
 event_frame_count(AYimatrix(n_, Frames_)),
 param_acc(new double[param_len_]), alpha_kill(new double[n_]),
-pos_res(AYdmatrix(Frames_, n_)), alpha_INTpos_res(AYdmatrix(Frames_, n_)), INTpos_res(AYdmatrix(n_, 3))
+pos_res(AYdmatrix(Frames_, n_)), alpha_INTpos_res(AYdmatrix(Frames_, n_)), INTpos_res(AYdmatrix(n_, 3)), TRAIN_sim_pos(new double[2*n_*Frames_])
 {pvals = &Kn;}
 
 runner::~runner()
@@ -128,24 +128,52 @@ void runner::detect_events(record * rec_, int start_, int end_)
   rec_->record_event_data(pos_res_acc=res_acc_local, kill_frames, INTpos_res, alpha_kill);
 }
 
-int runner::run_relay(record * rec_, int start_, int * end_, int earliest_, int latest_, double residual_worst_)
+int runner::run_relay(record * rec_, int start_, int earliest_, int latest_, int * event_frames_ordered_, int * bead_order, double residual_worst_)
 {
-  reset_sim(rec_->params, ts[start_]/t_phys, d_ang[start_], comega_s[start_], xs + 2*n*start_);
-  for (int i = 0; i < n; i++) pos_res[start_][i]= 0.0;
-  double res_acc_local = 0.0;
-  for (frame = start_+1; frame < latest_; frame++)
+  int poffset = 2*n*start_;
+
+  reset_sim(rec_->params, ts[start_]/t_phys, d_ang[start_], comega_s[start_], xs + poffset);
+
+  // set the starting frame position
+  double *tsp = TRAIN_sim_pos+(poffset);
+  for (int i=0, j=0; i < n; i++, j+=2)
+  {tsp[j]=q[i].x; tsp[j+1]=q[i].y;}
+
+  // begin by computing full stretch of event block
+  for (int frame_local = start_+1; frame_local < latest_; frame_local++)
   {
-    advance((ts[frame]-ts[frame-1])/t_phys, d_ang[frame-1], comega_s[frame], dt_sim);
-    double * f = xs+(2*n*frame);
+    advance((ts[frame_local]-ts[frame_local-1])/t_phys, d_ang[frame_local-1], comega_s[frame_local], dt_sim);
+    tsp+=(2*n);
     for (int i=0, j=0; i < n; i++, j+=2)
+    {tsp[j]=q[i].x; tsp[j+1]=q[i].y;}
+  }
+
+  // compute residual information
+  tsp=TRAIN_sim_pos+poffset;
+  double *f = xs+poffset, res_acc_local = 0.0;
+  int stretch_start = start_;
+  for (int si = 0; si < n; si++)
+  {
+    double * berm_si = bead_event_res_mat+(si*n);
+    for (int frame_local = stretch_start; frame_local < event_frames_ordered[si]; frame_local++)
     {
-      if (i<end_[i])
+      f+=2*n; tsp+=2*n;
+      for (int i=0, j=0; i < n; i++, j+=2)
       {
-        double xt=(q[i].x-cx)*cl_im + cx_im - f[j], yt=(q[i].y-cy)*cl_im + cy_im - f[j+1];
-        res_acc_local += pos_res[frame][i] = xt*xt+yt*yt;        
+        double  xt=(tsp[j]-cx)*cl_im + cx_im - f[j], yt=(tsp[j+1]-cy)*cl_im + cy_im - f[j+1];
+        berm_si[i]+=xt*xt+yt*yt; // accumulate the the event vs bead matrix.
       }
     }
-    if (res_acc_local>residual_worst_) break;
+    stretch_start+=event_frames_ordered[si];
   }
+
+  for (int bead_i = 0; bead_i < n; bead_i++)
+  {
+    for (int i = 0; i < count; i++) 
+    {
+
+    }
+  }
+
   return (int)rec_->check_success(pos_res_acc=res_acc_local,residual_worst_);
 }

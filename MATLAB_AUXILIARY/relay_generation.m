@@ -21,7 +21,10 @@ classdef relay_generation
         params;
     end
     methods
-        function obj = relay_generation(dat_dir_name_, exp_name_, dat_name_, relay_id_, gen_count_, specs)
+        function obj = relay_generation()
+
+        end
+        function obj = read_generation_data(obj, dat_dir_name_, exp_name_, dat_name_, relay_id_, gen_count_, specs)
             dat = fopen([dat_dir_name_ exp_name_ dat_name_ '.re' num2str(relay_id_) '_gen' num2str(gen_count_) '.redat']);
             header = fread(dat,[1, 2], 'int=>int');
             int_vec = fread(dat,[1, header(1)], 'int=>int');
@@ -46,12 +49,11 @@ classdef relay_generation
                                'beta', double_vec(7), ...
                                'w_sum', double_vec(8), ...
                                'w_max', double_vec(9));
-                            % 'residual_worst', double_vec(2));
 
             lead_dup_count = fread(dat, [1,gen_specs.leader_count], 'int=>int');
             sample_weights = fread(dat, [1,gen_specs.leader_count], 'double=>double');
-            lead_par_w_mean = fread(dat, [1,specs.param_len], 'double=>double');
-            lead_par_w_var = fread(dat, [1,specs.param_len], 'double=>double');
+            lead_par_w_mean = fread(dat, [specs.param_len, 1], 'double=>double');
+            lead_par_w_var = fread(dat, [specs.param_len, 1], 'double=>double');
 
             rec = relay_record.empty(gen_specs.leader_count, 0);
             leader_data = struct('int_data', nan(specs.record_int_len, specs.nlead), ...

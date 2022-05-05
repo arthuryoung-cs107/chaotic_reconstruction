@@ -59,6 +59,9 @@ walk_test: $(TEST_SRC)walk_test.cc $(WAOBJS)
 relay_test: $(TEST_SRC)relay_test.cc $(REOBJS)
 	$(CXX) $(IDIR) $(CFLAGS) $(LINK) $^ $(LIBS) -o $@
 
+swirl_writing_test: $(WRITING_SRC)swirl_writing_test.cc $(SWOBJS)
+	$(CXX) $(IDIR) $(CFLAGS) $(LINK) $^ $(LIBS) -o $@
+
 $(AY_DIR) $(SW_DIR) $(FI_DIR) $(RA_DIR) $(WA_DIR) $(RE_DIR):
 	mkdir -p $@
 

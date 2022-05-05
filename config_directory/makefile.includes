@@ -19,7 +19,7 @@ RACE:= race particle_race particle_race_io reporter runner
 
 WALK:= walk particle_walk pedestrian particle_walk_io
 
-RELAY:= relay particle_relay relay_runner particle_relay_io relay_sampler doctor
+RELAY:= relay particle_relay relay_runner particle_relay_io relay_sampler relay_trainer doctor
 
 # directories
 AY_SRC:= AYlinalg/linalg/
@@ -38,5 +38,7 @@ WA_DIR:=$(addsuffix objs/, $(WA_SRC))
 RE_DIR:=$(addsuffix objs/, $(RE_SRC))
 
 TEST_SRC:=tests/
+
+WRITING_SRC:=writing_tests/
 
 IDIR:=$(IBASIC) -I$(AY_SRC) -I$(SW_SRC) -I$(FI_SRC) -I$(RA_SRC) -I$(WA_SRC) -I$(RE_SRC)

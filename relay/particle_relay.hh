@@ -9,10 +9,10 @@
 #endif
 
 const int record_int_len=6;
-const int record_double_len=6;
+const int record_double_len=5;
 
 const int record_int_chunk_count = 1;
-const int record_double_chunk_count = 2;
+const int record_double_chunk_count = 3;
 
 const double log_P = log(1e14);
 const double par_acc_P = 1e14;
@@ -34,8 +34,9 @@ struct record
 
   double residual;
   double root_residual;
+  double smooth_residual;
+  double stiff_residual;
   double weight;
-  double event_residual;
   double px;
   double zeta;
 
@@ -47,12 +48,13 @@ struct record
 
   int * const event_positions;
 
-  double * const residual_data;
+  double * const smooth_residual;
+  double * const stiff_residual;
   double * const alpha_data;
 
   double * const params;
 
-  record(int beads_, int Frames_, int len_, int i_, int * int_chunk_, double * params_, double * double_chunk_): beads(beads_), Frames(Frames_), len(len_), global_index(i_), int_chunk(int_chunk_), double_chunk(double_chunk_), event_positions(int_chunk_), residual_data(double_chunk_), alpha_data(double_chunk_+beads_), params(params_)
+  record(int beads_, int Frames_, int len_, int i_, int * int_chunk_, double * params_, double * double_chunk_): beads(beads_), Frames(Frames_), len(len_), global_index(i_), int_chunk(int_chunk_), double_chunk(double_chunk_), event_positions(int_chunk_), smooth_residual(double_chunk_), stiff_residual(double_chunk_+beads_), alpha_data(double_chunk_+2*beads_), params(params_)
   {int_params=&(gen); double_params=&(residual);}
 
   ~record() {}
@@ -85,6 +87,47 @@ struct record
   }
 };
 
+struct events
+{
+  const int beads;
+  const int Frames;
+
+  int * const ref_earliest_event;
+  int * const ref_latest_event;
+
+  int * const global_event_frame_count;
+  int * const event_frames;
+
+  int * const next_event;
+  int * const prev_event;
+  int * const bead_order;
+  int * const event_sorted;
+
+  events(int Frames_, int beads_, int * global_event_frame_count, int *event_frames_in_): beads(beads_), Frames(Frames_),
+  event_frames(event_frames_in_),
+
+  next_event(new int[beads_]), prev_event(new int[beads_]), bead_order(new int[beads_]), event_sorted((new int[beads_]))
+  {}
+  ~events() {delete [] next_event; delete [] prev_event; delete [] bead_order; delete [] event_sorted;}
+
+  void sort_events(int earliest_event_, int latest_event_);
+
+  inline int earliest(int *index, int start_index_=0)
+  {
+    int out = event_sorted[start_index_]; *index=start_index_;
+    for (int i = start_index_+1; i < beads; i++) if (event_sorted[i]<out) out=event_sorted[(*index)=i];
+    return out;
+  }
+  inline void earliest_recursive(int i_next)
+  {
+    int i_it;
+    int early_it = earliest(&i_it,i_next), early_temp = event_sorted[i_next], i_temp = bead_order[i_next];
+    event_sorted[i_next]=event_sorted[i_it]; bead_order[i_next]=bead_order[i_it];
+    event_sorted[i_it]=early_temp; bead_order[i_it]=i_temp;
+    if (i_next<beads-1) earliest_recursive(i_next+1);
+  }
+};
+
 class runner: public swirl
 {
     public:
@@ -110,7 +153,8 @@ class runner: public swirl
       double  *pvals, *ts, *xs, *d_ang, *comega_s,
               *param_acc, *alpha_kill,
               **pos_res, **alpha_INTpos_res,
-              **INTpos_res;
+              **INTpos_res,
+              *TRAIN_sim_pos;
 
       runner(swirl_param &sp_, proximity_grid * pg_, wall_list &wl_, int n_, int thread_id_, int param_len_, int Frames_, int nlead_, int npool_, double t_phys_, double dt_sim_, double alpha_tol_, double *ts_, double *xs_, double *d_ang_, double *comega_s);
       ~runner();
@@ -123,7 +167,6 @@ class runner: public swirl
 
       inline void clear_event_data()
       {for (int i = 0; i < n*Frames; i++) event_frame_count[0][i] = 0;}
-
 
       // debugging stuff
 
@@ -153,15 +196,22 @@ struct referee
   const double dt_sim;
   const double noise_tol; // projected standard deviation of noised data
   const double alpha_tol; // threshold for event detection
+  const double rs_full_factor; // ratio of duplicated particles to resampled particles per generation
+  const double data_scale;
 
   record  **records,
           **leaders, **pool,
           **leader_board, **candidates;
 
+  events * ev;
+
   int **record_int_chunk,
       **global_event_frame_count,
       *lead_dup_count,
-      *event_end; // conservative estimate for pre-collision frame
+      *event_frames,
+      *observations;
+
+      // conservative estimate for pre-collision frame
 
 
   double  **param_chunk,
@@ -172,13 +222,15 @@ struct referee
 
   bool alloc_flag=false;
 
-  referee(int nlead_, int npool_, int param_len_, double dt_sim_, double noise_tol_, double alpha_tol_): nlead(nlead_), npool(npool_), param_len(param_len_), dt_sim(dt_sim_), noise_tol(noise_tol_), alpha_tol(alpha_tol_) {}
-  referee(referee &ref_): nlead(ref_.nlead), npool(ref_.npool), param_len(ref_.param_len), dt_sim(ref_.dt_sim), noise_tol(ref_.noise_tol), alpha_tol(ref_.alpha_tol) {}
+  referee(int nlead_, int npool_, int param_len_, double dt_sim_, double noise_tol_, double alpha_tol_, double rs_full_factor_, double data_scale_): nlead(nlead_), npool(npool_), param_len(param_len_), dt_sim(dt_sim_), noise_tol(noise_tol_), alpha_tol(alpha_tol_), rs_full_factor(rs_full_factor_), data_scale(data_scale_) {}
+  referee(referee &ref_): nlead(ref_.nlead), npool(ref_.npool), param_len(ref_.param_len), dt_sim(ref_.dt_sim), noise_tol(ref_.noise_tol), alpha_tol(ref_.alpha_tol) ,rs_full_factor(ref_.rs_full_factor), data_scale(ref_.data_scale) {}
 
   ~referee();
 
   void alloc_records(int nt_, int Frames_, int beads_);
 };
+
+
 
 class reporter : public ODR_struct
 {
@@ -194,11 +246,13 @@ class reporter : public ODR_struct
     double  dt_sim,
             noise_tol,
             alpha_tol,
+            rs_full_factor,
+            data_scale,
             t_phys;
 
     int *lead_dup_count,
         *global_event_frame_count,
-        *event_end,
+        *event_frames,
         *gen_int_vec,
         *postevent_int_vec;
 
@@ -219,7 +273,7 @@ class reporter : public ODR_struct
 
 
     void load_relay(double *ts_, double *xs_, double *d_ang_);
-    void write_startup_diagnostics(int gen_max_);
+    void write_startup_diagnostics(int *header_, int *int_params_, double *double_params_);
     void write_event_diagnostics(int event_);
     void write_postevent_diagnostics(int event_);
     void write_gen_diagnostics(int gen_count_, int leader_count_);
@@ -232,7 +286,7 @@ class reporter : public ODR_struct
     double noise_tol_in;
 };
 
-const int event_int_len=3;
+const int event_int_len=2;
 const int event_double_len=2;
 const int gen_int_len=10;
 const int gen_double_len=9;
@@ -270,7 +324,6 @@ class relay : public referee
     int dup_unique;
     int resample_count;
 
-    int event_observations;
     int earliest_event;
     int latest_event;
 
@@ -294,6 +347,7 @@ class relay : public referee
 
     void init_relay();
     void start_relay(int gen_max_, bool verbose_=true);
+    void train_leg(int gen_max_smooth_, int gen_max_stiff_);
 
     void make_best_swirl(char * name_);
       void make_best_swirl(const char *name_)
@@ -303,11 +357,7 @@ class relay : public referee
       /** The number of threads. */
       const int nt;
 
-      bool  debugging_flag=true,
-            gen0_resample_flag=false;
-
-      double  rs_full_factor = 0.5,
-              data_scale;
+      bool  debugging_flag=true;
 
       /** A reference to the list of walls for the swirling simulation. */
       wall_list &wl;

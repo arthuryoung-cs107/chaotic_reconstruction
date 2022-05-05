@@ -63,17 +63,13 @@ void reporter::load_relay(double *ts_, double *xs_, double *d_ang_)
   else printf("ODR_struct: not staged for reading binary filter inputs\n");
 }
 
-void reporter::write_startup_diagnostics(int gen_max_)
+void reporter::write_startup_diagnostics(int *header_, int *int_params_, double *double_params_)
 {
-  int header[] = {10,4}; // {int_len, double_len}
-  int int_params[] = {gen_max_, nlead, npool, param_len, beads, Frames, record_int_len, record_double_len, record_int_chunk_count, record_double_chunk_count};
-  double double_params[] = {dt_sim, noise_tol, alpha_tol, t_phys};
-
   char * buf_it = out_buf+obuf_end; sprintf(buf_it, "%s.re%d_startup.redat", file_name, relay_id);
   FILE * out_dat = fopen(out_buf, "wb");
-  fwrite(header, sizeof(int), 2, out_dat);
-  fwrite(int_params, sizeof(int), header[0], out_dat);
-  fwrite(double_params, sizeof(double), header[1], out_dat);
+  fwrite(header_, sizeof(int), 2, out_dat);
+  fwrite(int_params_, sizeof(int), header_[0], out_dat);
+  fwrite(double_params_, sizeof(double), header_[1], out_dat);
   fclose(out_dat);
 }
 
@@ -109,7 +105,7 @@ void reporter::write_postevent_diagnostics(int event_)
   fwrite(header, sizeof(int), 2, out_dat);
   fwrite(postevent_int_vec, sizeof(int), header[0], out_dat);
   fwrite(postevent_double_vec, sizeof(double), header[1], out_dat);
-  fwrite(event_end, sizeof(int), beads, out_dat);
+  fwrite(event_frames, sizeof(int), beads, out_dat);
   for (int i = 0; i < npool; i++)
   {
     // write the parameter

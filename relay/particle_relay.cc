@@ -52,6 +52,45 @@ void record::take_vals(record * rtake_)
   for (int i = 0; i < len; i++) params[i] = rtake_->params[i];
 }
 
+void events::define_relay_leg(int leg_id_)
+{
+  printf("(leg %d): Events identified. Event frames -", leg_id_);
+
+  // Update the event frames for each bead. Also identify the earliest and latest events.
+  int latest_event = 0, earliest_event=Frames;
+  for (int i = 0; i < beads; i++) for (int j = 0; j < Frames; j++)
+    if (global_event_frame_count[i][j])
+    {
+      event_frames[i] = j-1;
+      if (event_frames[i]>latest_event) latest_event = event_frames[i];
+      if (event_frames[i]<earliest_event) earliest_event = event_frames[i];
+      printf(" %d", j-1);
+      break;
+    }
+  printf(". Earliest: %d, latest: %d ", earliest_event, latest_event);
+  *ref_earliest_event=earliest_event; *ref_latest_event=latest_event;
+
+  // sort the events
+  int i_it, early_it, i_temp, early_temp;
+  for (int i = 0; i < beads; i++)
+  {
+    event_sorted[i] = event_frames[i];
+    bead_order[i] = i;
+  }
+  early_it = earliest(&i_it, 0);
+  early_temp = event_sorted[0]; i_temp = 0;
+  event_sorted[0]=early_it; bead_order[0]=i_it;
+  event_sorted[i_it]=early_temp; bead_order[i_it]=i_temp;
+  earliest_recursive(1);
+
+  printf("Events, ordered:\n");
+  for (int i = 0; i < beads; i++)
+    printf("(event %d) bead %d - frame %d\n",i,bead_order[i],event_sorted[i]);
+
+  tau = (noise_tol*data_scale)*sqrt((double)(event_observations));
+  tau_sqr = tau*tau;
+}
+
 referee::~referee()
 {
   if (alloc_flag)
@@ -66,13 +105,15 @@ referee::~referee()
     delete [] records;
 
     delete [] lead_dup_count;
-    delete [] event_end;
+    delete [] event_frames;
+    delete [] ev;
 
     delete [] sample_weights;
     delete [] lead_par_w_mean;
     delete [] lead_par_w_var;
   }
 }
+
 void referee::alloc_records(int nt_, int Frames_, int beads_)
 {
   record_int_chunk = AYimatrix(nlead+npool, record_int_chunk_count*beads_);
@@ -90,7 +131,9 @@ void referee::alloc_records(int nt_, int Frames_, int beads_)
   candidates = leader_board + nlead;
 
   lead_dup_count = new int[nlead];
-  event_end = new int[beads_];
+  event_frames = new int[beads_];
+  ev = new events(beads_, event_frames);
+
 
   sample_weights = new double[nlead];
   lead_par_w_mean = new double[param_len];

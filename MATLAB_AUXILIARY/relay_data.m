@@ -8,6 +8,8 @@ classdef relay_data
         specs;
         event0;
 
+        gen_ind;
+
         gen;
     end
     methods
@@ -38,12 +40,6 @@ classdef relay_data
 
             event0 = event(dat_dir_name_, exp_name_, dat_name_, relay_id_, 0, specs);
 
-            gen = relay_generation.empty(specs.gen_last, 0);
-
-            for i = 1:specs.gen_last
-                gen(i) = relay_generation(dat_dir_name_, exp_name_, dat_name_, relay_id_, i, specs);
-            end
-
             %%% assignments
 
             obj.dat_dir_name = dat_dir_name_;
@@ -53,7 +49,25 @@ classdef relay_data
 
             obj.specs = specs;
             obj.event0 = event0;
-            obj.gen = gen;
+
+        end
+        function [gen_ind,gen] = read_generations(obj,gen_ind_)
+            gen = relay_generation.empty(obj.specs.gen_last, 0);
+            if (nargin==2)
+                gen_ind = reshape(gen_ind_, 1, []);
+                for i = 1:obj.specs.gen_last;
+                    gen(i) = relay_generation();
+                end
+                for i = gen_ind
+                    gen(i) = gen(i).read_generation_data(obj.dat_dir_name, obj.exp_name, obj.dat_name, obj.relay_id, i, obj.specs);
+                end
+            else
+                gen_ind = 1:obj.specs.gen_last;
+                for i = gen_ind
+                    gen(i) = relay_generation();
+                    gen(i) = gen(i).read_generation_data(obj.dat_dir_name, obj.exp_name, obj.dat_name, obj.relay_id, i, obj.specs);
+                end
+            end
         end
         function write_relay_test(obj, params_, relay_id_, test_)
             header=size(params_);

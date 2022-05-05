@@ -41,28 +41,19 @@ classdef relay_plots
         end
 
         %% error bar plots
-        function plot_3bead_event_stats(axs_, color1, color2, color3, re_)
+        function plot_3bead_event_stats(axs_, colors_, re_)
+            event0 = re_.event0;
+            beads = event0.specs.beads
+            for i = 1:beads
+                Frame_bins = max(event0.bead_events_full(i,:))-min(event0.bead_events_full(i,:))+1;
+                histogram(axs_((i-1)*beads+1), re_.event0.bead_events_full(i,:), Frame_bins, 'FaceColor', colors_(1,:))
+                histogram(axs_((i-1)*beads+2), re_.event0.bead_res(i,:), 'FaceColor', colors_(2,:))
+                histogram(axs_((i-1)*beads+3), re_.event0.bead_alpha(i,:), 'FaceColor', colors_(3,:))
 
-            histogram(axs_(1), re_.event0.bead_events_full(1,:), 'FaceColor', color1)
-            histogram(axs_(2), re_.event0.bead_events_full(2,:), 'FaceColor', color1)
-            histogram(axs_(3), re_.event0.bead_events_full(3,:), 'FaceColor', color1)
-            apply_plot_labels(axs_(1), 'event frame', 'count', 'bead_1_collision_frame');
-            apply_plot_labels(axs_(2), 'event frame', 'count', 'bead_2_collision_frame');
-            apply_plot_labels(axs_(3), 'event frame', 'count', 'bead_3_collision_frame');
-
-            histogram(axs_(4), re_.event0.bead_res(1,:), 'FaceColor', color2)
-            histogram(axs_(5), re_.event0.bead_res(2,:), 'FaceColor', color2)
-            histogram(axs_(6), re_.event0.bead_res(3,:), 'FaceColor', color2)
-            apply_plot_labels(axs_(4), 'final residual', 'count', 'bead_1_final_residual');
-            apply_plot_labels(axs_(5), 'final residual', 'count', 'bead_2_final_residual');
-            apply_plot_labels(axs_(6), 'final residual', 'count', 'bead_3_final_residual');
-
-            histogram(axs_(7), re_.event0.bead_alpha(1,:), 'FaceColor', color3)
-            histogram(axs_(8), re_.event0.bead_alpha(2,:), 'FaceColor', color3)
-            histogram(axs_(9), re_.event0.bead_alpha(3,:), 'FaceColor', color3)
-            apply_plot_labels(axs_(7), 'final alpha', 'count', 'bead_1_final_alpha');
-            apply_plot_labels(axs_(8), 'final alpha', 'count', 'bead_2_final_alpha');
-            apply_plot_labels(axs_(9), 'final alpha', 'count', 'bead_3_final_alpha');
+                apply_plot_labels(axs_((i-1)*beads+1), 'event frame', 'count', ['bead_' num2str(i) '_collision_frame']);
+                apply_plot_labels(axs_((i-1)*beads+2), 'final residual', 'count', ['bead_' num2str(i) '_final_residual']);
+                apply_plot_labels(axs_((i-1)*beads+3), 'final alpha', 'count', ['bead_' num2str(i) '_final_alpha']);
+            end
         end
         function plot_gen_weights(axs_, base_color, re, indices_)
             axi = 1;
@@ -99,7 +90,8 @@ classdef relay_plots
         function plot_gen_duplication_count(axs_, base_color, re, indices_)
             axi = 1;
             for i = indices_
-                histogram(axs_(axi), re.gen(i).lead_dup_count , 'FaceColor', base_color)
+                lead_bins = max(re.gen(i).lead_dup_count)-min(re.gen(i).lead_dup_count)+1;
+                histogram(axs_(axi), re.gen(i).lead_dup_count, lead_bins, 'FaceColor', base_color)
                 apply_plot_labels(axs_(axi), 'duplication count', 'counts', ['gen_' num2str(i) '_duplication_count']);
                 axi=axi+1;
             end
@@ -114,7 +106,7 @@ classdef relay_plots
                 ylim(axs_(axi), [min(re.gen(i).lead_dup_count), max(re.gen(i).lead_dup_count)]);
                 apply_plot_labels(axs_(axi), 'weight', 'duplication count', ['gen_' num2str(i) '_weight_vs_duplication_count']);
 
-                set(axs_(axi), 'XScale', 'log');
+                % set(axs_(axi), 'XScale', 'log');
                 % set(axs_(axi), 'YScale', 'log');
                 axi=axi+1;
             end
@@ -123,6 +115,9 @@ classdef relay_plots
             axi = 1;
             for i = indices_
                 plot_generic_frame_data(axs_(axi), 1:length(par_true_), ((par_true_-re.gen(i).params)./abs(par_true_))', struct('base_color', base_color));
+
+                plot(axs_(axi),1:length(par_true_), (par_true_-re.gen(i).lead_par_w_mean)./abs(par_true_), ' --', 'Color', [0 0 0], 'LineWidth', 4);
+
                 apply_plot_labels(axs_(axi), 'indices', 'param err', ['gen_' num2str(i) '_param_error']);
                 axi=axi+1;
             end

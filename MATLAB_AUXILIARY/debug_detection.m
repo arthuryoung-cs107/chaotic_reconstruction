@@ -22,6 +22,7 @@ relay_id = 1;
 relay = read_relay(nbeads, par_id, relay_id);
 stat = read_stat(nbeads,'maxmin',0);
 swtrue = stat.sw0;
+[contact_f, bead_contact_f, wall_contact_f] = swtrue.find_contact_frames;
 det = relay.read_relay_test(swtrue,0,1);
 
 Frame_end = det.Frame_end;
@@ -57,7 +58,7 @@ if plot_stuff
     test_fig.init_tiles([3, 3]);
 
     relay_plots.plot_cell_vs_frames(test_fig.ax_tile(1:3), blue5, Frame_vec, beadres, 'Frames', 'position residual', 'position_residual_vs_Frames_bead')
-    relay_plots.plot_cell_vs_frames(test_fig.ax_tile(4:6), red5, Frame_vec, beadres_matcomp, 'Frames', 'matcomp position residual', 'posres_matcomp_vs_Frames_bead')
+    relay_plots.plot_cell_vs_frames(test_fig.ax_tile(4:6), red5, Frame_vec, beadINTres, 'Frames', 'matcomp position residual', 'posres_matcomp_vs_Frames_bead')
     relay_plots.plot_cell_vs_frames(test_fig.ax_tile(7:9), orange1, Frame_vec, beadalpha, 'Frames', 'alpha', 'alpha_vs_Frames')
 
 

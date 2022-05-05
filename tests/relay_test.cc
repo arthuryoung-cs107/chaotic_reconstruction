@@ -9,14 +9,15 @@
 const int nbeads=3;
 const int param_id=0;
 const int relay_id=1;
-const int generations=10;
-const int nlead = 500;
-const int npool = 1000;
+const int generations=300;
+const int nlead = 1000;
+const int npool = 200;
 const int param_len = 12;
 const double dt_sim = 0.002;
 const double t_wheels = 0.012;
 const double noise_tol = 1e-2;
 const double alpha_tol=10.0;
+const double rs_full_factor=1.0;
 const bool test_generation=false;
 const bool run_relay=true;
 const bool noise_data=true;
@@ -50,7 +51,7 @@ int main()
 
   double cl = sp_min.cl_im; // this will do for now, assuming that we aren't learning cl_im
   reporter rep; rep.init_relay(proc_loc, rydat_dir, file_name, relay_id, noise_data, noise_tol*cl);
-  referee ref(nlead, npool, param_len, dt_sim, noise_tol, alpha_tol);
+  referee ref(nlead, npool, param_len, dt_sim, noise_tol, alpha_tol, rs_full_factor, cl);
 
   if (test_generation)
   {
