@@ -34,7 +34,7 @@ void relay::find_events(int min_frame_, int latest_frame_)
     }
 }
 
-int relay::train_event_block(int event_block, int gen_max_)
+int relay::train_event_block(int event_block, int gen_max_, double tol_leeway_)
 {
   bool training=true;
   do
@@ -46,6 +46,7 @@ int relay::train_event_block(int event_block, int gen_max_)
       int * event_frames_ordered = ev->event_sorted;
       int * bead_order = ev->bead_order;
 #pragma omp for reduction(+:success_local)
+// #pragma omp critical
       for (int i = 0; i < npool; i++)
       {
         success_local += rt->run_relay(pool[i], 0, earliest_event, latest_event, event_frames_ordered, bead_order, residual_worst);
@@ -53,13 +54,13 @@ int relay::train_event_block(int event_block, int gen_max_)
     }
     gen_count++;
     printf("(gen %d): %d candidates. ", gen_count, success_local);
-    if (check_pool_results()) training=false; // we win
+    if (check_pool_results(tol_leeway_)) training=false; // we win
     else if (gen_count == gen_max_) training=false; // we give up
     else resample_pool(); // we try again
     if (debugging_flag) rep->write_gen_diagnostics(gen_count, leader_count);
-  } while (smooth_training);
+  } while (training);
 
-  return ;
+  return latest_event;
 }
 
 int relay::collect_candidates()
@@ -83,7 +84,7 @@ int relay::collect_candidates()
   else return pool_success_count;
 }
 
-bool relay::check_pool_results()
+bool relay::check_pool_results(double tol_leeway_)
 {
   int pool_candidates_local = pool_candidates = collect_candidates();
   // if we now have a full leader roster
@@ -93,6 +94,7 @@ bool relay::check_pool_results()
     // fill up remainder of leaders
     for (int i = 0, gap = nlead-leader_count; i < gap; i++)
     {
+      repl_count++;
       leader_board[leader_count] = leaders[leader_count];
       leaders[leader_count++]->take_vals(candidates[--pool_candidates_local]);
     }
@@ -134,8 +136,8 @@ bool relay::check_pool_results()
   best_leader = find_best_record(leaders, leader_count);
   record * wl_rec = leaders[worst_leader], * bl_rec = leaders[best_leader];
   residual_best = bl_rec->residual; root_res_best = bl_rec->root_residual;
-  printf("Best/Worst: (ID, gen, parents, residual) = (%d/%d %d/%d %d/%d %e/%e), %d replacements. ", bl_rec->global_index, wl_rec->global_index, bl_rec->gen, wl_rec->gen, bl_rec->parent_count, wl_rec->parent_count, residual_best, residual_worst, repl_count);
-  if (res_best<tau_sqr) return true;
+  printf("Best/Worst: (ID, gen, parents, residual) = (%d/%d %d/%d %d/%d %e/%e), tau_sqr=%e, %d replacements. ", bl_rec->global_index, wl_rec->global_index, bl_rec->gen, wl_rec->gen, bl_rec->parent_count, wl_rec->parent_count, residual_best, residual_worst, tau_sqr, repl_count);
+  if (root_res_best<(1.0+tol_leeway_)*tau) return true;
   else if (repl_count==0) return true;
-  else return false;
+  return false;
 }

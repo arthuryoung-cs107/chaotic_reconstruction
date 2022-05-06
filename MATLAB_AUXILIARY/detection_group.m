@@ -18,8 +18,7 @@ classdef detection_group
         Frame_full;
         ref_pos_mat;
 
-        earlylate_mat;
-        acc_res_mat;
+        records_cell; 
         sim_pos_mat;
         pos_mat;
         pos_res_mat;
@@ -27,8 +26,6 @@ classdef detection_group
         INTmat;
         pos_res_re_mat;
         alpha_re_mat;
-        kill_frame_mat;
-        alpha_kill_mat;
 
         sim_beadres;
         beadINTres;
@@ -50,18 +47,19 @@ classdef detection_group
             ref_pos_mat=fread(dat_test_specs, [beads*dof,Frame_end], 'double=>double');
             fclose(dat_test_specs);
 
-            earlylate_mat = nan(2,npool);
-            acc_res_mat = nan(2,npool);
+
+
+            records_cell = cell([2,npool]);
             [sim_pos_mat, pos_mat] = deal(nan(Frame_end*beads*dof, npool));
             [pos_res_mat, alpha_mat, INTmat] = deal(nan(Frame_end*beads, npool));
             [pos_res_re_mat, alpha_re_mat] = deal(nan(Frame_full*beads,npool));
-            [kill_frame_mat, alpha_kill_mat] = deal(nan(beads, npool));
 
             for i = 1:npool
                 dat = fopen([test_directory 'par' num2str(i-1) '.redat']);
                 header = fread(dat, [1,2], 'int=>int');
-                earlylate_mat(:,i) = fread(dat, [header(2),1], 'int=>int');
-                acc_res_mat(:,i) = fread(dat, [header(1),1], 'double=>double');
+                records_cell{1,i} = fread(dat, [header(1),1], 'int=>int');
+                records_cell{2,i} = fread(dat, [beads,header(2)/beads], 'double=>double');
+                params_it = fread(dat, [param_len,1], 'double=>double');
                 sim_pos_mat(:,i) = fread(dat, [Frame_end*beads*dof,1], 'double=>double');
                 pos_mat(:,i) = fread(dat, [Frame_end*beads*dof,1], 'double=>double');
                 pos_res_mat(:,i) = fread(dat, [Frame_end*beads,1], 'double=>double');
@@ -69,8 +67,6 @@ classdef detection_group
                 INTmat(:,i) = fread(dat, [Frame_end*beads,1], 'double=>double');
                 pos_res_re_mat(:,i) = fread(dat, [Frame_full*beads, 1], 'double=>double');
                 alpha_re_mat(:,i) = fread(dat, [Frame_full*beads, 1], 'double=>double');
-                kill_frame_mat(:,i) = fread(dat, [beads, 1], 'int=>int');
-                alpha_kill_mat(:,i) = fread(dat, [beads, 1], 'double=>double');
                 fclose(dat);
             end
 
@@ -91,8 +87,6 @@ classdef detection_group
             obj.Frame_full=Frame_full;
             obj.ref_pos_mat=ref_pos_mat;
 
-            obj.earlylate_mat=earlylate_mat;
-            obj.acc_res_mat=acc_res_mat;
             obj.sim_pos_mat=sim_pos_mat;
             obj.pos_mat=pos_mat;
             obj.pos_res_mat=pos_res_mat;
@@ -100,8 +94,8 @@ classdef detection_group
             obj.INTmat=INTmat;
             obj.pos_res_re_mat=pos_res_re_mat;
             obj.alpha_re_mat=alpha_re_mat;
-            obj.kill_frame_mat=kill_frame_mat;
-            obj.alpha_kill_mat=alpha_kill_mat;
+
+            obj.records_cell = records_cell;
 
             obj.swtrue = sw_;
         end

@@ -4,18 +4,6 @@ extern "C"
 {
   #include "AYaux.h"
 }
-
-void record::record_event_data(double res_acc_, int *kill_frames_, double ** INTpos_res_, double *alpha_kill_)
-{
-  residual = res_acc_; event_residual = 0.0;
-  for (int i = 0; i < beads; i++)
-  {
-    event_positions[i] = kill_frames_[i];
-    residual_data[i] = INTpos_res_[i][2];
-    event_residual += INTpos_res_[i][0];
-    alpha_data[i] = alpha_kill_[i];
-  }
-}
 void record::reset_record(int gen_, int p_gen_, int p_count_, int p_gi_)
 {
   gen=gen_;
@@ -52,7 +40,7 @@ void record::take_vals(record * rtake_)
   for (int i = 0; i < len; i++) params[i] = rtake_->params[i];
 }
 
-double events::define_relay_event_block(int event_block_id_, int * net_observations, int * observations, double * tau, double * tau_vec, int * early_late_events)
+void events::define_relay_event_block(int event_block_id_, int * obs_vec, double * tau_vec, int * early_late_events, double tau_coeff)
 {
   printf("(event block %d): Events identified. Event frames -", event_block_id_);
 
@@ -68,14 +56,14 @@ double events::define_relay_event_block(int event_block_id_, int * net_observati
       break;
     }
   printf(". Earliest: %d, latest: %d. ", earliest_event, latest_event);
-  observations[0] = 2*smooth_frames; // smooth observation count
-  observations[1] = 2*beads*latest_event-observations[0]; // stiff observation count
-  *net_observations = observations[0]+observations[1];
+  obs_vec[0] = 2*beads*latest_event; // full observation count
+  obs_vec[1] = 2*smooth_frames; // smooth observation count
+  obs_vec[2] = obs_vec[0]-obs_vec[1]; // stiff observation count
 
   // update the event block tolerance
-  *tau = (noise_tol*data_scale)*sqrt((double)(*net_observations));
-  tau_vec[0] = (noise_tol*data_scale)*sqrt((double)(observations[0]));
-  tau_vec[1] = (noise_tol*data_scale)*sqrt((double)(observations[1]));
+  tau_vec[0] = tau_coeff*sqrt((double)(obs_vec[0]));
+  tau_vec[1] = tau_coeff*sqrt((double)(obs_vec[1]));
+  tau_vec[2] = tau_coeff*sqrt((double)(obs_vec[2]));
 
   // update relay's start and end values of this event block
   early_late_events[0]=earliest_event; early_late_events[1]=latest_event;
@@ -100,8 +88,6 @@ double events::define_relay_event_block(int event_block_id_, int * net_observati
   printf("Events, ordered:\n");
   for (int i = 0; i < beads; i++)
     printf("(event %d) bead %d - frame %d\n",i,bead_order[i],event_sorted[i]);
-
-  return (*tau)*(*tau); 
 }
 
 referee::~referee()
@@ -145,8 +131,7 @@ void referee::alloc_records(int nt_, int Frames_, int beads_)
 
   lead_dup_count = new int[nlead];
   event_frames = new int[beads_];
-  ev = new events(beads_, event_frames);
-
+  ev = new events(Frames_, beads_, global_event_frame_count, event_frames);
 
   sample_weights = new double[nlead];
   lead_par_w_mean = new double[param_len];

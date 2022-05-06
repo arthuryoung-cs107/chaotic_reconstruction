@@ -75,10 +75,16 @@ void reporter::write_startup_diagnostics(int *header_, int *int_params_, double 
 
 void reporter::write_event_diagnostics(int event_)
 {
+  int header[] = {event_int_len,event_double_len}; // {int_len, double_len}
+
   char * buf_it = out_buf+obuf_end; sprintf(buf_it, "%s.re%d_event%d.redat", file_name, relay_id, event_);
   FILE * out_dat = fopen(out_buf, "wb");
 
+  fwrite(header, sizeof(int), 2, out_dat);
+  fwrite(event_int_vec, sizeof(int), header[0], out_dat);
+  fwrite(event_double_vec, sizeof(double), header[1], out_dat);
   fwrite(global_event_frame_count, sizeof(int), beads*Frames, out_dat);
+  fwrite(event_frames, sizeof(int), beads, out_dat);
   for (int i = 0; i < npool; i++)
   {
     // write the integer records
@@ -86,28 +92,9 @@ void reporter::write_event_diagnostics(int event_)
     // write the integer records
     fwrite(&(pool[i]->residual), sizeof(double), record_double_len, out_dat);
 
-    fwrite(pool[i]->event_positions, sizeof(int), beads*record_int_chunk_count, out_dat);
-    fwrite(pool[i]->residual_data, sizeof(double), beads*record_double_chunk_count, out_dat);
+    fwrite(pool[i]->int_chunk, sizeof(int), beads*record_int_chunk_count, out_dat);
+    fwrite(pool[i]->double_chunk, sizeof(double), beads*record_double_chunk_count, out_dat);
 
-    // write the parameter
-    fwrite(pool[i]->params, sizeof(double), param_len, out_dat);
-  }
-  fclose(out_dat);
-}
-
-void reporter::write_postevent_diagnostics(int event_)
-{
-  int header[] = {event_int_len,event_double_len}; // {int_len, double_len}
-
-  char * buf_it = out_buf+obuf_end; sprintf(buf_it, "%s.re%d_postevent%d.redat", file_name, relay_id, event_);
-  FILE * out_dat = fopen(out_buf, "wb");
-
-  fwrite(header, sizeof(int), 2, out_dat);
-  fwrite(postevent_int_vec, sizeof(int), header[0], out_dat);
-  fwrite(postevent_double_vec, sizeof(double), header[1], out_dat);
-  fwrite(event_frames, sizeof(int), beads, out_dat);
-  for (int i = 0; i < npool; i++)
-  {
     // write the parameter
     fwrite(pool[i]->params, sizeof(double), param_len, out_dat);
   }
@@ -136,7 +123,7 @@ void reporter::write_gen_diagnostics(int gen_count_, int leader_count_)
     fwrite(&(leaders[i]->residual), sizeof(double), record_double_len, out_dat);
     // write the parameter
 
-    fwrite(leaders[i]->residual_data, sizeof(double), beads, out_dat);
+    fwrite(leaders[i]->double_chunk, sizeof(double), beads*(record_double_chunk_count-1), out_dat);
 
     fwrite(leaders[i]->params, sizeof(double), param_len, out_dat);
   }
@@ -154,12 +141,4 @@ void reporter::close_diagnostics(int gen_count_)
   fwrite(gen_int_vec, sizeof(int), header[0], out_dat);
   fwrite(gen_double_vec, sizeof(double), header[1], out_dat);
   fclose(out_dat);
-}
-
-ODR_struct * reporter::spawn_swirlODR(char * name_)
-{
-  strcpy(out_buf + obuf_end, "");
-  ODR_struct * odr_out = new ODR_struct();
-  odr_out->init_swirl(out_buf, name_, file_name, false);
-  return odr_out;
 }

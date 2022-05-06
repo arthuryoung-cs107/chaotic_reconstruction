@@ -60,7 +60,8 @@ void doctor::test_run(int Frame_end_)
 #pragma omp for nowait
     for (int i = 0; i < npool; i++)
     {
-      med.write_test_run(rt->test_detection(pool[i], 0, Frame_end_, i),i);
+      rt->test_detection(pool[i], 0, Frame_end_, i);
+      med.write_test_run(pool[i],i);
     }
 #pragma omp critical
     {
@@ -81,26 +82,26 @@ void doctor::test_run(int Frame_end_)
   fclose(test_event_count);
   delete [] test_run_spec_name;
 }
-int runner::start_test_detection(int start_, double * params_, double * t_history_)
+int runner::start_test_detection(int start_, double * params_, double *t_history_, int * event_frames, double * smooth_residual, double * net_residual_)
 {
   for (int i = 0; i < n*Frames; i++) pos_res[0][i]=alpha_INTpos_res[0][i]=0.0;
 
   reset_sim(params_, ts[start_]/t_phys, d_ang[start_], comega_s[start_], xs + 2*n*start_);
   int frame_local = start_, poffset = 2*n*frame_local, foffset=n*frame_local;
-  double res_acc_local = 0.0, *f = xs+poffset;
+  double net_residual = 0.0, *f = xs+poffset;
 
   // initialize t=tstart data
   t_history_[0]=t_history_[1]=ts[frame_local];
   for (int i=0,j=0; i < n; i++,j+=2)
   {
-    kill_frames[i] = 0;
-    pos_res[frame_local][i]=alpha_INTpos_res[frame_local][i]=INTpos_res[i][0]=INTpos_res[i][1]=INTpos_res[i][2]=0.0;
+    event_frames[i] = 0;
+    smooth_residual[i]=pos_res[frame_local][i]=alpha_INTpos_res[frame_local][i]=INTpos_res[i][0]=INTpos_res[i][1]=INTpos_res[i][2]=0.0;
 
     // write test outputs
     double  x_sim = q[i].x, y_sim = q[i].y,
             x_now = (x_sim-cx)*cl_im + cx_im, y_now = (y_sim-cy)*cl_im + cy_im;
 
-    TEST_sim_pos[j+poffset]=x_sim; TEST_sim_pos[j+1+poffset]=y_sim;
+    sim_pos[j+poffset]=x_sim; sim_pos[j+1+poffset]=y_sim;
     TEST_pos[j+poffset]=x_now; TEST_pos[j+1+poffset]=y_now;
 
     TEST_pos_res[i+foffset]=pos_res[frame_local][i]; TEST_INTpos_res[i+foffset]=INTpos_res[i][0];
@@ -118,13 +119,14 @@ int runner::start_test_detection(int start_, double * params_, double * t_histor
             x_ref=f[j], y_ref=f[j+1],
             xt=x_now-x_ref,yt=y_now-y_ref, rsq=xt*xt+yt*yt;
 
-    res_acc_local+=pos_res[frame_local][i]=rsq;
+    net_residual+=pos_res[frame_local][i]=rsq;
+    smooth_residual[i]+=rsq;
     INTpos_res[i][2]=INTpos_res[i][1]; INTpos_res[i][1]=INTpos_res[i][0];
     INTpos_res[i][0]+=0.5*(rsq+pos_res[frame_local-1][i])*(t_history_[0]-t_history_[1]);
     alpha_INTpos_res[frame_local][i]=0.0;
 
     // write test outputs, being absolutely sure we are writing exactly what is being calculated
-    TEST_sim_pos[j+poffset]=x_sim; TEST_sim_pos[j+1+poffset]=y_sim;
+    sim_pos[j+poffset]=x_sim; sim_pos[j+1+poffset]=y_sim;
     TEST_pos[j+poffset]=x_now; TEST_pos[j+1+poffset]=y_now;
 
     TEST_pos_res[i+foffset]=pos_res[frame_local][i]; TEST_INTpos_res[i+foffset]=INTpos_res[i][0];
@@ -142,29 +144,30 @@ int runner::start_test_detection(int start_, double * params_, double * t_histor
             x_ref=f[j], y_ref=f[j+1],
             xt=x_now-x_ref,yt=y_now-y_ref, rsq=xt*xt+yt*yt;
 
-    res_acc_local+=pos_res[frame_local][i]=rsq;
+    net_residual+=pos_res[frame_local][i]=rsq;
+    smooth_residual[i]+=rsq;
     INTpos_res[i][2]=INTpos_res[i][1]; INTpos_res[i][1]=INTpos_res[i][0];
     INTpos_res[i][0]+=0.5*(rsq+pos_res[frame_local-1][i])*(t_history_[0]-t_history_[1]);
     alpha_INTpos_res[frame_local][i]=0.0;
 
     // write test outputs, being absolutely sure we are writing exactly what is being calculated
-    TEST_sim_pos[j+poffset]=x_sim; TEST_sim_pos[j+1+poffset]=y_sim;
+    sim_pos[j+poffset]=x_sim; sim_pos[j+1+poffset]=y_sim;
     TEST_pos[j+poffset]=x_now; TEST_pos[j+1+poffset]=y_now;
 
     TEST_pos_res[i+foffset]=pos_res[frame_local][i]; TEST_INTpos_res[i+foffset]=INTpos_res[i][0];
     TEST_alpha_INTpos_res[i+foffset]=alpha_INTpos_res[frame_local][i];
   }
-
-  pos_res_acc=res_acc_local;
+  *net_residual_=net_residual;
   return frame_local;
 }
 
-double runner::test_detection(record * rec_, int start_, int end_, int i_)
+void runner::test_detection(record * rec_, int start_, int end_, int i_)
 {
-  double t_history[3];
-  int frame_local = start_test_detection(start_, rec_->params, t_history);
-  int poffset = 2*n*frame_local, foffset=n*frame_local;
-  double res_acc_local = pos_res_acc, res_acc_local_full = pos_res_acc, *f;
+  double t_history[3], net_residual;
+  int frame_local = start_test_detection(start_, rec_->params, t_history,rec_->event_positions, rec_->smooth_residual, &net_residual);
+  int poffset = 2*n*frame_local, foffset=n*frame_local, *event_frames=rec_->event_positions;
+  double *f, *rec_res=rec_->smooth_residual, *alpha_data=rec_->alpha_data, net_smooth_residual=net_residual;
+
   do
   {
     frame_local++; poffset+=2*n; foffset+=n; f = xs+poffset;
@@ -178,22 +181,22 @@ double runner::test_detection(record * rec_, int start_, int end_, int i_)
               x_ref=f[j], y_ref=f[j+1],
               xt=x_now-x_ref,yt=y_now-y_ref, rsq=xt*xt+yt*yt;
 
-      TEST_sim_pos[j+poffset]=x_sim; TEST_sim_pos[j+1+poffset]=y_sim;
+      sim_pos[j+poffset]=x_sim; sim_pos[j+1+poffset]=y_sim;
       TEST_pos[j+poffset]=x_now; TEST_pos[j+1+poffset]=y_now;
-      res_acc_local_full+=rsq;
-      if (!(kill_frames[i])) // if this bead does not yet have a kill frame, continue search
+      net_residual+=pos_res[frame_local][i]=rsq;
+      if (!(event_frames[i])) // if this bead does not yet have a kill frame, continue search
       {
-        res_acc_local+=pos_res[frame_local][i]=rsq;
         INTpos_res[i][2]=INTpos_res[i][1]; INTpos_res[i][1]=INTpos_res[i][0];
         INTpos_res[i][0]+=0.5*(rsq+pos_res[frame_local-1][i])*(t_history[0]-t_history[1]);
         double alpha_it=alpha_INTpos_res[frame_local-1][i]=alpha_comp(INTpos_res[i], t_history[0], t_history[2]);
 
         if (alpha_it > alpha_tol) // if we just had a collision
         {
-          kill_frames[i] = frame_local-1;
-          alpha_kill[i] = alpha_it;
+          event_frames[i] = frame_local-1;
+          alpha_data[i] = alpha_it;
+          rec_res[i+n]+=rsq;
         }
-        else res_acc_local+=rsq;
+        {rec_res[i]+=rsq; net_smooth_residual+=rsq;}
 
         // write test outputs, being absolutely sure we are writing exactly what is being calculated
         TEST_pos_res[i+foffset]=pos_res[frame_local][i]; TEST_INTpos_res[i+foffset]=INTpos_res[i][0];
@@ -201,6 +204,8 @@ double runner::test_detection(record * rec_, int start_, int end_, int i_)
       }
       else
       {
+        rec_res[i+n]+=rsq;
+
         // write test outputs anyway.
         TEST_pos_res[i+foffset]=rsq;
         double INTp1=TEST_INTpos_res[i+foffset]=TEST_INTpos_res[i+(foffset-n)]+0.5*(rsq+TEST_pos_res[i+(foffset-n)])*(t_history[0]-t_history[1]);
@@ -209,66 +214,49 @@ double runner::test_detection(record * rec_, int start_, int end_, int i_)
     }
     if ((frame_local+1)==end_)
     {
-      for (int i=0; i < n; i++)
-      {
-        if (!(kill_frames[i]))
-        {
-          kill_frames[i] = end_-1;
-          alpha_kill[i] = alpha_INTpos_res[frame_local-2][i];
-        }
-      }
+      for (int i=0; i < n; i++) if (!(event_frames[i]))
+        {event_frames[i] = end_-1; alpha_data[i] = alpha_INTpos_res[frame_local-2][i];}
       break;
     }
   } while(true);
-  pos_res_acc=res_acc_local;
-  earliest_event=Frames; latest_event=0;
-  for (int i = 0; i < n; i++)
-  {
-    if (kill_frames[i]<earliest_event) earliest_event=kill_frames[i];
-    if (kill_frames[i]>latest_event) latest_event=kill_frames[i];
-    event_frame_count[i][kill_frames[i]]++;
-  }
-  printf("(thread %d) Tested parameters %d.\n", thread_id, i_);
 
-  return res_acc_local_full;
+  for (int i = 0; i < n; i++) event_frame_count[i][event_frames[i]]++;
+
+  bool done = rec_->check_success(net_residual, net_smooth_residual, DBL_MAX);
+  printf("(thread %d) Tested parameters %d.\n", thread_id, i_);
 }
 
 
-void medic::write_test_run(double accresfull_, int i_)
+void medic::write_test_run(record * rec_, int i_)
 {
-  int int_len=2, double_len=2;
-  int header[] = {int_len, double_len};
-  int int_params[] = {rt->earliest_event, rt->latest_event};
-  double double_params[] = {accresfull_, rt->pos_res_acc};
+  int header[] = {beads*record_int_chunk_count, beads*record_double_chunk_count};
 
   sprintf(test_directory+buf_end, "par%d.redat", i_);
   FILE * test_file = fopen(test_directory, "wb");
-
   fwrite(header, sizeof(int), 2, test_file);
-  fwrite(int_params, sizeof(int), int_len, test_file);
-  fwrite(double_params, sizeof(double), double_len, test_file);
-  fwrite(rt->TEST_sim_pos, sizeof(double), 2*beads*Frame_end, test_file);
+  fwrite(rec_->int_chunk, sizeof(int), beads*record_int_chunk_count, test_file);
+  fwrite(rec_->double_chunk, sizeof(double), beads*record_double_chunk_count, test_file);
+  fwrite(rec_->params, sizeof(double), rec_->len, test_file);
+  fwrite(rt->sim_pos, sizeof(double), 2*beads*Frame_end, test_file);
   fwrite(rt->TEST_pos, sizeof(double), 2*beads*Frame_end, test_file);
   fwrite(rt->TEST_pos_res, sizeof(double), beads*Frame_end, test_file);
   fwrite(rt->TEST_alpha_INTpos_res, sizeof(double), beads*Frame_end, test_file);
   fwrite(rt->TEST_INTpos_res, sizeof(double), beads*Frame_end, test_file);
   fwrite(rt->pos_res, sizeof(double), beads*rt->Frames, test_file);
   fwrite(rt->alpha_INTpos_res, sizeof(double), beads*rt->Frames, test_file);
-  fwrite(rt->kill_frames, sizeof(int), beads, test_file);
-  fwrite(rt->alpha_kill, sizeof(double), beads, test_file);
   fclose(test_file);
 }
 
 void runner::init_test_run(int Frame_end_)
 {
-  TEST_sim_pos=new double[2*n*Frame_end_]; TEST_pos=new double[2*n*Frame_end_];
+  TEST_pos=new double[2*n*Frame_end_];
   TEST_pos_res=new double[n*Frame_end_];
   TEST_alpha_INTpos_res=new double[n*Frame_end_]; TEST_INTpos_res=new double[n*Frame_end_];
 }
 
 void runner::free_test_buffers()
 {
-  delete [] TEST_sim_pos; delete [] TEST_pos;
+  delete [] TEST_pos;
   delete [] TEST_pos_res;
   delete [] TEST_alpha_INTpos_res; delete [] TEST_INTpos_res;
 }

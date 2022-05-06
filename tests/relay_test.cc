@@ -10,8 +10,8 @@ const int nbeads=3;
 const int param_id=0;
 const int relay_id=1;
 const int generations=300;
-const int nlead = 1000;
-const int npool = 200;
+const int nlead = 500;
+const int npool = 1000;
 const int param_len = 12;
 const double dt_sim = 0.002;
 const double t_wheels = 0.012;
@@ -59,7 +59,8 @@ int main()
     int test_relay_id=(noise_data)?1:0;
     printf("Testing %d bead generation. Test id: %d, Frames : %d\n", nbeads, test_id, Frames_test);
     doctor doc(ref, sp_min,sp_max,wl,t_phys,&rep);
-    doc.init_test(test_id, test_relay_id); doc.test_run(Frames_test);
+    doc.init_test(test_id, test_relay_id);
+    // doc.test_run(Frames_test);
   }
   if (run_relay)
   {

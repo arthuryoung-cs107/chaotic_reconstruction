@@ -8,15 +8,15 @@ runner::runner(swirl_param &sp_, proximity_grid * pg_, wall_list &wl_, int n_, i
 thread_id(thread_id_), param_len(param_len_), Frames(Frames_), nlead(nlead_), npool(npool_),
 t_phys(t_phys_), dt_sim(dt_sim_), alpha_tol(alpha_tol_),
 ts(ts_), xs(xs_), d_ang(d_ang_), comega_s(comega_s_),
-lead_dup_count(new int[nlead_]), kill_frames(new int[n_]),
+lead_dup_count(new int[nlead_]),
 event_frame_count(AYimatrix(n_, Frames_)),
-param_acc(new double[param_len_]), alpha_kill(new double[n_]),
-pos_res(AYdmatrix(Frames_, n_)), alpha_INTpos_res(AYdmatrix(Frames_, n_)), INTpos_res(AYdmatrix(n_, 3)), TRAIN_sim_pos(new double[2*n_*Frames_])
+param_acc(new double[param_len_]),
+pos_res(AYdmatrix(Frames_, n_)), alpha_INTpos_res(AYdmatrix(Frames_, n_)), INTpos_res(AYdmatrix(n_, 3)), sim_pos(new double[2*n_*Frames_]), bead_event_res_mat(new double[n_*n_])
 {pvals = &Kn;}
 
 runner::~runner()
 {
-  delete [] lead_dup_count; delete [] kill_frames; delete [] param_acc; delete [] alpha_kill;
+  delete [] lead_dup_count; delete [] param_acc; delete [] bead_event_res_mat; delete [] sim_pos;
   free_AYimatrix(event_frame_count); free_AYdmatrix(pos_res);
   free_AYdmatrix(alpha_INTpos_res); free_AYdmatrix(INTpos_res);
 }
@@ -35,20 +35,20 @@ void runner::reset_sim(double *ptest_, double t0_, double ctheta0_, double comeg
 }
 
 // take two steps so that we can start off the event diagnostics collection
-int runner::start_detection(int start_, double * params_, double *t_history_)
+int runner::start_detection(int start_, double * params_, double *t_history_, int * event_frames, double * smooth_residual, double * net_residual_)
 {
   for (int i = 0; i < n*Frames; i++) pos_res[0][i]=alpha_INTpos_res[0][i]=0.0;
 
   reset_sim(params_, ts[start_]/t_phys, d_ang[start_], comega_s[start_], xs + 2*n*start_);
   int frame_local = start_, poffset = 2*n*frame_local, foffset=n*frame_local;
-  double res_acc_local = 0.0, *f = xs+poffset;
+  double net_residual = 0.0, *f = xs+poffset;
 
   // initialize t=tstart data
   t_history_[0]=t_history_[1]=ts[frame_local];
   for (int i=0,j=0; i < n; i++,j+=2)
   {
-    kill_frames[i] = 0;
-    pos_res[frame_local][i]=alpha_INTpos_res[frame_local][i]=INTpos_res[i][0]=INTpos_res[i][1]=INTpos_res[i][2]=0.0;
+    event_frames[i] = 0;
+    smooth_residual[i]=pos_res[frame_local][i]=alpha_INTpos_res[frame_local][i]=INTpos_res[i][0]=INTpos_res[i][1]=INTpos_res[i][2]=0.0;
 
     // write test outputs
     double  x_sim = q[i].x, y_sim = q[i].y,
@@ -61,7 +61,8 @@ int runner::start_detection(int start_, double * params_, double *t_history_)
   for (int i=0, j=0; i < n; i++, j+=2)
   {
     double  xt=(q[i].x-cx)*cl_im + cx_im-f[j],yt=(q[i].y-cy)*cl_im + cy_im-f[j+1], rsq=xt*xt+yt*yt;
-    res_acc_local+=pos_res[frame_local][i]=rsq;
+    net_residual+=pos_res[frame_local][i]=rsq;
+    smooth_residual[i]+=rsq;
     INTpos_res[i][2]=INTpos_res[i][1]; INTpos_res[i][1]=INTpos_res[i][0];
     INTpos_res[i][0]+=0.5*(rsq+pos_res[frame_local-1][i])*(t_history_[0]-t_history_[1]);
     alpha_INTpos_res[frame_local][i]=0.0;
@@ -74,21 +75,23 @@ int runner::start_detection(int start_, double * params_, double *t_history_)
   for (int i=0, j=0; i < n; i++, j+=2)
   {
     double  xt=(q[i].x-cx)*cl_im + cx_im-f[j],yt=(q[i].y-cy)*cl_im + cy_im-f[j+1], rsq=xt*xt+yt*yt;
-    res_acc_local+=pos_res[frame_local][i]=rsq;
+    net_residual+=pos_res[frame_local][i]=rsq;
+    smooth_residual[i]+=rsq;
     INTpos_res[i][2]=INTpos_res[i][1]; INTpos_res[i][1]=INTpos_res[i][0];
     INTpos_res[i][0]+=0.5*(rsq+pos_res[frame_local-1][i])*(t_history_[0]-t_history_[1]);
     alpha_INTpos_res[frame_local][i]=0.0;
   }
-  pos_res_acc=res_acc_local;
+  *net_residual_=net_residual;
   return frame_local;
 }
 
 void runner::detect_events(record * rec_, int start_, int end_)
 {
-  double t_history[3];
-  int frame_local = start_detection(start_, rec_->params, t_history);
-  int poffset = 2*n*frame_local, foffset=n*frame_local;
-  double res_acc_local = pos_res_acc, res_acc_local_full = pos_res_acc, *f;
+  double t_history[3], net_residual;
+  int frame_local = start_detection(start_, rec_->params, t_history, rec_->event_positions, rec_->smooth_residual, &net_residual);
+  int poffset = 2*n*frame_local, foffset=n*frame_local, *event_frames=rec_->event_positions;
+  double *f, *rec_res=rec_->smooth_residual, *alpha_data=rec_->alpha_data, net_smooth_residual=net_residual;
+
   do
   {
     frame_local++; poffset+=2*n; foffset+=n; f = xs+poffset;
@@ -99,33 +102,35 @@ void runner::detect_events(record * rec_, int start_, int end_)
 
     for (int i=0, j=0; i < n; i++, j+=2)
     {
-      if (!(kill_frames[i])) // if this bead does not yet have a kill frame, continue search
+      double  xt=(q[i].x-cx)*cl_im + cx_im-f[j],yt=(q[i].y-cy)*cl_im + cy_im-f[j+1], rsq=xt*xt+yt*yt;
+      net_residual+=pos_res[frame_local][i]=rsq;
+      if (!(event_frames[i])) // if this bead does not yet have a kill frame, continue search
       {
         all_dead=false;
-
-        double  xt=(q[i].x-cx)*cl_im + cx_im-f[j],yt=(q[i].y-cy)*cl_im + cy_im-f[j+1], rsq=xt*xt+yt*yt;
-        res_acc_local+=pos_res[frame_local][i]=rsq;
         INTpos_res[i][2]=INTpos_res[i][1]; INTpos_res[i][1]=INTpos_res[i][0];
         INTpos_res[i][0]+=0.5*(rsq+pos_res[frame_local-1][i])*(t_history[0]-t_history[1]);
         alpha_INTpos_res[frame_local-1][i]=alpha_comp(INTpos_res[i], t_history[0], t_history[2]);
         if (alpha_INTpos_res[frame_local-1][i] > alpha_tol) // if we just had a collision
         {
-          kill_frames[i] = frame_local-1;
-          alpha_kill[i] = alpha_INTpos_res[frame_local-1][i];
+          event_frames[i] = frame_local-1;
+          alpha_data[i] = alpha_INTpos_res[frame_local-1][i];
+          rec_res[i+n]+=rsq;
         }
-        else res_acc_local+=rsq;
+        else
+        {rec_res[i]+=rsq; net_smooth_residual+=rsq;}
       }
+      else rec_res[i+n]+=rsq;
     }
     if (all_dead) break;
     else if ((frame_local+1)==end_)
     {
-      for (int i=0; i < n; i++) if (!(kill_frames[i]))
-        {kill_frames[i] = end_-1; alpha_kill[i] = alpha_INTpos_res[frame_local-2][i];}
+      for (int i=0; i < n; i++) if (!(event_frames[i]))
+        {event_frames[i] = end_-1; alpha_data[i] = alpha_INTpos_res[frame_local-2][i];}
       break;
     }
   } while(true);
-  for (int i = 0; i < n; i++) event_frame_count[i][kill_frames[i]]++;
-  rec_->record_event_data(pos_res_acc=res_acc_local, kill_frames, INTpos_res, alpha_kill);
+  for (int i = 0; i < n; i++) event_frame_count[i][event_frames[i]]++;
+  bool done = rec_->check_success(net_residual, net_smooth_residual, DBL_MAX);
 }
 
 int runner::run_relay(record * rec_, int start_, int earliest_, int latest_, int * event_frames_ordered_, int * bead_order, double residual_worst_)
@@ -135,62 +140,53 @@ int runner::run_relay(record * rec_, int start_, int earliest_, int latest_, int
   reset_sim(rec_->params, ts[start_]/t_phys, d_ang[start_], comega_s[start_], xs + poffset);
 
   // set the starting frame position
-  double *tsp = TRAIN_sim_pos+(poffset);
+  double *tsp = sim_pos+(poffset);
   for (int i=0, j=0; i < n; i++, j+=2)
   {tsp[j]=q[i].x; tsp[j+1]=q[i].y;}
 
-  // begin by computing full stretch of event block
-  for (int frame_local = start_+1; frame_local < latest_; frame_local++)
-  {
-    advance((ts[frame_local]-ts[frame_local-1])/t_phys, d_ang[frame_local-1], comega_s[frame_local], dt_sim);
-    tsp+=(2*n);
-    for (int i=0, j=0; i < n; i++, j+=2)
-    {tsp[j]=q[i].x; tsp[j+1]=q[i].y;}
-  }
 
-  // clear the bead-event residual matrix
-  for (int i = 0; i < n*n; i++) bead_event_res_mat[i] = 0.0; 
+  for (int i = 0; i < n*n; i++) bead_event_res_mat[i] = 0.0;
 
-  // compute residual information
-  tsp=TRAIN_sim_pos+poffset;
-  double *f = xs+poffset;
-  int stretch_start = start_;
+  int stretch_start = start_+1;
   for (int si = 0; si < n; si++)
   {
     double * berm_si = bead_event_res_mat+(si*n);
-    for (int frame_local = stretch_start; frame_local < event_frames_ordered[si]; frame_local++)
+    for (int frame_local = stretch_start; frame_local < event_frames_ordered_[si]; frame_local++)
     {
-      f+=2*n; tsp+=2*n;
+      advance((ts[frame_local]-ts[frame_local-1])/t_phys, d_ang[frame_local-1], comega_s[frame_local], dt_sim);
+      poffset+=2*n;
+      double *f = xs+(poffset);
       for (int i=0, j=0; i < n; i++, j+=2)
       {
-        double  xt=(tsp[j]-cx)*cl_im + cx_im - f[j], yt=(tsp[j+1]-cy)*cl_im + cy_im - f[j+1];
-        berm_si[i]+=xt*xt+yt*yt; // accumulate the the event vs bead matrix.
+        double xt=(q[i].x-cx)*cl_im + cx_im - f[j], yt=(q[i].y-cy)*cl_im + cy_im - f[j+1];
+        berm_si[i]+=xt*xt+yt*yt; // accumulate the event vs bead matrix.
       }
     }
-    stretch_start+=event_frames_ordered[si];
+    stretch_start=event_frames_ordered_[si];
   }
 
-  double * rec_res=rec_->smooth_residual, res_acc_local = 0.0;
+  double * rec_res=rec_->smooth_residual, net_residual=0.0, net_smooth_residual=0.0;
 
-  // clear this records residual data, which is split between stiff and smooth residual
+  // clear this record's residual data, which is split between stiff and smooth residual
   for (int i = 0; i < 2*n; i++) rec_res[i] = 0.0;
 
   // accumulate residuals across the full event block
-  for (int event_i = 0; event_i < n; event_i++)
+  for (int event_i = 0; event_i < n; event_i++) // from earliest event to latest event
   {
-    double  *si_res = berm_si + n*bead_order[event_i],
+    double  *berm_si = bead_event_res_mat + bead_order[event_i], // maps to the starting column index of the bead_res_mat
             *beadi_res = rec_res + bead_order[event_i];
 
     // accumulate smooth event residual for current bead
-    for (int si = 0; si < event_i+1; si++) *(beadi_res)+= si_res[si];
+    for (int si = 0; si < event_i+1; si++) *(beadi_res)+= berm_si[si*n];
 
-    res_acc_local+= *(beadi_res); beadi_res+=n;
+    net_smooth_residual += *(beadi_res);
+    net_residual += *(beadi_res);
+    beadi_res+=n;
 
     // accumulate stiff event residual for current bead
-    for (int si = 0; si < n; si++) *(beadi_res)+= si_res[si];
-
-    res_acc_local+= *(beadi_res);
+    for (int si = event_i+1; si < n; si++) *(beadi_res)+= berm_si[si*n];
+    net_residual += *(beadi_res);
   }
 
-  return (int)rec_->check_success(pos_res_acc=res_acc_local,residual_worst_);
+  return (int)rec_->check_success(net_residual, net_smooth_residual, residual_worst_);
 }

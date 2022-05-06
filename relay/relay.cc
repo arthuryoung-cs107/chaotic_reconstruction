@@ -83,25 +83,27 @@ void relay::stage_diagnostics(int gen_max_)
   };
 
   double startup_double_params[] = {
-  rep->dt_sim = dt_sim,
-  rep->noise_tol = noise_tol,
-  rep->alpha_tol = alpha_tol,
-  rep->rs_full_factor=rs_full_factor,
-  rep->data_scale=data_scale,
-  rep->t_phys = t_phys
+  dt_sim,
+  noise_tol,
+  alpha_tol,
+  rs_full_factor,
+  data_scale,
+  t_phys
   };
 
+  // integer pointers
   rep->lead_dup_count = lead_dup_count;
   rep->global_event_frame_count = *global_event_frame_count;
   rep->event_frames = event_frames;
   rep->gen_int_vec = &(gen_count);
-  rep->postevent_int_vec = &(event_observations);
+  rep->event_int_vec = &(earliest_event);
 
+  // double pointers
   rep->sample_weights = sample_weights;
   rep->lead_par_w_mean = lead_par_w_mean;
   rep->lead_par_w_var = lead_par_w_var;
   rep->gen_double_vec = &(residual_best);
-  rep->postevent_double_vec = &(tau);
+  rep->event_double_vec = &(tau);
 
   rep->leaders = leaders;
   rep->pool = pool;
@@ -132,15 +134,42 @@ void relay::start_relay(int gen_max_, bool verbose_)
   bool relay_underway=true;
   int event_block=0;
   int start_frame=0;
+  int gen_smooth_max = gen_max_/2;
 
   if (debugging_flag) stage_diagnostics(gen_max_);
 
   do
   {
+    #pragma omp parallel for
+    for (int i = 0; i < nlead+npool; i++)
+    {
+      leaders[i]->init_training(true);
+    }
     find_events(start_frame,Frames);
-    tau_sqr = ev->define_relay_event_block(event_block, &net_observations, &smooth_obs, &tau, &tau_smooth, &earliest_event);
+    ev->define_relay_event_block(event_block, &net_observations, &tau_full, &earliest_event, noise_tol*data_scale);
+    tau=tau_smooth; tau_sqr=tau*tau;
     if (debugging_flag) rep->write_event_diagnostics(event_block);
-    start_frame = train_event_block(event_block);
+
+    // smooth training
+    start_frame = train_event_block(event_block, gen_smooth_max,0.01);
+    resample_pool();
+
+    printf("(event block %d) Completed smooth training. Best residual: %e, for tau^2=%e. tau/r= %e. Beginning stiff training: \n", event_block, residual_best, tau_sqr, tau/root_res_best);
+    #pragma omp parallel for
+    for (int i = 0; i < nlead+npool; i++)
+    {
+      leaders[i]->init_training(false);
+    }
+    // reevaluate leaders with their stiff performance.
+    worst_leader = find_worst_record(leaders, leader_count);
+    best_leader = find_best_record(leaders, leader_count);
+    record * wl_rec = leaders[worst_leader], * bl_rec = leaders[best_leader];
+    residual_best = bl_rec->residual; root_res_best = bl_rec->root_residual;
+
+    tau=tau_stiff; tau_sqr=tau*tau;
+    // full block training
+    start_frame = train_event_block(event_block, gen_max_,0.01);
+
     event_block++;
 
     if (start_frame==Frames) relay_underway= false;

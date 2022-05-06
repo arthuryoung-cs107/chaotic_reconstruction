@@ -9,7 +9,7 @@
 #endif
 
 const int record_int_len=6;
-const int record_double_len=5;
+const int record_double_len=7;
 
 const int record_int_chunk_count = 1;
 const int record_double_chunk_count = 3;
@@ -34,8 +34,8 @@ struct record
 
   double residual;
   double root_residual;
-  double smooth_residual;
-  double stiff_residual;
+  double net_residual;
+  double net_smooth_residual;
   double weight;
   double px;
   double zeta;
@@ -54,6 +54,8 @@ struct record
 
   double * const params;
 
+  bool smooth_training=true;
+
   record(int beads_, int Frames_, int len_, int i_, int * int_chunk_, double * params_, double * double_chunk_): beads(beads_), Frames(Frames_), len(len_), global_index(i_), int_chunk(int_chunk_), double_chunk(double_chunk_), event_positions(int_chunk_), smooth_residual(double_chunk_), stiff_residual(double_chunk_+beads_), alpha_data(double_chunk_+2*beads_), params(params_)
   {int_params=&(gen); double_params=&(residual);}
 
@@ -64,14 +66,16 @@ struct record
   void duplicate(record *parent_, int gen_, double *dmin_, double *dmax_, AYrng * r_, double * var_);
   void take_vals(record * rtake_);
 
-  void record_event_data(double res_acc_, int *kill_frames_, double ** INTpos_res_, double *alpha_kill_);
-
   inline void init_leader()
   {reset_record(0);}
   inline void init_pool(double * dmin_, double *dmax_, AYrng * r_)
   {resample(0,dmin_,dmax_,r_);}
-  inline bool check_success(double residual_, double residual_worst_)
-  {residual=residual_; root_residual=sqrt(residual_); return success=(residual_<residual_worst_);}
+  inline bool check_success(double net_residual_, double net_smooth_residual_, double residual_worst_)
+  {
+    net_residual=net_residual_; net_smooth_residual=net_smooth_residual_;
+    residual = (smooth_training)?net_smooth_residual:net_residual;
+    root_residual=sqrt(residual); return success=(residual<residual_worst_);
+  }
   inline bool isbetter(record * rcomp_)
   {return residual<rcomp_->residual;}
   inline bool isworse(record * rcomp_)
@@ -85,6 +89,12 @@ struct record
     px = exp(log_C+(log(itau)-zeta));
     return weight = lambda_*exp(log_P+(beta_-zeta));
   }
+
+  inline void init_training(bool smooth_training_)
+  {
+    residual=(smooth_training=smooth_training_)?residual=net_smooth_residual:net_residual;
+    root_residual=sqrt(residual);
+  }
 };
 
 struct events
@@ -92,19 +102,19 @@ struct events
   const int beads;
   const int Frames;
 
-  int * const global_event_frame_count;
+  int ** global_event_frame_count;
   int * const event_frames;
 
   int * const bead_order;
   int * const event_sorted;
 
-  events(int Frames_, int beads_, int * global_event_frame_count_, int *event_frames_in_): beads(beads_), Frames(Frames_),
+  events(int Frames_, int beads_, int ** global_event_frame_count_, int *event_frames_in_): beads(beads_), Frames(Frames_),
   global_event_frame_count(global_event_frame_count_), event_frames(event_frames_in_),
   bead_order(new int[beads_]), event_sorted((new int[beads_]))
   {}
   ~events() {delete [] bead_order; delete [] event_sorted;}
 
-  double define_relay_event_block(int event_block_id_, int * net_observations, int * observations, double * tau, double * tau_vec, int * early_late_events);
+  void define_relay_event_block(int event_block_id_, int * obs_vec, double * tau_vec, int * early_late_events, double tau_coeff);
 
   inline int earliest(int *index, int start_index_)
   {
@@ -131,42 +141,36 @@ class runner: public swirl
       const int nlead;
       const int npool;
 
-
       const double t_phys;
       const double dt_sim;
       const double alpha_tol;
 
-      int frame,earliest_event,latest_event;
-
-      double  pos_res_acc;
-
       int *lead_dup_count,
-          *kill_frames,
           **event_frame_count;
 
       double  *pvals, *ts, *xs, *d_ang, *comega_s,
-              *param_acc, *alpha_kill,
+              *param_acc,
               **pos_res, **alpha_INTpos_res,
               **INTpos_res,
-              *TRAIN_sim_pos;
+              *sim_pos,
+              *bead_event_res_mat;
 
       runner(swirl_param &sp_, proximity_grid * pg_, wall_list &wl_, int n_, int thread_id_, int param_len_, int Frames_, int nlead_, int npool_, double t_phys_, double dt_sim_, double alpha_tol_, double *ts_, double *xs_, double *d_ang_, double *comega_s);
       ~runner();
 
       void reset_sim(double *ptest_, double t0_, double ctheta0_, double comega0_, double *x0_);
 
-      int run_relay(record * rec_, int start_, int * end_, int earliest_, int latest_, double residual_worst_);
-      int start_detection(int start_, double * params_, double *t_history_);
+      int run_relay(record * rec_, int start_, int earliest_, int latest_, int * event_frames_ordered_, int * bead_order, double residual_worst_);
+      int start_detection(int start_, double * params_, double *t_history_, int * event_frames, double * smooth_residual, double * net_residual_);
       void detect_events(record* rec_, int start_, int end_);
 
       inline void clear_event_data()
       {for (int i = 0; i < n*Frames; i++) event_frame_count[0][i] = 0;}
 
       // debugging stuff
-
-      double *TEST_sim_pos, *TEST_pos, *TEST_pos_res, *TEST_alpha_INTpos_res, *TEST_INTpos_res;
-      int start_test_detection(int start_, double * params_, double *t_history_);
-      double test_detection(record * rec_, int start_, int end_, int i_);
+      double *TEST_pos, *TEST_pos_res, *TEST_alpha_INTpos_res, *TEST_INTpos_res;
+      int start_test_detection(int start_, double * params_, double *t_history_, int * event_frames, double * smooth_residual, double * net_residual_);
+      void test_detection(record * rec_, int start_, int end_, int i_);
 
       void init_test_run(int Frame_end_);
       void free_test_buffers();
@@ -202,11 +206,9 @@ struct referee
   int **record_int_chunk,
       **global_event_frame_count,
       *lead_dup_count,
-      *event_frames,
-      *observations;
+      *event_frames;
 
       // conservative estimate for pre-collision frame
-
 
   double  **param_chunk,
           **record_double_chunk,
@@ -237,24 +239,17 @@ class reporter : public ODR_struct
         param_len,
         beads;
 
-    double  dt_sim,
-            noise_tol,
-            alpha_tol,
-            rs_full_factor,
-            data_scale,
-            t_phys;
-
     int *lead_dup_count,
         *global_event_frame_count,
         *event_frames,
         *gen_int_vec,
-        *postevent_int_vec;
+        *event_int_vec;
 
     double  *sample_weights,
             *lead_par_w_mean,
             *lead_par_w_var,
             *gen_double_vec,
-            *postevent_double_vec;
+            *event_double_vec;
 
     record ** leaders;
     record ** pool;
@@ -269,10 +264,8 @@ class reporter : public ODR_struct
     void load_relay(double *ts_, double *xs_, double *d_ang_);
     void write_startup_diagnostics(int *header_, int *int_params_, double *double_params_);
     void write_event_diagnostics(int event_);
-    void write_postevent_diagnostics(int event_);
     void write_gen_diagnostics(int gen_count_, int leader_count_);
     void close_diagnostics(int gen_count_);
-    ODR_struct * spawn_swirlODR(char *name_);
 
   private:
 
@@ -280,10 +273,10 @@ class reporter : public ODR_struct
     double noise_tol_in;
 };
 
-const int event_int_len=2;
-const int event_double_len=2;
 const int gen_int_len=10;
 const int gen_double_len=9;
+const int event_int_len=5;
+const int event_double_len=5;
 
 class relay : public referee
 {
@@ -333,9 +326,11 @@ class relay : public referee
     double beta;
     double w_sum;
     double w_max;
+    double t_wheel;
 
     double tau;
     double tau_sqr;
+    double tau_full;
     double tau_smooth;
     double tau_stiff;
 
@@ -346,7 +341,6 @@ class relay : public referee
 
     void init_relay();
     void start_relay(int gen_max_, bool verbose_=true);
-    void train_event_block(int gen_max_smooth_, int gen_max_stiff_);
 
     void make_best_swirl(char * name_);
       void make_best_swirl(const char *name_)
@@ -371,11 +365,12 @@ class relay : public referee
 
       void stage_diagnostics(int gen_max_);
 
-      void learn_first_event_block(int gen_max_, bool verbose_);
+      void find_events(int min_frame_, int latest_frame_);
+      int train_event_block(int event_block, int gen_max_, double tol_leeway_=0.0);
 
       void check_gen0();
 
-      bool check_pool_results();
+      bool check_pool_results(double tol_leeway_=0.0);
       int collect_candidates();
 
       void compute_leader_statistics();
@@ -406,7 +401,7 @@ struct medic
   ~medic()
   {delete [] test_directory;}
 
-  void write_test_run(double accresfull_, int i_);
+  void write_test_run(record * rec_, int i_);
 };
 
 class doctor : public relay
