@@ -165,10 +165,13 @@ void relay::start_relay(int gen_max_, bool verbose_)
     best_leader = find_best_record(leaders, leader_count);
     record * wl_rec = leaders[worst_leader], * bl_rec = leaders[best_leader];
     residual_best = bl_rec->residual; root_res_best = bl_rec->root_residual;
+    residual_worst = wl_rec->residual; root_res_worst = wl_rec->root_residual;
 
     tau=tau_stiff; tau_sqr=tau*tau;
+
     // full block training
     start_frame = train_event_block(event_block, gen_max_,0.01);
+    printf("(event block %d) Completed stiff training. Best residual: %e, for tau^2=%e. tau/r= %e. Beginning stiff training: \n", event_block, residual_best, tau_sqr, tau/root_res_best);
 
     event_block++;
 
