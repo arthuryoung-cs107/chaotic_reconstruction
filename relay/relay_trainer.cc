@@ -9,55 +9,58 @@ extern "C"
   #include "AYaux.h"
 }
 
-void relay::train_leg(int smooth_gen_max_, int stiff_gen_max_)
+void relay::find_events(int min_frame_, int latest_frame_)
 {
-  bool smooth_training=true;
-  int half_gen_max = gen_max_/2;
+  bool first2finish = true;
+  // determine the next sequence of events in the data, requiring that that they must occur after the min_frame_ parameter
+  #pragma omp parallel
+    {
+      runner *rt = runners[thread_num()];
+      rt->clear_event_data();
+  #pragma omp for nowait
+      for (int i = 0; i < npool; i++)
+      {
+        rt->detect_events(pool[i], min_frame_, latest_frame_);
+      }
+  #pragma omp critical
+      {
+        if (first2finish)
+        {
+          for (int i = 0; i < n*Frames; i++) global_event_frame_count[0][i] = rt->event_frame_count[0][i];
+          first2finish=false;
+        }
+        else for (int i = 0; i < n*Frames; i++) global_event_frame_count[0][i] += rt->event_frame_count[0][i];
+      }
+    }
+}
 
-  do // train off of the smooth data
+int relay::train_event_block(int event_block, int gen_max_)
+{
+  bool training=true;
+  do
   {
     int success_local=0;
 #pragma omp parallel
     {
       runner *rt = runners[thread_num()];
-#pragma omp for reduction(+:success_local) nowait
+      int * event_frames_ordered = ev->event_sorted;
+      int * bead_order = ev->bead_order;
+#pragma omp for reduction(+:success_local)
       for (int i = 0; i < npool; i++)
       {
-        success_local += rt->run_relay(pool[i], 0, event_frames, earliest_event, latest_event, residual_worst);
+        success_local += rt->run_relay(pool[i], 0, earliest_event, latest_event, event_frames_ordered, bead_order, residual_worst);
       }
     }
     gen_count++;
     printf("(gen %d): %d candidates. ", gen_count, success_local);
-    if (check_pool_results()) smooth_training=false; // we win
-    else if (gen_count == half_gen_max) smooth_training=false; // we give up
+    if (check_pool_results()) training=false; // we win
+    else if (gen_count == gen_max_) training=false; // we give up
     else resample_pool(); // we try again
     if (debugging_flag) rep->write_gen_diagnostics(gen_count, leader_count);
   } while (smooth_training);
 
-  printf("\nSmooth training terminated. Beginning post-event training.");
-
-  do // train off of full data
-  {
-    int success_local=0;
-#pragma omp parallel
-    {
-      runner *rt = runners[thread_num()];
-#pragma omp for reduction(+:success_local) nowait
-      for (int i = 0; i < npool; i++)
-      {
-        success_local += rt->run_relay(pool[i], 0, event_frames, earliest_event, latest_event, residual_worst);
-      }
-    }
-    gen_count++;
-    printf("(gen %d): %d candidates. ", gen_count, success_local);
-    if (check_pool_results()) training_underway=false; // we win
-    else if (gen_count == half_gen_max) training_underway=false; // we give up
-    else resample_pool(); // we try again
-    if (debugging_flag) rep->write_gen_diagnostics(gen_count, leader_count);
-  } while (training_underway);
-
+  return ;
 }
-
 
 int relay::collect_candidates()
 {
@@ -105,7 +108,7 @@ bool relay::check_pool_results()
       }
 
     worst_leader = worst_best; // this will be the worst leader
-    residual_worst = leader_board[worst_best]->residual;
+    residual_worst = leader_board[worst_best]->residual; root_res_worst = leader_board[worst_best]->root_residual;
 
     double resacc_local = 0.0;
     for (int i = 0; i < nlead; i++)
@@ -130,8 +133,9 @@ bool relay::check_pool_results()
 
   best_leader = find_best_record(leaders, leader_count);
   record * wl_rec = leaders[worst_leader], * bl_rec = leaders[best_leader];
-  residual_best = bl_rec->residual;
+  residual_best = bl_rec->residual; root_res_best = bl_rec->root_residual;
   printf("Best/Worst: (ID, gen, parents, residual) = (%d/%d %d/%d %d/%d %e/%e), %d replacements. ", bl_rec->global_index, wl_rec->global_index, bl_rec->gen, wl_rec->gen, bl_rec->parent_count, wl_rec->parent_count, residual_best, residual_worst, repl_count);
-  if (sqrt(residual_worst)<tau) return true;
-  return false;
+  if (res_best<tau_sqr) return true;
+  else if (repl_count==0) return true;
+  else return false;
 }

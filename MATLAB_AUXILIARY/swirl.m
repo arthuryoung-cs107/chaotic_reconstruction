@@ -11,6 +11,10 @@ classdef swirl
     dish=0; % (t cx cy wall_sca) for each frame
     params; % the parameters associated with the swirl
 
+    contact_f;
+    bead_contact_f;
+    wall_contact_f;
+    
   end
   methods
     function data = swirl(pos_, dish_, Frames_, len_dish_, len_pos_, beads_)

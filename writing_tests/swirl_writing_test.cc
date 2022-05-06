@@ -8,6 +8,7 @@
 const int nbeads=1;
 const int param_id=0;
 const bool write_split = false;
+const int bead_index = 6;
 char proc_loc[] = "./dat_dir/";
 int main()
 {
@@ -39,7 +40,10 @@ int main()
     proximity_grid pg;
     swirl sw(sparam,&pg,wl,nbeads);
 
-    sw.import("input_dir/input30.dat");
+    if ((nbeads==1)&&(bead_index!=0)) sw.import1("input_dir/input30.dat", 30, bead_index);
+    else sw.import("input_dir/input30.dat");
+
+
 
     // Solve the system
     ODR_struct odr;

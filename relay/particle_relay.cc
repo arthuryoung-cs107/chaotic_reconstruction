@@ -52,32 +52,46 @@ void record::take_vals(record * rtake_)
   for (int i = 0; i < len; i++) params[i] = rtake_->params[i];
 }
 
-void events::define_relay_leg(int leg_id_)
+double events::define_relay_event_block(int event_block_id_, int * net_observations, int * observations, double * tau, double * tau_vec, int * early_late_events)
 {
-  printf("(leg %d): Events identified. Event frames -", leg_id_);
+  printf("(event block %d): Events identified. Event frames -", event_block_id_);
 
   // Update the event frames for each bead. Also identify the earliest and latest events.
-  int latest_event = 0, earliest_event=Frames;
+  int latest_event = 0, earliest_event=Frames, smooth_frames=0;
   for (int i = 0; i < beads; i++) for (int j = 0; j < Frames; j++)
     if (global_event_frame_count[i][j])
     {
-      event_frames[i] = j-1;
+      smooth_frames+=event_frames[i] = j-1;
       if (event_frames[i]>latest_event) latest_event = event_frames[i];
       if (event_frames[i]<earliest_event) earliest_event = event_frames[i];
       printf(" %d", j-1);
       break;
     }
-  printf(". Earliest: %d, latest: %d ", earliest_event, latest_event);
-  *ref_earliest_event=earliest_event; *ref_latest_event=latest_event;
+  printf(". Earliest: %d, latest: %d. ", earliest_event, latest_event);
+  observations[0] = 2*smooth_frames; // smooth observation count
+  observations[1] = 2*beads*latest_event-observations[0]; // stiff observation count
+  *net_observations = observations[0]+observations[1];
+
+  // update the event block tolerance
+  *tau = (noise_tol*data_scale)*sqrt((double)(*net_observations));
+  tau_vec[0] = (noise_tol*data_scale)*sqrt((double)(observations[0]));
+  tau_vec[1] = (noise_tol*data_scale)*sqrt((double)(observations[1]));
+
+  // update relay's start and end values of this event block
+  early_late_events[0]=earliest_event; early_late_events[1]=latest_event;
 
   // sort the events
+
   int i_it, early_it, i_temp, early_temp;
+  // start by filling the events as they are in the bead order
   for (int i = 0; i < beads; i++)
   {
     event_sorted[i] = event_frames[i];
     bead_order[i] = i;
   }
+  // determine earliest event, starting from index 0, save its value to temporary variables
   early_it = earliest(&i_it, 0);
+  // swap indices and values
   early_temp = event_sorted[0]; i_temp = 0;
   event_sorted[0]=early_it; bead_order[0]=i_it;
   event_sorted[i_it]=early_temp; bead_order[i_it]=i_temp;
@@ -87,8 +101,7 @@ void events::define_relay_leg(int leg_id_)
   for (int i = 0; i < beads; i++)
     printf("(event %d) bead %d - frame %d\n",i,bead_order[i],event_sorted[i]);
 
-  tau = (noise_tol*data_scale)*sqrt((double)(event_observations));
-  tau_sqr = tau*tau;
+  return (*tau)*(*tau); 
 }
 
 referee::~referee()

@@ -92,27 +92,21 @@ struct events
   const int beads;
   const int Frames;
 
-  int * const ref_earliest_event;
-  int * const ref_latest_event;
-
   int * const global_event_frame_count;
   int * const event_frames;
 
-  int * const next_event;
-  int * const prev_event;
   int * const bead_order;
   int * const event_sorted;
 
-  events(int Frames_, int beads_, int * global_event_frame_count, int *event_frames_in_): beads(beads_), Frames(Frames_),
-  event_frames(event_frames_in_),
-
-  next_event(new int[beads_]), prev_event(new int[beads_]), bead_order(new int[beads_]), event_sorted((new int[beads_]))
+  events(int Frames_, int beads_, int * global_event_frame_count_, int *event_frames_in_): beads(beads_), Frames(Frames_),
+  global_event_frame_count(global_event_frame_count_), event_frames(event_frames_in_),
+  bead_order(new int[beads_]), event_sorted((new int[beads_]))
   {}
-  ~events() {delete [] next_event; delete [] prev_event; delete [] bead_order; delete [] event_sorted;}
+  ~events() {delete [] bead_order; delete [] event_sorted;}
 
-  void sort_events(int earliest_event_, int latest_event_);
+  double define_relay_event_block(int event_block_id_, int * net_observations, int * observations, double * tau, double * tau_vec, int * early_late_events);
 
-  inline int earliest(int *index, int start_index_=0)
+  inline int earliest(int *index, int start_index_)
   {
     int out = event_sorted[start_index_]; *index=start_index_;
     for (int i = start_index_+1; i < beads; i++) if (event_sorted[i]<out) out=event_sorted[(*index)=i];
@@ -326,6 +320,9 @@ class relay : public referee
 
     int earliest_event;
     int latest_event;
+    int net_observations;
+    int smooth_obs;
+    int stiff_obs;
 
     double residual_best;
     double residual_worst;
@@ -339,6 +336,8 @@ class relay : public referee
 
     double tau;
     double tau_sqr;
+    double tau_smooth;
+    double tau_stiff;
 
     reporter * rep;
 
@@ -347,7 +346,7 @@ class relay : public referee
 
     void init_relay();
     void start_relay(int gen_max_, bool verbose_=true);
-    void train_leg(int gen_max_smooth_, int gen_max_stiff_);
+    void train_event_block(int gen_max_smooth_, int gen_max_stiff_);
 
     void make_best_swirl(char * name_);
       void make_best_swirl(const char *name_)
@@ -372,7 +371,7 @@ class relay : public referee
 
       void stage_diagnostics(int gen_max_);
 
-      void learn_first_leg(int gen_max_, bool verbose_);
+      void learn_first_event_block(int gen_max_, bool verbose_);
 
       void check_gen0();
 

@@ -148,9 +148,12 @@ int runner::run_relay(record * rec_, int start_, int earliest_, int latest_, int
     {tsp[j]=q[i].x; tsp[j+1]=q[i].y;}
   }
 
+  // clear the bead-event residual matrix
+  for (int i = 0; i < n*n; i++) bead_event_res_mat[i] = 0.0; 
+
   // compute residual information
   tsp=TRAIN_sim_pos+poffset;
-  double *f = xs+poffset, res_acc_local = 0.0;
+  double *f = xs+poffset;
   int stretch_start = start_;
   for (int si = 0; si < n; si++)
   {
@@ -167,12 +170,26 @@ int runner::run_relay(record * rec_, int start_, int earliest_, int latest_, int
     stretch_start+=event_frames_ordered[si];
   }
 
-  for (int bead_i = 0; bead_i < n; bead_i++)
-  {
-    for (int i = 0; i < count; i++) 
-    {
+  double * rec_res=rec_->smooth_residual, res_acc_local = 0.0;
 
-    }
+  // clear this records residual data, which is split between stiff and smooth residual
+  for (int i = 0; i < 2*n; i++) rec_res[i] = 0.0;
+
+  // accumulate residuals across the full event block
+  for (int event_i = 0; event_i < n; event_i++)
+  {
+    double  *si_res = berm_si + n*bead_order[event_i],
+            *beadi_res = rec_res + bead_order[event_i];
+
+    // accumulate smooth event residual for current bead
+    for (int si = 0; si < event_i+1; si++) *(beadi_res)+= si_res[si];
+
+    res_acc_local+= *(beadi_res); beadi_res+=n;
+
+    // accumulate stiff event residual for current bead
+    for (int si = 0; si < n; si++) *(beadi_res)+= si_res[si];
+
+    res_acc_local+= *(beadi_res);
   }
 
   return (int)rec_->check_success(pos_res_acc=res_acc_local,residual_worst_);

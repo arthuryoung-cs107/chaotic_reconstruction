@@ -129,38 +129,26 @@ void relay::init_relay()
 
 void relay::start_relay(int gen_max_, bool verbose_)
 {
-  if (debugging_flag) stage_diagnostics(gen_max_);
   bool relay_underway=true;
-  bool first2finish = true;
+  int event_block=0;
+  int start_frame=0;
 
-  printf("searching for first events\n");
-  // finding first events
-#pragma omp parallel
+  if (debugging_flag) stage_diagnostics(gen_max_);
+
+  do
   {
-    runner *rt = runners[thread_num()];
-    rt->clear_event_data();
-#pragma omp for nowait
-    for (int i = 0; i < npool; i++)
+    find_events(start_frame,Frames);
+    tau_sqr = ev->define_relay_event_block(event_block, &net_observations, &smooth_obs, &tau, &tau_smooth, &earliest_event);
+    if (debugging_flag) rep->write_event_diagnostics(event_block);
+    start_frame = train_event_block(event_block);
+    event_block++;
+
+    if (start_frame==Frames) relay_underway= false;
+    else
     {
-      rt->detect_events(pool[i], 0, Frames);
+      break;
     }
-#pragma omp critical
-    {
-      if (first2finish)
-      {
-        for (int i = 0; i < n*Frames; i++) global_event_frame_count[0][i] = rt->event_frame_count[0][i];
-        first2finish=false;
-      }
-      else for (int i = 0; i < n*Frames; i++) global_event_frame_count[0][i] += rt->event_frame_count[0][i];
-    }
-  }
 
-  ev->define_relay_leg(0);
-  if (debugging_flag) rep->write_event_diagnostics(0);
-
-  int gen_max_smooth = gen_max_/2, gen_max_stiff = gen_max_-gen_max_smooth;
-
-  if (debugging_flag) rep->write_postevent_diagnostics(0);]
-  train_leg(gen_max_smooth, gen_max_stiff);
+  } while(relay_underway);
   if (debugging_flag) rep->close_diagnostics(gen_count);
 }

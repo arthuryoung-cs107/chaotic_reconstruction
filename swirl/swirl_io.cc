@@ -92,6 +92,25 @@ void swirl::import_true(const char* filename) {
     }
     fclose(fp);
 }
+
+void swirl::import1(const char* filename, int max_beads_, int index_)
+{
+    FILE *fp=fopen(filename,"r");
+    double icl=1./cl_im,x,y;
+    int id;
+
+    for (int i = 0; i < max_beads_; i++)
+    {
+      if(fscanf(fp,"%d %lf %lf\n",&id,&x,&y)!=3)
+          fatal_error("Can't read particle information\n",1);
+      if (i==index_)
+      {
+        q[0].set_pos((x-cx_im)*icl+cx,(y-cy_im)*icl+cy,rad);
+      }
+    }
+    fclose(fp);
+}
+
 /** Saves the simulation parameters as single-precision doubleing point numbers
  * in binary format.
  * \param[in] fp the file hand to write to. */
