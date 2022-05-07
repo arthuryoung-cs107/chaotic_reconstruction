@@ -44,16 +44,17 @@ void record::take_vals(record * rtake_)
 
 
 
-void events::define_relay_event_block(int event_block_id_, int * obs_vec, double * tau_vec, int * early_late_events, double tau_coeff)
+bool events::define_relay_event_block(int event_block_id_, int * obs_vec, double * tau_vec, int * early_late_events, double tau_coeff)
 {
-  printf("(event block %d): Events identified. Event frames -", event_block_id_);
+  printf("\n(event block %d): Events identified. Event frames -", event_block_id_);
 
-  for (int i = 0; i < beads; i++) prev_event[i] = event_frames[i]; 
+  bool same_frames=false;
 
+  for (int i = 0; i < beads; i++) prev_event[i] = event_frames[i];
   // Update the event frames for each bead. Also identify the earliest and latest events.
   int latest_event = 0, earliest_event=Frames, smooth_frames=0;
   for (int i = 0; i < beads; i++) for (int j = 0; j < Frames; j++)
-    if (global_event_frame_count[i][j])
+    if (global_event_frame_count[i][j] && (j-1>prev_event[i]))
     {
       smooth_frames+=event_frames[i] = j-1;
       if (event_frames[i]>latest_event) latest_event = event_frames[i];
@@ -62,6 +63,7 @@ void events::define_relay_event_block(int event_block_id_, int * obs_vec, double
       break;
     }
   printf(". Earliest: %d, latest: %d. ", earliest_event, latest_event);
+
   obs_vec[0] = 2*beads*latest_event; // full observation count
   obs_vec[1] = 2*smooth_frames; // smooth observation count
   obs_vec[2] = obs_vec[0]-obs_vec[1]; // stiff observation count
@@ -94,50 +96,49 @@ void events::define_relay_event_block(int event_block_id_, int * obs_vec, double
   printf("Events, ordered:\n");
   for (int i = 0; i < beads; i++)
     printf("(event %d) bead %d - frame %d\n",i,bead_order[i],event_sorted[i]);
+
+  return same_frames;
 }
 
 
 
+referee::~referee()
+{
+if (alloc_flag)
+{
+  free_AYimatrix(record_int_chunk); free_AYimatrix(global_event_frame_count);
+  free_AYdmatrix(param_chunk); free_AYdmatrix(record_double_chunk);
+  delete [] leader_board; for (int i = 0; i < nlead+npool; i++) delete records[i];
+  delete [] records; delete [] lead_dup_count; delete [] event_frames; delete ev;
+  delete [] sample_weights; delete [] lead_par_w_mean; delete [] lead_par_w_var;
+}
+}
+void referee::alloc_records(int nt_, int Frames_, int beads_)
+{
+record_int_chunk = AYimatrix(nlead+npool, record_int_chunk_count*beads_);
+global_event_frame_count = AYimatrix(beads_,Frames_);
+record_double_chunk = AYdmatrix(nlead+npool, record_double_chunk_count*beads_);
+param_chunk = AYdmatrix(nlead+npool, param_len);
 
+records = leaders = new record*[nlead+npool];
+leader_board = new record*[nlead+npool];
 
+for (int i = 0; i < nlead+npool; i++)
+  records[i] = new record(beads_,Frames_,param_len,i,record_int_chunk[i],param_chunk[i],record_double_chunk[i]);
 
-  referee::~referee()
-  {
-    if (alloc_flag)
-    {
-      free_AYimatrix(record_int_chunk); free_AYimatrix(global_event_frame_count);
-      free_AYdmatrix(param_chunk); free_AYdmatrix(record_double_chunk);
-      delete [] leader_board; for (int i = 0; i < nlead+npool; i++) delete records[i];
-      delete [] records; delete [] lead_dup_count; delete [] event_frames; delete ev;
-      delete [] sample_weights; delete [] lead_par_w_mean; delete [] lead_par_w_var;
-    }
-  }
-  void referee::alloc_records(int nt_, int Frames_, int beads_)
-  {
-    record_int_chunk = AYimatrix(nlead+npool, record_int_chunk_count*beads_);
-    global_event_frame_count = AYimatrix(beads_,Frames_);
-    record_double_chunk = AYdmatrix(nlead+npool, record_double_chunk_count*beads_);
-    param_chunk = AYdmatrix(nlead+npool, param_len);
+pool = records + nlead;
+candidates = leader_board + nlead;
 
-    records = leaders = new record*[nlead+npool];
-    leader_board = new record*[nlead+npool];
+lead_dup_count = new int[nlead];
+event_frames = new int[beads_];
+ev = new events(Frames_, beads_, global_event_frame_count, event_frames);
 
-    for (int i = 0; i < nlead+npool; i++)
-      records[i] = new record(beads_,Frames_,param_len,i,record_int_chunk[i],param_chunk[i],record_double_chunk[i]);
+sample_weights = new double[nlead];
+lead_par_w_mean = new double[param_len];
+lead_par_w_var = new double[param_len];
 
-    pool = records + nlead;
-    candidates = leader_board + nlead;
-
-    lead_dup_count = new int[nlead];
-    event_frames = new int[beads_];
-    ev = new events(Frames_, beads_, global_event_frame_count, event_frames);
-
-    sample_weights = new double[nlead];
-    lead_par_w_mean = new double[param_len];
-    lead_par_w_var = new double[param_len];
-
-    alloc_flag = true;
-  }
+alloc_flag = true;
+}
 
 
 

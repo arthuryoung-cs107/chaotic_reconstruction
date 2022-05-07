@@ -115,7 +115,7 @@ struct events
   {}
   ~events() {delete [] bead_order; delete [] event_sorted;}
 
-  void define_relay_event_block(int event_block_id_, int * obs_vec, double * tau_vec, int * early_late_events, double tau_coeff);
+  bool define_relay_event_block(int event_block_id_, int * obs_vec, double * tau_vec, int * early_late_events, double tau_coeff);
 
   inline int earliest(int *index, int start_index_)
   {
@@ -135,6 +135,12 @@ struct events
   {
     bool out=true;
     for (int i = 0; i < beads; i++) out = (out&&(prev_event[i]==event_frames[i]));
+    return out;
+  }
+  inline bool check_last()
+  {
+    bool out=true;
+    for (int i = 0; i < beads; i++) out = (out&&(prev_event[i]==Frames));
     return out;
   }
 };

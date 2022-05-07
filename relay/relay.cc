@@ -191,6 +191,8 @@ void relay::start_block_relay(int gen_max_, bool verbose_)
   int start_frame=0;
   int gen_smooth_max = gen_max_/2;
 
+  for (int i = 0; i < n; i++) event_frames[i] = 0; 
+
   if (debugging_flag) stage_diagnostics(gen_max_);
 
   #pragma omp parallel for
@@ -218,9 +220,18 @@ void relay::start_block_relay(int gen_max_, bool verbose_)
 
     event_block++;
     find_events(0,Frames, true);
-    ev->define_relay_event_block(event_block, &net_observations, &tau_full, &earliest_event, noise_tol*data_scale);
+    bool same_frames = ev->define_relay_event_block(event_block, &net_observations, &tau_full, &earliest_event, noise_tol*data_scale);
 
-    if (ev->check_event_history()) relay_underway=false;
+    if (same_frames)
+    {
+      if (ev->check_last()) relay_underway=false;
+      else
+      {
+        event_block++;
+        tau=tau_smooth; tau_sqr=tau*tau;
+        if (debugging_flag) rep->write_event_diagnostics(event_block, nlead, leaders);
+      }
+    }
     else
     {
       tau=tau_smooth; tau_sqr=tau*tau;
