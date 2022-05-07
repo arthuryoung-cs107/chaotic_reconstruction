@@ -73,7 +73,7 @@ void reporter::write_startup_diagnostics(int *header_, int *int_params_, double 
   fclose(out_dat);
 }
 
-void reporter::write_event_diagnostics(int event_)
+void reporter::write_event_diagnostics(int event_, int n_check, record ** rec_check)
 {
   int header[] = {event_int_len,event_double_len}; // {int_len, double_len}
 
@@ -85,18 +85,18 @@ void reporter::write_event_diagnostics(int event_)
   fwrite(event_double_vec, sizeof(double), header[1], out_dat);
   fwrite(global_event_frame_count, sizeof(int), beads*Frames, out_dat);
   fwrite(event_frames, sizeof(int), beads, out_dat);
-  for (int i = 0; i < npool; i++)
+  for (int i = 0; i < n_check; i++)
   {
     // write the integer records
-    fwrite(&(pool[i]->global_index), sizeof(int), record_int_len, out_dat);
+    fwrite(&(rec_check[i]->global_index), sizeof(int), record_int_len, out_dat);
     // write the integer records
-    fwrite(&(pool[i]->residual), sizeof(double), record_double_len, out_dat);
+    fwrite(&(rec_check[i]->residual), sizeof(double), record_double_len, out_dat);
 
-    fwrite(pool[i]->int_chunk, sizeof(int), beads*record_int_chunk_count, out_dat);
-    fwrite(pool[i]->double_chunk, sizeof(double), beads*record_double_chunk_count, out_dat);
+    fwrite(rec_check[i]->int_chunk, sizeof(int), beads*record_int_chunk_count, out_dat);
+    fwrite(rec_check[i]->double_chunk, sizeof(double), beads*record_double_chunk_count, out_dat);
 
     // write the parameter
-    fwrite(pool[i]->params, sizeof(double), param_len, out_dat);
+    fwrite(rec_check[i]->params, sizeof(double), param_len, out_dat);
   }
   fclose(out_dat);
 }

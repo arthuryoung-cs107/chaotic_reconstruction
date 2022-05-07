@@ -268,7 +268,7 @@ class reporter : public ODR_struct
 
     void load_relay(double *ts_, double *xs_, double *d_ang_);
     void write_startup_diagnostics(int *header_, int *int_params_, double *double_params_);
-    void write_event_diagnostics(int event_);
+    void write_event_diagnostics(int event_, int ncheck, record ** rec_check);
     void write_gen_diagnostics(int gen_count_, int leader_count_);
     void close_diagnostics(int gen_count_);
 
@@ -371,7 +371,7 @@ class relay : public referee
 
       void stage_diagnostics(int gen_max_);
 
-      void find_events(int min_frame_, int latest_frame_);
+      void find_events(int min_frame_, int latest_frame_, bool verify_=false);
       int train_event_block(int event_block, int gen_max_, double tol_leeway_, bool train_full_=false);
 
       void check_gen0();

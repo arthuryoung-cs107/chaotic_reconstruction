@@ -9,18 +9,30 @@ extern "C"
   #include "AYaux.h"
 }
 
-void relay::find_events(int min_frame_, int latest_frame_)
+void relay::find_events(int min_frame_, int latest_frame_, bool verify_)
 {
   bool first2finish = true;
+  int ncheck;
+  record ** rec_check;
+  if (verify_)
+  {
+    ncheck=nlead;
+    rec_check = leaders;
+  }
+  else
+  {
+    ncheck=npool;
+    rec_check = pool;
+  }
   // determine the next sequence of events in the data, requiring that that they must occur after the min_frame_ parameter
   #pragma omp parallel
     {
       runner *rt = runners[thread_num()];
       rt->clear_event_data();
   #pragma omp for nowait
-      for (int i = 0; i < npool; i++)
+      for (int i = 0; i < ncheck; i++)
       {
-        rt->detect_events(pool[i], 0, min_frame_, latest_frame_);
+        rt->detect_events(rec_check[i], 0, min_frame_, latest_frame_);
       }
   #pragma omp critical
       {
@@ -33,6 +45,7 @@ void relay::find_events(int min_frame_, int latest_frame_)
       }
     }
 }
+
 
 int relay::train_event_block(int event_block, int gen_max_, double tol_leeway_, bool train_full_)
 {
