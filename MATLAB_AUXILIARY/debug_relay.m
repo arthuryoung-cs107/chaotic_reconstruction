@@ -25,14 +25,15 @@ diagnostics_fig.init_tiles([3, 4]);
 
 nbeads = 3;
 par_id = 0;
-relay_id = 1;
+relay_id = 3;
 
 relay = read_relay(nbeads, par_id, relay_id);
 stat = read_stat(nbeads,'maxmin',0);
 swtrue = stat.sw0;
 [contact_f, bead_contact_f, wall_contact_f] = swtrue.find_contact_frames;
 
-gen_last = relay.specs.gen_last;
+% gen_last = relay.specs.gen_max;
+gen_last = 741 ;
 true_params = swtrue.params(3:end);
 last_indices = (gen_last-length(diagnostics_fig.ax_tile)+1):gen_last;
 first_indices = 1:length(diagnostics_fig.ax_tile);
@@ -41,7 +42,7 @@ uniform_indices = round(linspace(1, double(gen_last),length(diagnostics_fig.ax_t
 
 gen_ind = uniform_indices;
 
-[relay.gen_ind, relay.gen] = relay.read_generations(gen_ind);
+[relay.gen_ind, relay.gen] = relay.read_generations(gen_ind, gen_last);
 
 % relay.write_relay_test(stat.params_mat(3:end, :),0,1);
 
@@ -49,7 +50,7 @@ gen_ind = uniform_indices;
 %%%%%%%% ------------------------------  begin plots  ---------------------------------
 %%%%%%%% ---------------------------------------------------------------------------
 
-relay_plots.plot_3bead_event_stats(event_fig.ax_tile, [blue5; red5; green4], relay);
+% relay_plots.plot_3bead_event_stats(event_fig.ax_tile, [blue5; red5; green4], relay);
 
 relay_plots.plot_gen_param_error(diagnostics_fig.ax_tile, green4, relay, true_params, gen_ind);
 % relay_plots.plot_gen_netresiduals(diagnostics_fig.ax_tile, red5, relay, gen_ind);

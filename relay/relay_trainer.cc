@@ -49,6 +49,7 @@ void relay::find_events(int min_frame_, int latest_frame_, bool verify_)
 
 int relay::train_event_block(int event_block, int gen_max_, double tol_leeway_, bool train_full_)
 {
+  int gen_local = 0;
   int end_point = (train_full_)?Frames:latest_event;
   bool training=true;
   do
@@ -68,7 +69,7 @@ int relay::train_event_block(int event_block, int gen_max_, double tol_leeway_, 
     gen_count++;
     printf("(gen %d): %d candidates. ", gen_count, success_local);
     if (check_pool_results(tol_leeway_)) training=false; // we win
-    else if (gen_count == gen_max_) training=false; // we give up
+    else if (++gen_local == gen_max_) training=false; // we give up
     else resample_pool(); // we try again
     if (debugging_flag) rep->write_gen_diagnostics(gen_count, leader_count);
   } while (training);

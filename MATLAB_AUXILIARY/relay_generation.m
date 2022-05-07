@@ -48,7 +48,8 @@ classdef relay_generation
                                'lambda', double_vec(6), ...
                                'beta', double_vec(7), ...
                                'w_sum', double_vec(8), ...
-                               'w_max', double_vec(9));
+                               'w_max', double_vec(9), ...
+                               't_wheels', double_vec(10));
 
             lead_dup_count = fread(dat, [1,gen_specs.leader_count], 'int=>int');
             sample_weights = fread(dat, [1,gen_specs.leader_count], 'double=>double');
@@ -58,12 +59,12 @@ classdef relay_generation
             rec = relay_record.empty(gen_specs.leader_count, 0);
             leader_data = struct('int_data', nan(specs.record_int_len, specs.nlead), ...
                                 'double_data', nan(specs.record_double_len, specs.nlead), ...
-                                'bead_residuals', nan(specs.beads, specs.nlead));
+                                'double_chunk', nan(specs.beads*(specs.record_double_chunk_len-1), specs.nlead));
             params = nan(specs.param_len, specs.nlead);
             for i = 1:specs.nlead
                 leader_data.int_data(:,i) = fread(dat, [specs.record_int_len,1], 'int=>int');
                 leader_data.double_data(:, i) = fread(dat, [specs.record_double_len,1], 'double=>double');
-                leader_data.bead_residuals(:,i) = fread(dat, [specs.beads,1], 'double=>double');
+                leader_data.double_chunk(:,i) = fread(dat, [specs.beads*(specs.record_double_chunk_len-1),1], 'double=>double');
                 params(:,i) = fread(dat, [specs.param_len,1], 'double=>double');
                 rec(i) = relay_record(params(:,i));
             end
@@ -83,10 +84,6 @@ classdef relay_generation
             obj.sample_weights = sample_weights;
             obj.lead_par_w_mean = lead_par_w_mean;
             obj.lead_par_w_var = lead_par_w_var;
-
-            obj.net_residuals = leader_data.double_data(1,:);
-            obj.pis = leader_data.double_data(5,:);
-            obj.zetas = leader_data.double_data(6,:);
 
             obj.rec = rec;
             obj.leader_data = leader_data;

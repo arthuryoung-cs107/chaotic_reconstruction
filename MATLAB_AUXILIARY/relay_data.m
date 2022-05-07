@@ -20,12 +20,6 @@ classdef relay_data
             double_params_start = fread(dat_start,[1, header_start(2)], 'double=>double');
             fclose(dat_start);
 
-            dat_end = fopen([dat_dir_name_ exp_name_ dat_name_ '.re' num2str(relay_id_) '_end.redat']);
-            header_end = fread(dat_end,[1, 2], 'int=>int');
-            int_params_end = fread(dat_end,[1, header_end(1)], 'int=>int');
-            double_params_end = fread(dat_end,[1, header_end(2)], 'double=>double');
-            fclose(dat_end);
-
             specs = struct('gen_max', int_params_start(1), ...
             'nlead', int_params_start(2), ...
             'npool', int_params_start(3), ...
@@ -35,8 +29,7 @@ classdef relay_data
             'record_int_len', int_params_start(7), ...
             'record_double_len', int_params_start(8), ...
             'record_int_chunk_len', int_params_start(9), ...
-            'record_double_chunk_len', int_params_start(10),  ...
-            'gen_last', int_params_end(1));
+            'record_double_chunk_len', int_params_start(10));
 
             event0 = event(dat_dir_name_, exp_name_, dat_name_, relay_id_, 0, specs);
 
@@ -51,22 +44,14 @@ classdef relay_data
             obj.event0 = event0;
 
         end
-        function [gen_ind,gen] = read_generations(obj,gen_ind_)
-            gen = relay_generation.empty(obj.specs.gen_last, 0);
-            if (nargin==2)
-                gen_ind = reshape(gen_ind_, 1, []);
-                for i = 1:obj.specs.gen_last;
-                    gen(i) = relay_generation();
-                end
-                for i = gen_ind
-                    gen(i) = gen(i).read_generation_data(obj.dat_dir_name, obj.exp_name, obj.dat_name, obj.relay_id, i, obj.specs);
-                end
-            else
-                gen_ind = 1:obj.specs.gen_last;
-                for i = gen_ind
-                    gen(i) = relay_generation();
-                    gen(i) = gen(i).read_generation_data(obj.dat_dir_name, obj.exp_name, obj.dat_name, obj.relay_id, i, obj.specs);
-                end
+        function [gen_ind,gen] = read_generations(obj,gen_ind_, gen_last_)
+            gen = relay_generation.empty(gen_last_, 0);
+            gen_ind = reshape(gen_ind_, 1, []);
+            for i = 1:gen_last_;
+                gen(i) = relay_generation();
+            end
+            for i = gen_ind
+                gen(i) = gen(i).read_generation_data(obj.dat_dir_name, obj.exp_name, obj.dat_name, obj.relay_id, i, obj.specs);
             end
         end
         function write_relay_test(obj, params_, relay_id_, test_)
