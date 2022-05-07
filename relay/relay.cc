@@ -189,9 +189,8 @@ void relay::start_block_relay(int gen_max_, bool verbose_)
   bool relay_underway=true;
   int event_block=0;
   int start_frame=0;
-  int gen_smooth_max = gen_max_/2;
 
-  for (int i = 0; i < n; i++) event_frames[i] = 0; 
+  for (int i = 0; i < n; i++) event_frames[i] = 0;
 
   if (debugging_flag) stage_diagnostics(gen_max_);
 
@@ -207,14 +206,14 @@ void relay::start_block_relay(int gen_max_, bool verbose_)
   do
   {
     // smooth training
-    start_frame = train_event_block(event_block, gen_smooth_max,0.005);
+    start_frame = train_event_block(event_block, 50,0.05);
     printf("\n(event block %d) Completed smooth training. Best residual: %e, for tau^2=%e. tau/r= %e. Beginning stiff training: \n", event_block, residual_best, tau_sqr, tau/root_res_best);
     reload_leaders(false);
 
     tau=tau_full; tau_sqr=tau*tau;
 
     // full block training
-    int block_end = train_event_block(event_block, gen_max_,0.01);
+    int block_end = train_event_block(event_block, 50,0.1);
     printf("\n(event block %d) Completed stiff training. Best residual: %e, for tau^2=%e. tau/r= %e.", event_block, residual_best, tau_sqr, tau/root_res_best);
     reload_leaders(true);
 
@@ -232,6 +231,7 @@ void relay::start_block_relay(int gen_max_, bool verbose_)
         if (debugging_flag) rep->write_event_diagnostics(event_block, nlead, leaders);
       }
     }
+    else if (gen_count==gen_max_) relay_underway=false;
     else
     {
       tau=tau_smooth; tau_sqr=tau*tau;

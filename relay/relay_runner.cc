@@ -156,12 +156,14 @@ void runner::detect_events(record * rec_, int start_, int min_, int end_)
 
 int runner::run_relay(record * rec_, int start_, int earliest_, int latest_, int * event_frames_ordered_, int * bead_order, double residual_worst_)
 {
+  double comp_res = (rec_->smooth_training)?DBL_MAX:residual_worst_;
+
   int poffset = 2*n*start_;
 
   reset_sim(rec_->params, ts[start_]/t_phys, d_ang[start_], comega_s[start_], xs + poffset);
 
   // set the starting frame position
-  double *tsp = sim_pos+(poffset);
+  double *tsp = sim_pos+(poffset), net_residual=0.0;
   for (int i=0, j=0; i < n; i++, j+=2)
   {tsp[j]=q[i].x; tsp[j+1]=q[i].y;}
 
@@ -179,14 +181,16 @@ int runner::run_relay(record * rec_, int start_, int earliest_, int latest_, int
       double *f = xs+(poffset);
       for (int i=0, j=0; i < n; i++, j+=2)
       {
-        double xt=(q[i].x-cx)*cl_im + cx_im - f[j], yt=(q[i].y-cy)*cl_im + cy_im - f[j+1];
-        berm_si[i]+=xt*xt+yt*yt; // accumulate the event vs bead matrix.
+        double xt=(q[i].x-cx)*cl_im + cx_im - f[j], yt=(q[i].y-cy)*cl_im + cy_im - f[j+1], rsq=xt*xt+yt*yt;
+        berm_si[i]+=rsq; // accumulate the event vs bead matrix.
+        net_residual+=rsq;
       }
+      if (net_residual>comp_res) return (int)rec_->check_success(net_residual, net_residual, residual_worst_);
     }
     stretch_start=event_frames_ordered_[si];
   }
 
-  double * rec_res=rec_->smooth_residual, net_residual=0.0, net_smooth_residual=0.0;
+  double * rec_res=rec_->smooth_residual, net_smooth_residual=0.0;
 
   // clear this record's residual data, which is split between stiff and smooth residual
   for (int i = 0; i < 2*n; i++) rec_res[i] = 0.0;
@@ -201,12 +205,10 @@ int runner::run_relay(record * rec_, int start_, int earliest_, int latest_, int
     for (int si = 0; si < event_i+1; si++) *(beadi_res)+= berm_si[si*n];
 
     net_smooth_residual += *(beadi_res);
-    net_residual += *(beadi_res);
     beadi_res+=n;
 
     // accumulate stiff event residual for current bead
     for (int si = event_i+1; si < n; si++) *(beadi_res)+= berm_si[si*n];
-    net_residual += *(beadi_res);
   }
 
   double fac = t_wheels/cl_im,dur;
@@ -214,6 +216,7 @@ int runner::run_relay(record * rec_, int start_, int earliest_, int latest_, int
   // if applicable, train on more of the data
   for (int frame_local = stretch_start; frame_local < latest_; frame_local++)
   {
+    printf("this should not be happening.\n");
     advance(dur=(ts[frame_local]-ts[frame_local-1])/t_phys, d_ang[frame_local-1], comega_s[frame_local], dt_sim);
     poffset+=2*n;
     double *f = xs+(poffset), idur=1.0/dur;
