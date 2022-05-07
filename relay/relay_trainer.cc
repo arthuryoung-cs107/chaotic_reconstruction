@@ -20,7 +20,7 @@ void relay::find_events(int min_frame_, int latest_frame_)
   #pragma omp for nowait
       for (int i = 0; i < npool; i++)
       {
-        rt->detect_events(pool[i], min_frame_, latest_frame_);
+        rt->detect_events(pool[i], 0, min_frame_, latest_frame_);
       }
   #pragma omp critical
       {
@@ -34,8 +34,9 @@ void relay::find_events(int min_frame_, int latest_frame_)
     }
 }
 
-int relay::train_event_block(int event_block, int gen_max_, double tol_leeway_)
+int relay::train_event_block(int event_block, int gen_max_, double tol_leeway_, bool train_full_)
 {
+  int end_point = (train_full_)?Frames:latest_event;
   bool training=true;
   do
   {
@@ -46,10 +47,9 @@ int relay::train_event_block(int event_block, int gen_max_, double tol_leeway_)
       int * event_frames_ordered = ev->event_sorted;
       int * bead_order = ev->bead_order;
 #pragma omp for reduction(+:success_local)
-// #pragma omp critical
       for (int i = 0; i < npool; i++)
       {
-        success_local += rt->run_relay(pool[i], 0, earliest_event, latest_event, event_frames_ordered, bead_order, residual_worst);
+        success_local += rt->run_relay(pool[i], 0, earliest_event, end_point, event_frames_ordered, bead_order, residual_worst);
       }
     }
     gen_count++;

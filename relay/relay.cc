@@ -138,13 +138,14 @@ void relay::start_relay(int gen_max_, bool verbose_)
 
   if (debugging_flag) stage_diagnostics(gen_max_);
 
+  #pragma omp parallel for
+  for (int i = 0; i < nlead+npool; i++)
+  {
+    leaders[i]->init_training(true);
+  }
+
   do
   {
-    #pragma omp parallel for
-    for (int i = 0; i < nlead+npool; i++)
-    {
-      leaders[i]->init_training(true);
-    }
     find_events(start_frame,Frames);
     ev->define_relay_event_block(event_block, &net_observations, &tau_full, &earliest_event, noise_tol*data_scale);
     tau=tau_smooth; tau_sqr=tau*tau;
@@ -167,20 +168,91 @@ void relay::start_relay(int gen_max_, bool verbose_)
     residual_best = bl_rec->residual; root_res_best = bl_rec->root_residual;
     residual_worst = wl_rec->residual; root_res_worst = wl_rec->root_residual;
 
-    tau=tau_stiff; tau_sqr=tau*tau;
+    tau=tau_full; tau_sqr=tau*tau;
 
     // full block training
-    start_frame = train_event_block(event_block, gen_max_,0.01);
-    printf("(event block %d) Completed stiff training. Best residual: %e, for tau^2=%e. tau/r= %e. Beginning stiff training: \n", event_block, residual_best, tau_sqr, tau/root_res_best);
+    int block_end = train_event_block(event_block, gen_max_,0.01);
+    resample_pool();
+    printf("\n(event block %d) Completed stiff training. Best residual: %e, for tau^2=%e. tau/r= %e.", event_block, residual_best, tau_sqr, tau/root_res_best);
 
     event_block++;
 
-    if (start_frame==Frames) relay_underway= false;
+    if (block_end==Frames) relay_underway=false;
     else
     {
-      break;
+      printf(" Reloading leaders, searching next event block, starting from frame %d. ", block_end);
+      #pragma omp parallel for
+      for (int i = 0; i < nlead+npool; i++)
+      {
+        leaders[i]->init_training(true);
+      }
+      for (int i = 0; i < nlead; i++)
+      {
+        pool[i]->take_vals(leaders[i]);
+        leaders[i]->residual= DBL_MAX;
+      }
+      start_frame = block_end;
     }
 
   } while(relay_underway);
+  if (debugging_flag) rep->close_diagnostics(gen_count);
+}
+
+void relay::start_block_relay(int gen_max_, bool verbose_)
+{
+  bool relay_underway=true;
+  int event_block=0;
+  int start_frame=0;
+  int gen_smooth_max = gen_max_/2;
+
+  if (debugging_flag) stage_diagnostics(gen_max_);
+
+  #pragma omp parallel for
+  for (int i = 0; i < nlead+npool; i++)
+  {
+    leaders[i]->init_training(true);
+  }
+
+  find_events(start_frame,Frames);
+  ev->define_relay_event_block(event_block, &net_observations, &tau_full, &earliest_event, noise_tol*data_scale);
+  tau=tau_smooth; tau_sqr=tau*tau;
+  if (debugging_flag) rep->write_event_diagnostics(event_block);
+
+  // smooth training
+  start_frame = train_event_block(event_block, gen_smooth_max,0.01);
+  resample_pool();
+
+  printf("(event block %d) Completed smooth training. Best residual: %e, for tau^2=%e. tau/r= %e. Beginning stiff training: \n", event_block, residual_best, tau_sqr, tau/root_res_best);
+  #pragma omp parallel for
+  for (int i = 0; i < nlead+npool; i++)
+  {
+    leaders[i]->init_training(false);
+  }
+  // reevaluate leaders with their stiff performance.
+  worst_leader = find_worst_record(leaders, leader_count);
+  best_leader = find_best_record(leaders, leader_count);
+  record * wl_rec = leaders[worst_leader], * bl_rec = leaders[best_leader];
+  residual_best = bl_rec->residual; root_res_best = bl_rec->root_residual;
+  residual_worst = wl_rec->residual; root_res_worst = wl_rec->root_residual;
+
+  tau=tau_full; tau_sqr=tau*tau;
+
+  // full block training
+  int block_end = train_event_block(event_block, gen_max_,0.01);
+  resample_pool();
+  printf("\n(event block %d) Completed stiff training. Best residual: %e, for tau^2=%e. tau/r= %e.\n", event_block, residual_best, tau_sqr, tau/root_res_best);
+
+  for (int i = 0; i < nlead; i++)
+  {
+    pool[i]->take_vals(leaders[i]);
+    leaders[i]->residual = DBL_MAX;
+  }
+  tau=noise_tol*data_scale*sqrt((double)Frames); tau_sqr=tau*tau;
+  residual_worst=DBL_MAX;
+
+  printf("Reloading leaders. Training on full data.\n");
+
+  block_end = train_event_block(event_block, gen_max_,0.01,true);
+
   if (debugging_flag) rep->close_diagnostics(gen_count);
 }

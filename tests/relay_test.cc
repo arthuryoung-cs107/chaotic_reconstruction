@@ -19,7 +19,8 @@ const double noise_tol = 1e-2;
 const double alpha_tol=10.0;
 const double rs_full_factor=1.0;
 const bool test_generation=false;
-const bool run_relay=true;
+const bool run_relay=false;
+const bool run_block_relay=true;
 const bool noise_data=true;
 char proc_loc[] = "./dat_dir/";
 int main()
@@ -69,6 +70,15 @@ int main()
     relay prelay(ref, sp_min,sp_max,wl,t_phys,&rep);
     prelay.init_relay();
     prelay.start_relay(generations);
+    // prelay.make_best_swirl(swbest_name);
+  }
+  if (run_block_relay)
+  {
+    printf("Running %d bead relay. Relay id: %d, parameter id: %d,  maximum generations: %d, leaders: %d, pool: %d \n", nbeads, relay_id, param_id, generations, nlead, npool);
+
+    relay prelay(ref, sp_min,sp_max,wl,t_phys,&rep);
+    prelay.init_relay();
+    prelay.start_block_relay(generations);
     // prelay.make_best_swirl(swbest_name);
   }
 

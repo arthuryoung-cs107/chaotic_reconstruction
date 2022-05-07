@@ -161,8 +161,8 @@ class runner: public swirl
       void reset_sim(double *ptest_, double t0_, double ctheta0_, double comega0_, double *x0_);
 
       int run_relay(record * rec_, int start_, int earliest_, int latest_, int * event_frames_ordered_, int * bead_order, double residual_worst_);
-      int start_detection(int start_, double * params_, double *t_history_, int * event_frames, double * smooth_residual, double * net_residual_);
-      void detect_events(record* rec_, int start_, int end_);
+      int start_detection(int start_, int min_, double * params_, double *t_history_, int * event_frames, double * smooth_residual, double * net_residual_);
+      void detect_events(record* rec_, int start_, int min_, int end_);
 
       inline void clear_event_data()
       {for (int i = 0; i < n*Frames; i++) event_frame_count[0][i] = 0;}
@@ -222,11 +222,8 @@ struct referee
   referee(referee &ref_): nlead(ref_.nlead), npool(ref_.npool), param_len(ref_.param_len), dt_sim(ref_.dt_sim), noise_tol(ref_.noise_tol), alpha_tol(ref_.alpha_tol) ,rs_full_factor(ref_.rs_full_factor), data_scale(ref_.data_scale) {}
 
   ~referee();
-
-  void alloc_records(int nt_, int Frames_, int beads_);
+  void alloc_records(int nt_, int Frames_, int beads_); 
 };
-
-
 
 class reporter : public ODR_struct
 {
@@ -341,6 +338,7 @@ class relay : public referee
 
     void init_relay();
     void start_relay(int gen_max_, bool verbose_=true);
+    void start_block_relay(int gen_max_, bool verbose_=true);
 
     void make_best_swirl(char * name_);
       void make_best_swirl(const char *name_)
@@ -366,7 +364,7 @@ class relay : public referee
       void stage_diagnostics(int gen_max_);
 
       void find_events(int min_frame_, int latest_frame_);
-      int train_event_block(int event_block, int gen_max_, double tol_leeway_=0.0);
+      int train_event_block(int event_block, int gen_max_, double tol_leeway_, bool train_full_=false);
 
       void check_gen0();
 

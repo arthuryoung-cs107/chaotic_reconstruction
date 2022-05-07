@@ -35,7 +35,7 @@ void runner::reset_sim(double *ptest_, double t0_, double ctheta0_, double comeg
 }
 
 // take two steps so that we can start off the event diagnostics collection
-int runner::start_detection(int start_, double * params_, double *t_history_, int * event_frames, double * smooth_residual, double * net_residual_)
+int runner::start_detection(int start_, int min_, double * params_, double *t_history_, int * event_frames, double * smooth_residual, double * net_residual_)
 {
   for (int i = 0; i < n*Frames; i++) pos_res[0][i]=alpha_INTpos_res[0][i]=0.0;
 
@@ -81,14 +81,35 @@ int runner::start_detection(int start_, double * params_, double *t_history_, in
     INTpos_res[i][0]+=0.5*(rsq+pos_res[frame_local-1][i])*(t_history_[0]-t_history_[1]);
     alpha_INTpos_res[frame_local][i]=0.0;
   }
+
+  if (min_>start_)
+  {
+    for ( frame_local = frame_local+1 ; frame_local <= min_; frame_local++)
+    {
+      poffset+=2*n; foffset+=n; f = xs+poffset;
+      advance((ts[frame_local]-ts[frame_local-1])/t_phys, d_ang[frame_local-1], comega_s[frame_local], dt_sim);
+      t_history_[2]=t_history_[1]; t_history_[1]=t_history_[0]; t_history_[0]=ts[frame_local];
+      for (int i=0, j=0; i < n; i++, j+=2)
+      {
+        double  xt=(q[i].x-cx)*cl_im + cx_im-f[j],yt=(q[i].y-cy)*cl_im + cy_im-f[j+1], rsq=xt*xt+yt*yt;
+        net_residual+=pos_res[frame_local][i]=rsq;
+        smooth_residual[i]+=rsq;
+        INTpos_res[i][2]=INTpos_res[i][1]; INTpos_res[i][1]=INTpos_res[i][0];
+        INTpos_res[i][0]+=0.5*(rsq+pos_res[frame_local-1][i])*(t_history_[0]-t_history_[1]);
+        alpha_INTpos_res[frame_local-1][i]=alpha_comp(INTpos_res[i], t_history_[0], t_history_[2]);
+      }
+    }
+    frame_local--;
+  }
+
   *net_residual_=net_residual;
   return frame_local;
 }
 
-void runner::detect_events(record * rec_, int start_, int end_)
+void runner::detect_events(record * rec_, int start_, int min_, int end_)
 {
   double t_history[3], net_residual;
-  int frame_local = start_detection(start_, rec_->params, t_history, rec_->event_positions, rec_->smooth_residual, &net_residual);
+  int frame_local = start_detection(start_, min_, rec_->params, t_history, rec_->event_positions, rec_->smooth_residual, &net_residual);
   int poffset = 2*n*frame_local, foffset=n*frame_local, *event_frames=rec_->event_positions;
   double *f, *rec_res=rec_->smooth_residual, *alpha_data=rec_->alpha_data, net_smooth_residual=net_residual;
 
@@ -188,5 +209,19 @@ int runner::run_relay(record * rec_, int start_, int earliest_, int latest_, int
     net_residual += *(beadi_res);
   }
 
+  rec_res=rec_->stiff_residual;
+  // if applicable, train on more of the data
+  for (int frame_local = stretch_start; frame_local < latest_; frame_local++)
+  {
+    advance((ts[frame_local]-ts[frame_local-1])/t_phys, d_ang[frame_local-1], comega_s[frame_local], dt_sim);
+    poffset+=2*n;
+    double *f = xs+(poffset);
+    for (int i=0, j=0; i < n; i++, j+=2)
+    {
+      double xt=(q[i].x-cx)*cl_im + cx_im - f[j], yt=(q[i].y-cy)*cl_im + cy_im - f[j+1], rsq=xt*xt+yt*yt;
+      net_residual+=rsq;
+      rec_res[i]+=rsq;
+    }
+  }
   return (int)rec_->check_success(net_residual, net_smooth_residual, residual_worst_);
 }
