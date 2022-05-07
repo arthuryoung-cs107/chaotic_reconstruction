@@ -48,6 +48,8 @@ void events::define_relay_event_block(int event_block_id_, int * obs_vec, double
 {
   printf("(event block %d): Events identified. Event frames -", event_block_id_);
 
+  for (int i = 0; i < beads; i++) prev_event[i] = event_frames[i]; 
+
   // Update the event frames for each bead. Also identify the earliest and latest events.
   int latest_event = 0, earliest_event=Frames, smooth_frames=0;
   for (int i = 0; i < beads; i++) for (int j = 0; j < Frames; j++)
@@ -106,7 +108,7 @@ void events::define_relay_event_block(int event_block_id_, int * obs_vec, double
       free_AYimatrix(record_int_chunk); free_AYimatrix(global_event_frame_count);
       free_AYdmatrix(param_chunk); free_AYdmatrix(record_double_chunk);
       delete [] leader_board; for (int i = 0; i < nlead+npool; i++) delete records[i];
-      delete [] records; delete [] lead_dup_count; delete [] event_frames; delete [] ev;
+      delete [] records; delete [] lead_dup_count; delete [] event_frames; delete ev;
       delete [] sample_weights; delete [] lead_par_w_mean; delete [] lead_par_w_var;
     }
   }

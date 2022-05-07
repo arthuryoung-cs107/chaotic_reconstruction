@@ -107,10 +107,11 @@ struct events
 
   int * const bead_order;
   int * const event_sorted;
+  int * const prev_event;
 
   events(int Frames_, int beads_, int ** global_event_frame_count_, int *event_frames_in_): beads(beads_), Frames(Frames_),
   global_event_frame_count(global_event_frame_count_), event_frames(event_frames_in_),
-  bead_order(new int[beads_]), event_sorted((new int[beads_]))
+  bead_order(new int[beads_]), event_sorted((new int[beads_])), prev_event((new int[beads_]))
   {}
   ~events() {delete [] bead_order; delete [] event_sorted;}
 
@@ -129,6 +130,12 @@ struct events
     event_sorted[i_next]=event_sorted[i_it]; bead_order[i_next]=bead_order[i_it];
     event_sorted[i_it]=early_temp; bead_order[i_it]=i_temp;
     if (i_next<beads-1) earliest_recursive(i_next+1);
+  }
+  inline bool check_event_history()
+  {
+    bool out=true;
+    for (int i = 0; i < beads; i++) out = (out&&(prev_event[i]==event_frames[i]));
+    return out;
   }
 };
 
@@ -153,9 +160,10 @@ class runner: public swirl
               **pos_res, **alpha_INTpos_res,
               **INTpos_res,
               *sim_pos,
-              *bead_event_res_mat;
+              *bead_event_res_mat,
+              t_wheels;
 
-      runner(swirl_param &sp_, proximity_grid * pg_, wall_list &wl_, int n_, int thread_id_, int param_len_, int Frames_, int nlead_, int npool_, double t_phys_, double dt_sim_, double alpha_tol_, double *ts_, double *xs_, double *d_ang_, double *comega_s);
+      runner(swirl_param &sp_, proximity_grid * pg_, wall_list &wl_, int n_, int thread_id_, int param_len_, int Frames_, int nlead_, int npool_, double t_phys_, double dt_sim_, double alpha_tol_, double *ts_, double *xs_, double *d_ang_, double *comega_s, double t_wheels_);
       ~runner();
 
       void reset_sim(double *ptest_, double t0_, double ctheta0_, double comega0_, double *x0_);
@@ -222,7 +230,7 @@ struct referee
   referee(referee &ref_): nlead(ref_.nlead), npool(ref_.npool), param_len(ref_.param_len), dt_sim(ref_.dt_sim), noise_tol(ref_.noise_tol), alpha_tol(ref_.alpha_tol) ,rs_full_factor(ref_.rs_full_factor), data_scale(ref_.data_scale) {}
 
   ~referee();
-  void alloc_records(int nt_, int Frames_, int beads_); 
+  void alloc_records(int nt_, int Frames_, int beads_);
 };
 
 class reporter : public ODR_struct
@@ -271,7 +279,7 @@ class reporter : public ODR_struct
 };
 
 const int gen_int_len=10;
-const int gen_double_len=9;
+const int gen_double_len=10;
 const int event_int_len=5;
 const int event_double_len=5;
 
@@ -323,7 +331,7 @@ class relay : public referee
     double beta;
     double w_sum;
     double w_max;
-    double t_wheel;
+    double t_wheels=0.0;
 
     double tau;
     double tau_sqr;
@@ -373,6 +381,9 @@ class relay : public referee
 
       void compute_leader_statistics();
       void resample_pool();
+
+      void assess_leaders();
+      void reload_leaders(bool smooth_training_);
 
       inline void clear_global_event_data()
       {for (int i = 0; i < n*Frames; i++) global_event_frame_count[0][i] = 0;}

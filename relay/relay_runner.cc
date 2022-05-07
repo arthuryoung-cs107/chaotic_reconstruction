@@ -4,10 +4,10 @@ extern "C"
 {
   #include "AYaux.h"
 }
-runner::runner(swirl_param &sp_, proximity_grid * pg_, wall_list &wl_, int n_, int thread_id_, int param_len_, int Frames_, int nlead_, int npool_, double t_phys_, double dt_sim_, double alpha_tol_, double *ts_, double *xs_, double *d_ang_, double *comega_s_) : swirl(sp_, pg_, wl_, n_),
+runner::runner(swirl_param &sp_, proximity_grid * pg_, wall_list &wl_, int n_, int thread_id_, int param_len_, int Frames_, int nlead_, int npool_, double t_phys_, double dt_sim_, double alpha_tol_, double *ts_, double *xs_, double *d_ang_, double *comega_s_, double t_wheels_) : swirl(sp_, pg_, wl_, n_),
 thread_id(thread_id_), param_len(param_len_), Frames(Frames_), nlead(nlead_), npool(npool_),
 t_phys(t_phys_), dt_sim(dt_sim_), alpha_tol(alpha_tol_),
-ts(ts_), xs(xs_), d_ang(d_ang_), comega_s(comega_s_),
+ts(ts_), xs(xs_), d_ang(d_ang_), comega_s(comega_s_), t_wheels(t_wheels_),
 lead_dup_count(new int[nlead_]),
 event_frame_count(AYimatrix(n_, Frames_)),
 param_acc(new double[param_len_]),
@@ -209,18 +209,21 @@ int runner::run_relay(record * rec_, int start_, int earliest_, int latest_, int
     net_residual += *(beadi_res);
   }
 
+  double fac = t_wheels/cl_im,dur;
   rec_res=rec_->stiff_residual;
   // if applicable, train on more of the data
   for (int frame_local = stretch_start; frame_local < latest_; frame_local++)
   {
-    advance((ts[frame_local]-ts[frame_local-1])/t_phys, d_ang[frame_local-1], comega_s[frame_local], dt_sim);
+    advance(dur=(ts[frame_local]-ts[frame_local-1])/t_phys, d_ang[frame_local-1], comega_s[frame_local], dt_sim);
     poffset+=2*n;
-    double *f = xs+(poffset);
+    double *f = xs+(poffset), idur=1.0/dur;
     for (int i=0, j=0; i < n; i++, j+=2)
     {
       double xt=(q[i].x-cx)*cl_im + cx_im - f[j], yt=(q[i].y-cy)*cl_im + cy_im - f[j+1], rsq=xt*xt+yt*yt;
       net_residual+=rsq;
       rec_res[i]+=rsq;
+
+      q[i].tweak_pos(-fac*xt,-fac*yt,idur); // training wheels
     }
   }
   return (int)rec_->check_success(net_residual, net_smooth_residual, residual_worst_);

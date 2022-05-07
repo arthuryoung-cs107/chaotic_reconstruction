@@ -21,6 +21,7 @@ const double rs_full_factor=1.0;
 const bool test_generation=false;
 const bool run_relay=false;
 const bool run_block_relay=true;
+const bool walk_relay=false;
 const bool noise_data=true;
 char proc_loc[] = "./dat_dir/";
 int main()
@@ -59,6 +60,7 @@ int main()
     int test_id=0, Frames_test=600;
     int test_relay_id=(noise_data)?1:0;
     printf("Testing %d bead generation. Test id: %d, Frames : %d\n", nbeads, test_id, Frames_test);
+    getchar();
     doctor doc(ref, sp_min,sp_max,wl,t_phys,&rep);
     doc.init_test(test_id, test_relay_id);
     // doc.test_run(Frames_test);
@@ -70,16 +72,23 @@ int main()
     relay prelay(ref, sp_min,sp_max,wl,t_phys,&rep);
     prelay.init_relay();
     prelay.start_relay(generations);
-    // prelay.make_best_swirl(swbest_name);
   }
-  if (run_block_relay)
+  else if (run_block_relay)
   {
-    printf("Running %d bead relay. Relay id: %d, parameter id: %d,  maximum generations: %d, leaders: %d, pool: %d \n", nbeads, relay_id, param_id, generations, nlead, npool);
+    printf("Running %d bead block relay. Relay id: %d, parameter id: %d,  maximum generations: %d, leaders: %d, pool: %d \n", nbeads, relay_id, param_id, generations, nlead, npool);
 
     relay prelay(ref, sp_min,sp_max,wl,t_phys,&rep);
     prelay.init_relay();
     prelay.start_block_relay(generations);
-    // prelay.make_best_swirl(swbest_name);
+  }
+  else if (walk_relay)
+  {
+    printf("Walking %d bead relay. Relay id: %d, parameter id: %d,  maximum generations: %d, leaders: %d, pool: %d, training wheels: %e \n", nbeads, relay_id, param_id, generations, nlead, npool, t_wheels);
+
+    relay prelay(ref, sp_min,sp_max,wl,t_phys,&rep);
+    prelay.init_relay();
+    prelay.t_wheels = t_wheels;
+    prelay.start_relay(generations);
   }
 
 

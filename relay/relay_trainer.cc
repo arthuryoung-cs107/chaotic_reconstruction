@@ -136,8 +136,9 @@ bool relay::check_pool_results(double tol_leeway_)
   best_leader = find_best_record(leaders, leader_count);
   record * wl_rec = leaders[worst_leader], * bl_rec = leaders[best_leader];
   residual_best = bl_rec->residual; root_res_best = bl_rec->root_residual;
+  residual_worst = wl_rec->residual; root_res_worst = wl_rec->root_residual;
   printf("Best/Worst: (ID, gen, parents, residual) = (%d/%d %d/%d %d/%d %e/%e), tau_sqr=%e, %d replacements. ", bl_rec->global_index, wl_rec->global_index, bl_rec->gen, wl_rec->gen, bl_rec->parent_count, wl_rec->parent_count, residual_best, residual_worst, tau_sqr, repl_count);
-  if (root_res_best<(1.0+tol_leeway_)*tau) return true;
+  if (root_res_worst<(1.0+tol_leeway_)*tau) return true;
   else if (repl_count==0) return true;
   return false;
 }
