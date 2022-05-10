@@ -206,14 +206,14 @@ void relay::start_block_relay(int gen_max_, bool verbose_)
   do
   {
     // smooth training
-    start_frame = train_event_block(event_block, 50,0.05);
+    start_frame = train_event_block(event_block, 100,0.02);
     printf("\n(event block %d) Completed smooth training. Best residual: %e, for tau^2=%e. tau/r= %e. Beginning stiff training: \n", event_block, residual_best, tau_sqr, tau/root_res_best);
     reload_leaders(false);
 
     tau=tau_full; tau_sqr=tau*tau;
 
     // full block training
-    int block_end = train_event_block(event_block, 50,0.1);
+    int block_end = train_event_block(event_block, 5,0.1);
     printf("\n(event block %d) Completed stiff training. Best residual: %e, for tau^2=%e. tau/r= %e.", event_block, residual_best, tau_sqr, tau/root_res_best);
     reload_leaders(true);
 

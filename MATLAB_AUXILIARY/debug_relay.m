@@ -26,9 +26,9 @@ figs = [diagnostics_fig, convergence_fig];
 %%%%%%%% ------------------------------  get data  ---------------------------------
 %%%%%%%% ---------------------------------------------------------------------------
 
-nbeads = 3;
+nbeads = 20;
 par_id = 0;
-relay_id = 4;
+relay_id = 3;
 
 relay = read_relay(nbeads, par_id, relay_id);
 stat = read_stat(3,'maxmin',1);

@@ -56,7 +56,7 @@ bool events::define_relay_event_block(int event_block_id_, int * obs_vec, double
   for (int i = 0; i < beads; i++) for (int j = 0; j < Frames; j++)
     if (global_event_frame_count[i][j])
     {
-      int event_index =(j-1>prev_event[i])?j-1:j;
+      int event_index =(j-1>prev_event[i])?j-1:prev_event[i]+1;
       smooth_frames+=event_frames[i] = event_index;
       if (event_index>latest_event) latest_event = event_index;
       if (event_index<earliest_event) earliest_event = event_index;
