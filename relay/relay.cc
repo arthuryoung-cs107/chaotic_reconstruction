@@ -221,17 +221,8 @@ void relay::start_block_relay(int gen_max_, bool verbose_)
     find_events(0,Frames, true);
     bool same_frames = ev->define_relay_event_block(event_block, &net_observations, &tau_full, &earliest_event, noise_tol*data_scale);
 
-    if (same_frames)
-    {
-      if (ev->check_last()) relay_underway=false;
-      else
-      {
-        event_block++;
-        tau=tau_smooth; tau_sqr=tau*tau;
-        if (debugging_flag) rep->write_event_diagnostics(event_block, nlead, leaders);
-      }
-    }
-    else if (gen_count==gen_max_) relay_underway=false;
+    if (gen_count==gen_max_) relay_underway=false;
+    else if (ev->check_last()) relay_underway=false;
     else
     {
       tau=tau_smooth; tau_sqr=tau*tau;
