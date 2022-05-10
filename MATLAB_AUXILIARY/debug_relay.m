@@ -26,9 +26,9 @@ figs = [diagnostics_fig, convergence_fig];
 %%%%%%%% ------------------------------  get data  ---------------------------------
 %%%%%%%% ---------------------------------------------------------------------------
 
-nbeads = 20;
+nbeads = 3;
 par_id = 0;
-relay_id = 2;
+relay_id = 4;
 
 relay = read_relay(nbeads, par_id, relay_id);
 stat = read_stat(3,'maxmin',1);
@@ -36,7 +36,7 @@ swtrue = stat.sw0;
 [contact_f, bead_contact_f, wall_contact_f] = swtrue.find_contact_frames;
 
 % gen_last = relay.specs.gen_max;
-gen_last = 350;
+gen_last = 154;
 true_params = swtrue.params(3:end);
 last_indices = (gen_last-length(diagnostics_fig.ax_tile)+1):gen_last;
 first_indices = 1:length(diagnostics_fig.ax_tile);
@@ -55,8 +55,8 @@ gen_ind = uniform_indices;
 
 % relay_plots.plot_3bead_event_stats(event_fig.ax_tile, [blue5; red5; green4], relay);
 
-% relay_plots.plot_convergence(convergence_fig.ax, green4, relay, 1:gen_last, true_params)
-writing_plots.plot_param_error(convergence_fig.ax, green4, stat.params_mat(3:end,:), true_params)
+relay_plots.plot_convergence(convergence_fig.ax, green4, relay, 1:gen_last, true_params)
+% writing_plots.plot_param_error(convergence_fig.ax, green4, stat.params_mat(3:end,:), true_params)
 
 % relay_plots.plot_gen_param_error(diagnostics_fig.ax_tile, green4, relay, true_params, gen_ind);
 % relay_plots.plot_gen_netresiduals(diagnostics_fig.ax_tile, red5, relay, gen_ind);

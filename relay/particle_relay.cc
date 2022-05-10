@@ -54,12 +54,13 @@ bool events::define_relay_event_block(int event_block_id_, int * obs_vec, double
   // Update the event frames for each bead. Also identify the earliest and latest events.
   int latest_event = 0, earliest_event=Frames, smooth_frames=0;
   for (int i = 0; i < beads; i++) for (int j = 0; j < Frames; j++)
-    if (global_event_frame_count[i][j] && (j-1>prev_event[i]))
+    if (global_event_frame_count[i][j])
     {
-      smooth_frames+=event_frames[i] = j-1;
-      if (event_frames[i]>latest_event) latest_event = event_frames[i];
-      if (event_frames[i]<earliest_event) earliest_event = event_frames[i];
-      printf(" %d", j-1);
+      int event_index =(j-1>prev_event[i])?j-1:j;
+      smooth_frames+=event_frames[i] = event_index;
+      if (event_index>latest_event) latest_event = event_index;
+      if (event_index<earliest_event) earliest_event = event_index;
+      printf(" %d", event_index);
       break;
     }
   printf(". Earliest: %d, latest: %d. ", earliest_event, latest_event);
