@@ -71,6 +71,25 @@ classdef writing_plots
             end
             axis(AYfig_.ax, lims);
         end
+        function plot_param_error( ax_, base_color, par_mat, par_true_)
+            x = 1:7;
+            Y=((par_true_(x)-par_mat(x,:))./abs(par_true_(x)))';
+
+            [len_gp, Frames] = size(Y);
+            box(ax_,'on');
+            hold(ax_, 'on');
+            for i=1:len_gp
+                plot(ax_,x, Y(i,:), ' - o', 'Color', [base_color, 0.1], 'LineWidth', 2);
+            end
+            xlim(ax_, [min(x), max(x)]);
+            ylim(ax_, [min(min(Y)), max(max(Y))]);
+
+            names = {'$$K$$';'$$\gamma_b$$';'$$\gamma_f$$';'$$\gamma_w$$';'$$\mu_b$$';'$$\mu_f$$';'$$\mu_w$$'};
+
+            ylabel(ax_, '$$\frac{\hat{x}_i - x_i}{|\hat{x}_i|}$$', 'Interpreter', 'Latex', 'Fontsize', 14)
+            % xlabel(ax_, 'parameters', 'Interpreter', 'Latex', 'Fontsize', 14)
+            set(ax_,'xtick',x,'xticklabel',names, 'TickLabelInterpreter', 'Latex', 'Fontsize', 14)
+        end
     end
 end
 

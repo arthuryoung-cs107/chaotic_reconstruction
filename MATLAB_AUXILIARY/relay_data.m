@@ -54,6 +54,38 @@ classdef relay_data
                 gen(i) = gen(i).read_generation_data(obj.dat_dir_name, obj.exp_name, obj.dat_name, obj.relay_id, i, obj.specs);
             end
         end
+        function [lin_mat, params_out] = get_lineage_mat(obj, rec)
+            lin_count = rec.parent_count;
+            lin_mat = nan(lin_count,2);
+            lin_mat(1,:) = [rec.global_index, rec.gen];
+            parent_gen = rec.parent_gen;
+            parent_index = rec.parent_global_index;
+
+            if (nargout==1)
+                for i = 2:lin_count
+                    parent = obj.gen(parent_gen+1).rec(parent_index+1);
+                    lin_mat(i,:) = [parent.global_index, parent.gen];
+                    parent_gen = parent.parent_gen;
+                    parent_index = parent.parent_global_index;
+                end
+            else
+                len_par = length(rec.params);
+                params_out = nan(len_par,lin_count);
+                params_out(:, 1) = rec.params;
+                for i = 2:lin_count
+                    parent = obj.gen(parent_gen+1).rec(parent_index+1);
+                    lin_mat(i,:) = [parent.global_index, parent.gen];
+                    params_out(:,i) = parent.params;
+                    parent_gen = parent.parent_gen;
+                    parent_index = parent.parent_global_index;
+                    if parent_gen<1
+                        break
+                    end
+                end
+                params_out = flip(params_out,2);
+            end
+            lin_mat = flip(lin_mat);
+        end
         function write_relay_test(obj, params_, relay_id_, test_)
             header=size(params_);
             file_id = fopen([obj.dat_dir_name obj.exp_name obj.dat_name '.re' num2str(relay_id_) '_test' num2str(test_) '.redat'], 'w+');

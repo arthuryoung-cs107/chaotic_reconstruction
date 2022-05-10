@@ -66,7 +66,7 @@ classdef relay_generation
                 leader_data.double_data(:, i) = fread(dat, [specs.record_double_len,1], 'double=>double');
                 leader_data.double_chunk(:,i) = fread(dat, [specs.beads*(specs.record_double_chunk_len-1),1], 'double=>double');
                 params(:,i) = fread(dat, [specs.param_len,1], 'double=>double');
-                rec(i) = relay_record(params(:,i));
+                rec(i) = relay_record(params(:,i), leader_data.int_data(:,i), leader_data.double_data(:, i), leader_data.double_chunk(:,i));                
             end
             fclose(dat);
 
