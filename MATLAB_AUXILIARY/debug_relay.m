@@ -2,7 +2,7 @@ clear
 close all
 run AYfigprops.m
 
-write_figs = false;
+write_figs = true;
 write_all_figs = true;
 figs_to_write = 0;
 save_dir = [getenv('HOME') '/Desktop/MATLAB_OUTPUT/'];
@@ -17,7 +17,7 @@ event_fig = AYfig(AYfig.specs_gen('event_data',pos_full));
 event_fig.init_tiles([3, 3]);
 
 diagnostics_fig = AYfig(AYfig.specs_gen('relay_diagnostics',pos_full));
-diagnostics_fig.init_tiles([3, 4]);
+diagnostics_fig.init_tiles([4, 3]);
 
 %%%%%%%% ----------------------------------------------------------------------------------
 %%%%%%%% ------------------------------  get data  ---------------------------------
