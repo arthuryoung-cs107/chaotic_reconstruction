@@ -167,7 +167,7 @@ class runner: public swirl
               **INTpos_res,
               *sim_pos,
               *bead_event_res_mat,
-              t_wheels
+              t_wheels,
               tol;
 
       runner(swirl_param &sp_, proximity_grid * pg_, wall_list &wl_, int n_, int thread_id_, int param_len_, int Frames_, int nlead_, int npool_, double t_phys_, double dt_sim_, double alpha_tol_, double *ts_, double *xs_, double *d_ang_, double *comega_s, double t_wheels_);

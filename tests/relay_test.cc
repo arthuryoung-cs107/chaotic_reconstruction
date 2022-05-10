@@ -8,7 +8,7 @@
 
 const int nbeads=3;
 const int param_id=0;
-const int relay_id=5;
+const int relay_id=4;
 const int generations=300;
 const int nlead = 1;
 const int npool = 500;
