@@ -31,7 +31,7 @@ int set_special_params(int id_, double *vec_)
       for (int i = 0; i < 14; i++) vec_[i]=p_use[i];id=3;} break;
     case 5: // solution to a 3 bead particle relay
       {double p_use[]={0.5,1.0,968.783014762039e+000,41.2628475974082e+000,37.6024843085871e+000,40.1025717087601e+000,786.658543983309e-003,248.062481196825e-003,508.720872282600e-003,1.8,203.0,178.0,27.6,1.0};
-      for (int i = 0; i < 14; i++) vec_[i]=p_use[i];id=3;} break;
+      for (int i = 0; i < 14; i++) vec_[i]=p_use[i];id=5;} break;
     default: // initial swirl parameters from Rycroft
       {double p_use[]={0.5,1.0,1000.0,40.0 ,40.0 ,40.0 ,0.5,0.25,0.5,1.8,203.0,178.0,27.6,1.0};
       for (int i = 0; i < 14; i++) vec_[i]=p_use[i];id=0;}
