@@ -29,6 +29,9 @@ int set_special_params(int id_, double *vec_)
     case 3: // perturbed parameters
       {double p_use[]={0.5,1.0,1.193724226206541e3,0.047740229534684e3,0.050033742603846e3,0.025898751172936e3,0.000773880324000e3,0.000131158234738e3,0.000439930156805e3,1.8,203.0,178.0,27.6,1.0};
       for (int i = 0; i < 14; i++) vec_[i]=p_use[i];id=3;} break;
+    case 5: // perturbed parameters
+      {double p_use[]={0.5,1.0,1.193724226206541e3,0.047740229534684e3,0.050033742603846e3,0.025898751172936e3,0.000773880324000e3,0.000131158234738e3,0.000439930156805e3,1.8,203.0,178.0,27.6,1.0};
+      for (int i = 0; i < 14; i++) vec_[i]=p_use[i];id=3;} break;
     default: // initial swirl parameters from Rycroft
       {double p_use[]={0.5,1.0,1000.0,40.0 ,40.0 ,40.0 ,0.5,0.25,0.5,1.8,203.0,178.0,27.6,1.0};
       for (int i = 0; i < 14; i++) vec_[i]=p_use[i];id=0;}

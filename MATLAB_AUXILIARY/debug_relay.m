@@ -13,8 +13,8 @@ pos_full = [1 1 1728 1000];
 pos_top_row = [1 551 1728 460];
 pos_bottom_row = [0 1 1728 460];
 
-event_fig = AYfig(AYfig.specs_gen('event_data',pos_full));
-event_fig.init_tiles([3, 3]);
+% event_fig = AYfig(AYfig.specs_gen('event_data',pos_full));
+% event_fig.init_tiles([3, 3]);
 
 diagnostics_fig = AYfig(AYfig.specs_gen('relay_diagnostics',pos_full));
 diagnostics_fig.init_tiles([4, 3]);
@@ -25,7 +25,7 @@ diagnostics_fig.init_tiles([4, 3]);
 
 nbeads = 3;
 par_id = 0;
-relay_id = 3;
+relay_id = 5;
 
 relay = read_relay(nbeads, par_id, relay_id);
 stat = read_stat(nbeads,'maxmin',0);
@@ -33,7 +33,7 @@ swtrue = stat.sw0;
 [contact_f, bead_contact_f, wall_contact_f] = swtrue.find_contact_frames;
 
 % gen_last = relay.specs.gen_max;
-gen_last = 741 ;
+gen_last = 148 ;
 true_params = swtrue.params(3:end);
 last_indices = (gen_last-length(diagnostics_fig.ax_tile)+1):gen_last;
 first_indices = 1:length(diagnostics_fig.ax_tile);

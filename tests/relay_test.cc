@@ -8,10 +8,10 @@
 
 const int nbeads=3;
 const int param_id=0;
-const int relay_id=3;
-const int generations=500;
-const int nlead = 2;
-const int npool = 2000;
+const int relay_id=5;
+const int generations=300;
+const int nlead = 1;
+const int npool = 1000;
 const int param_len = 12;
 const double dt_sim = 0.002;
 const double t_wheels = 0.012;
@@ -29,7 +29,7 @@ int main()
   assert(nbeads<=30);
   char rydat_dir[30]; sprintf(rydat_dir, "swirl%d.odr/", nbeads);
   char file_name[10]; sprintf(file_name, "pts.%d", param_id);
-  char swbest_name[30]; sprintf(swbest_name, "swirl_best_wa%d.odr/", relay_id);
+  char swbest_name[30]; sprintf(swbest_name, "swirl_best_re%d.odr/", relay_id);
 
   // Physical constants
   double g_phys=9.804,                 // Gravity (m/s^2)
