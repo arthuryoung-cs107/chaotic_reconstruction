@@ -12,7 +12,7 @@ lead_dup_count(new int[nlead_]),
 event_frame_count(AYimatrix(n_, Frames_)),
 param_acc(new double[param_len_]),
 pos_res(AYdmatrix(Frames_, n_)), alpha_INTpos_res(AYdmatrix(Frames_, n_)), INTpos_res(AYdmatrix(n_, 3)), sim_pos(new double[2*n_*Frames_]), bead_event_res_mat(new double[n_*n_])
-{pvals = &Kn;}
+{pvals = &Kn; tol=cl_im;}
 
 runner::~runner()
 {
@@ -131,7 +131,7 @@ void runner::detect_events(record * rec_, int start_, int min_, int end_)
         INTpos_res[i][2]=INTpos_res[i][1]; INTpos_res[i][1]=INTpos_res[i][0];
         INTpos_res[i][0]+=0.5*(rsq+pos_res[frame_local-1][i])*(t_history[0]-t_history[1]);
         alpha_INTpos_res[frame_local-1][i]=alpha_comp(INTpos_res[i], t_history[0], t_history[2]);
-        if (alpha_INTpos_res[frame_local-1][i] > alpha_tol) // if we just had a collision
+        if ((alpha_INTpos_res[frame_local-1][i] > alpha_tol) || (sqrt(rsq) > tol)) // if we just had a collision, or we are off by greater than a particle diameter
         {
           event_frames[i] = frame_local-1;
           alpha_data[i] = alpha_INTpos_res[frame_local-1][i];
