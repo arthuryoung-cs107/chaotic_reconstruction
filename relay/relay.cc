@@ -206,14 +206,14 @@ void relay::start_block_relay(int gen_max_, bool verbose_)
   do
   {
     // smooth training
-    start_frame = train_event_block(event_block, 100,0.02);
+    start_frame = train_event_block(event_block, 10,0.05);
     printf("\n(event block %d) Completed smooth training. Best residual: %e, for tau^2=%e. tau/r= %e. Beginning stiff training: \n", event_block, residual_best, tau_sqr, tau/root_res_best);
     reload_leaders(false);
 
     tau=tau_full; tau_sqr=tau*tau;
 
     // full block training
-    int block_end = train_event_block(event_block, 5,0.1);
+    int block_end = train_event_block(event_block, 10,0.1);
     printf("\n(event block %d) Completed stiff training. Best residual: %e, for tau^2=%e. tau/r= %e.", event_block, residual_best, tau_sqr, tau/root_res_best);
     reload_leaders(true);
 
@@ -221,7 +221,7 @@ void relay::start_block_relay(int gen_max_, bool verbose_)
     find_events(0,Frames, true);
     bool same_frames = ev->define_relay_event_block(event_block, &net_observations, &tau_full, &earliest_event, noise_tol*data_scale);
 
-    if (gen_count==gen_max_) relay_underway=false;
+    if (gen_count>=gen_max_) relay_underway=false;
     else if (ev->check_last()) relay_underway=false;
     else
     {

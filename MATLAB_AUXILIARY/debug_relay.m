@@ -27,16 +27,15 @@ figs = [diagnostics_fig, convergence_fig];
 %%%%%%%% ---------------------------------------------------------------------------
 par_id = 0;
 
-nbeads = 20;
-relay_id = 2;
+nbeads = 3;
+relay_id = 4;
+gen_last = 1278;
 
 relay = read_relay(nbeads, par_id, relay_id);
 stat = read_stat(3,'maxmin',1);
 swtrue = stat.sw0;
 [contact_f, bead_contact_f, wall_contact_f] = swtrue.find_contact_frames;
 
-% gen_last = relay.specs.gen_max;
-gen_last = 350;
 true_params = swtrue.params(3:end);
 last_indices = (gen_last-length(diagnostics_fig.ax_tile)+1):gen_last;
 first_indices = 1:length(diagnostics_fig.ax_tile);
