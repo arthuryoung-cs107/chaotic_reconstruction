@@ -8,7 +8,7 @@
 
 const int nbeads=5;
 const int param_id=0;
-const int relay_id=3;
+const int relay_id=0;
 const int generations=200;
 const int nlead = 1;
 const int npool = 1000;
@@ -63,13 +63,13 @@ int main()
     getchar();
     doctor doc(ref, sp_min,sp_max,wl,t_phys,&rep);
     doc.init_test(test_id, test_relay_id);
-    // doc.test_run(Frames_test);
+    doc.test_run(Frames_test);
   }
   if (run_relay)
   {
     printf("Running %d bead relay. Relay id: %d, parameter id: %d,  maximum generations: %d, leaders: %d, pool: %d \n", nbeads, relay_id, param_id, generations, nlead, npool);
 
-    relay prelay(ref, sp_min,sp_max,wl,t_phys,&rep);
+    relay prelay(ref, sp_min,sp_max,wl,t_phys,&rep, t_wheels);
     prelay.init_relay();
     prelay.start_relay(generations);
   }
@@ -77,7 +77,7 @@ int main()
   {
     printf("Running %d bead block relay. Relay id: %d, parameter id: %d,  maximum generations: %d, leaders: %d, pool: %d \n", nbeads, relay_id, param_id, generations, nlead, npool);
 
-    relay prelay(ref, sp_min,sp_max,wl,t_phys,&rep);
+    relay prelay(ref, sp_min,sp_max,wl,t_phys,&rep, t_wheels);
     prelay.init_relay();
     prelay.start_block_relay(generations);
   }

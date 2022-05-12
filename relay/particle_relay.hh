@@ -348,7 +348,7 @@ class relay : public referee
 
     reporter * rep;
 
-    relay(referee &ref_, swirl_param &sp_min_, swirl_param &sp_max_, wall_list &wl_,double t_phys_,reporter * rep_);
+    relay(referee &ref_, swirl_param &sp_min_, swirl_param &sp_max_, wall_list &wl_,double t_phys_,reporter * rep_, double t_wheels_=0.0);
     ~relay();
 
     void init_relay();
