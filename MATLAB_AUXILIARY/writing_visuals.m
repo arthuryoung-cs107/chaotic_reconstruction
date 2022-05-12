@@ -4,8 +4,11 @@ run AYfigprops.m
 
 write_figs = false;
 write_all_figs = true;
+
+make_convergence_plots=true;
+make_path_plots = true;
 make_movie = true;
-make_plots = true;
+
 figs_to_write = 0;
 save_dir = [getenv('HOME') '/Desktop/MATLAB_OUTPUT/'];
 save_type = 'pdf';
@@ -14,6 +17,8 @@ fig_pos = AYfig.fig_pos_gen(2, 3);
 pos_full = [1 1 1728 1000];
 pos_top_row = [1 551 1728 460];
 pos_bottom_row = [0 1 1728 460];
+
+convergence_specs = AYfig.specs_gen('convergence_plots', pos_top_row);
 swirl_path_specs = AYfig.specs_gen('swirl_path', [fig_pos(5, 1:2), 500,500]);
 movie_specs = AYfig.specs_gen('playback', [fig_pos(5, 1:2), 500,500]);
 
@@ -36,11 +41,15 @@ sw_watch = sw1;
 %%%%%%%% ------------------------------  get data  ---------------------------------
 %%%%%%%% ---------------------------------------------------------------------------
 
-if (make_plots)
+if (make_convergence_plots)
+    convergence_fig = AYfig(convergence_specs);
+    relay3 = read_relay(nbeads, par_id, relay_id);
+
+
+elseif (make_path_plots)
     swirl_path_fig = AYfig(swirl_path_specs);
     writing_plots.plot_1bead_swirl(sw1,swirl_path_fig, green4, red5);
 
-    
 elseif (make_movie)
     movie1 = AYfig(movie_specs);
 
@@ -66,5 +75,5 @@ if (write_figs)
   %   figs_to_write = 1:length(figs);
   % end
   % AYfig.save_figs(figs, figs_to_write, save_type, save_dir);
-  AYfig.save_fig(diagnostics_fig.fig, save_type, save_dir);
+  % AYfig.save_fig(diagnostics_fig.fig, save_type, save_dir);
 end
