@@ -38,8 +38,9 @@ sw_watch = sw1;
 
 if (make_plots)
     swirl_path_fig = AYfig(swirl_path_specs);
-
     writing_plots.plot_1bead_swirl(sw1,swirl_path_fig, green4, red5);
+
+    
 elseif (make_movie)
     movie1 = AYfig(movie_specs);
 

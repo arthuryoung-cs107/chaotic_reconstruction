@@ -352,7 +352,6 @@ class relay : public referee
     ~relay();
 
     void init_relay();
-    void start_relay(int gen_max_, bool verbose_=true);
     void start_block_relay(int gen_max_, bool verbose_=true);
 
     void make_best_swirl(char * name_);
