@@ -8,13 +8,14 @@
 
 const int nbeads=5;
 const int param_id=0;
-const int relay_id=0;
+const int relay_id=1;
 const int generations=200;
 const int nlead = 1;
-const int npool = 1000;
+const int npool = 2000;
 const int param_len = 12;
 const double dt_sim = 0.002;
-const double t_wheels = 0.012;
+// const double t_wheels = 0.012;
+const double t_wheels = 0.0;
 const double noise_tol = 1e-2;
 const double alpha_tol=10.0;
 const double rs_full_factor=1.0;
