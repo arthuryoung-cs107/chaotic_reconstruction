@@ -18,30 +18,30 @@ struct MH_io
         * const obuf,
         * const ibuf;
 
-  const int id,
-            fullbuf_len;
+  const size_t fullbuf_len;
+  size_t  obuf_len,
+          ibuf_len;
+
+  const int id;
 
   int Frames,
       nbeads;
-
-  size_t  obuf_len,
-          ibuf_len;
 
   private:
     const bool noise_data;
     const double noise_sigma;
 
-    void read_fisml(char * ibuf_, int * Frames_);
+    void read_fisml(char * ibuf_);
 };
 
 const int record_int_len=5;
 const int record_double_len=2;
 struct record
 {
-  record(int rid_, int nbeads_, int Frames_, int len_, int * int_chunk_, double * double_chunk_, double * params_): rid(rid_),
+  record(int rid_, int nbeads_, int Frames_, int len_, int * int_chunk_, double * double_chunk_, double * u_): rid(rid_),
   nbeads(nbeads_), Frames(Frames_), len(len_),
-  int_params(&gen), double_params(&residual),
-  params(params_) {}
+  iparams(&gen), dparams(&residual),
+  u(u_) {}
   ~record() {}
 
   bool success;
@@ -57,8 +57,15 @@ struct record
       parent_rid, // index position of parent particle
       dup_count; // number of times this particle has been duplicated
 
+  int * iparams;
+
   double  residual,
           w;
+
+  double  * const dparams,
+          * const u;
+
+
 };
 
 class thread_worker: public swirl
@@ -140,10 +147,10 @@ class MH_trainer : public MH_params
            * const  d_ang, // observed angular position of dish
            * const  comega_s; // observed average rotational speed of dish
 
-    int ** record_int_chunk;
+    int ** rec_int_chunk;
 
-    double  **record_double_chunk,
-            **param_chunk;
+    double  **rec_double_chunk,
+            **u_chunk;
 
     record  ** const records,
             ** const leaders, ** const pool,
