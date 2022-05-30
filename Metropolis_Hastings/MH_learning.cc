@@ -14,12 +14,23 @@ extern "C"
 MH_io::MH_io(char * proc_loc_, char * test_dir_, char * data_name_, int id_, bool noise_data_, double noise_sigma_): proc_loc(proc_loc_), test_dir(test_dir_), data_name(data_name_),
 id(id_), fullbuf_len(strlen(proc_loc)+strlen(test_dir)+strlen(noise_data)),
 noise_data(noise_data_), noise_sigma(noise_sigma_),
-obuf(new char[fullbuf_len+100]), ibuf(new char[fullbuf_len+1])
+obuf(new char[fullbuf_len+100]), ibuf(new char[fullbuf_len+10])
 {
   sprintf(obuf, "%s%s", proc_loc, test_dir); obuf_end = strlen(obuf);
   sprintf(ibuf, "%s%s%s", proc_loc, test_dir, data_name); ibuf_end = strlen(ibuf);
 
-  FILE *refh_file = fopen();
+  read_fisml(ibuf+ibuf_len);
+  read_fisml(ibuf+ibuf_len);
+}
+
+MH_io::read_fisml(char *ibuf_, int * Frames_)
+{
+  int int_buf[3];
+  strcpy(ibuf, ".fisml"); FILE * ref_sml = fopen(ibuf, "r");
+  fscanf(ref_sml,"%d %d %d\n",int_buf,int_buf+1,int_buf+2);
+  fscanf(ref_sml,"%d %d %d\n",int_buf,int_buf+1,int_buf+2);
+  fscanf(ref_sml,"%d %d %d\n",int_buf,int_buf+1,int_buf+2);
+  fclose(ref_sml)
 }
 
 thread_worker::thread_worker(swirl_param &sp_, proximity_grid * pg_, wall_list &wl_, int thread_id_, int ichunk_len_, int dchunk_len_, int param_len_, int nbeads_, int Frames_, int nlead_, int npool_, double dt_sim_, double t_phys_, double *ts_, double *xs_, double *d_ang_, double *comega_s_): swirl(sp_, pg_, wl_, nbeads_),

@@ -21,12 +21,17 @@ struct MH_io
   const int id,
             fullbuf_len;
 
+  int Frames,
+      nbeads;
+
   size_t  obuf_len,
           ibuf_len;
 
   private:
     const bool noise_data;
     const double noise_sigma;
+
+    void read_fisml(char * ibuf_, int * Frames_);
 };
 
 const int record_int_len=5;
