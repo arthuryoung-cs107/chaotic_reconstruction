@@ -2,8 +2,8 @@ clear
 close all
 run AYfigprops.m
 
-write_figs = true;
-write_all_figs = true;
+write_figs = false;
+write_all_figs = false;
 figs_to_write = 0;
 save_dir = [getenv('HOME') '/Desktop/MATLAB_OUTPUT/'];
 save_type = 'pdf';
@@ -16,36 +16,40 @@ pos_bottom_row = [0 1 1728 460];
 % event_fig = AYfig(AYfig.specs_gen('event_data',pos_full));
 % event_fig.init_tiles([3, 3]);
 
-diagnostics_fig = AYfig(AYfig.specs_gen('relay_diagnostics',pos_full));
-diagnostics_fig.init_tiles([4, 3]);
+% diagnostics_fig = AYfig(AYfig.specs_gen('relay_diagnostics',pos_full));
+% diagnostics_fig.init_tiles([4, 3]);
 
 convergence_fig = AYfig(AYfig.specs_gen('convergence',fig_pos(1,:)));
 
-figs = [diagnostics_fig, convergence_fig];
+% figs = [diagnostics_fig, convergence_fig];
 %%%%%%%% ----------------------------------------------------------------------------------
 %%%%%%%% ------------------------------  get data  ---------------------------------
 %%%%%%%% ---------------------------------------------------------------------------
 par_id = 0;
 
-nbeads = 3;
-relay_id = 4;
-gen_last = 1278;
+% nbeads = 3;
+% relay_id = 4;
+% gen_last = 1278;
 
-relay = read_relay(nbeads, par_id, relay_id);
-stat = read_stat(3,'maxmin',1);
+nbeads = 5;
+relay_id = 1;
+
+relay = read_relay(nbeads, par_id, relay_id, true);
+gen_last = length(relay.gen);
+
+stat = read_stat(3,'maxmin',0);
 swtrue = stat.sw0;
 [contact_f, bead_contact_f, wall_contact_f] = swtrue.find_contact_frames;
 
 true_params = swtrue.params(3:end);
-last_indices = (gen_last-length(diagnostics_fig.ax_tile)+1):gen_last;
-first_indices = 1:length(diagnostics_fig.ax_tile);
-uniform_indices = round(linspace(1, double(gen_last),length(diagnostics_fig.ax_tile)));
-[uniform_indices(1), uniform_indices(length(diagnostics_fig.ax_tile))] = deal(1, gen_last);
+% last_indices = (gen_last-length(diagnostics_fig.ax_tile)+1):gen_last;
+% first_indices = 1:length(diagnostics_fig.ax_tile);
+% uniform_indices = round(linspace(1, double(gen_last),length(diagnostics_fig.ax_tile)));
+% [uniform_indices(1), uniform_indices(length(diagnostics_fig.ax_tile))] = deal(1, gen_last);
 
-gen_ind = uniform_indices;
+% gen_ind = uniform_indices;
 
-[relay.gen_ind, relay.gen] = relay.read_generations(1:gen_last, gen_last);
-
+% [relay.gen_ind, relay.gen] = relay.read_generations(1:gen_last, gen_last);
 % relay.write_relay_test(stat.params_mat(3:end, :),0,1);
 
 %%%%%%%% ----------------------------------------------------------------------------------

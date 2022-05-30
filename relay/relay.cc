@@ -214,7 +214,7 @@ void relay::start_block_relay(int gen_max_, bool verbose_)
 
     // full block training
     int block_end = train_event_block(event_block, 50,0.1);
-    printf("\n(event block %d) Completed stiff training. Best residual: %e, for tau^2=%e. tau/r= %e.", event_block, residual_best, tau_sqr, tau/root_res_best);
+    printf("\n(event block %d) Completed stiff training. Best residual: %e, for tau^2=%e. r/tau= %e.", event_block, residual_best, tau_sqr, root_res_best/tau);
     reload_leaders(true);
 
     event_block++;

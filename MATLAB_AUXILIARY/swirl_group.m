@@ -48,6 +48,21 @@ classdef swirl_group
         end
     end
     methods (Static)
+        function write_test(params_in, nbeads_, param_id_, relay_id_, test_id_)
+            if (size(params_in,1)==14)
+                params_=params_in(3:end, :);
+            else
+                params_=params_in;
+            end
+            exp_name = ['swirl' num2str(nbeads_) '.odr/'];
+            name = ['../dat_dir/' exp_name 'pts.' num2str(param_id_) '.re' num2str(relay_id_) '_test' num2str(test_id_) '.redat'];
+            header=size(params_);
+            file_id = fopen(name, 'w+');
+            fwrite(file_id, header, 'int');
+            fwrite(file_id, params_(:), 'double');
+            fclose(file_id);
+            fprintf('wrote %s \n', name)
+        end
         function INT_mat = compute_INT(t_vec_, x_mat_)
             [M,N] = size(x_mat_);
             INT_mat = cumsum([zeros(M,1), 0.5*(x_mat_(:,1:(N-1))+x_mat_(:,2:end)).*reshape(t_vec_(2:end)-t_vec_(1:(N-1)), 1, [])] , 2);

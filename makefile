@@ -1,4 +1,19 @@
-include config_directory/makefile.includes
+# file names
+AYLINALG:= AYaux AYlinalg AYmat AYvec AYrng AYtens AYdecomps AYdata
+
+SWIRL:= p_grid swirl particle common swirl_io wall swirl_param dat_store RYdat2AYdat
+
+FILTER:= filter_io filter
+
+RACE:= race particle_race particle_race_io reporter runner
+
+WALK:= walk particle_walk pedestrian particle_walk_io
+
+RELAY:= relay particle_relay relay_runner particle_relay_io relay_sampler relay_trainer doctor
+
+MH:= 
+
+include config_directory/includes.mak
 
 # AYlinalg object files
 AYOBJS:= $(addprefix $(AY_DIR), $(addsuffix .o, $(AYLINALG)))
@@ -12,6 +27,8 @@ RAOBJS:= $(SWOBJS) $(addprefix $(RA_DIR), $(addsuffix .o, $(RACE)))
 WAOBJS:= $(SWOBJS) $(addprefix $(WA_DIR), $(addsuffix .o, $(WALK)))
 
 REOBJS:= $(SWOBJS) $(addprefix $(RE_DIR), $(addsuffix .o, $(RELAY)))
+
+MHOBJS:= $(SWOBJS) $(addprefix $(MH_DIR), $(addsuffix .o, $(MH)))
 
 # rules for each directory
 # AYlinalg rules
@@ -36,7 +53,10 @@ $(WA_DIR)%.o: $(WA_SRC)%.cc | $(WA_DIR)
 $(RE_DIR)%.o: $(RE_SRC)%.cc | $(RE_DIR)
 	$(CXX) $(IDIR) $(CFLAGS) -c $< -o $@
 
-all: process_test swirl_test filter_test stat_test race_test walk_test relay_test
+$(MH_DIR)%.o: $(MH_SRC)%.cc | $(MH_DIR)
+	$(CXX) $(IDIR) $(CFLAGS) -c $< -o $@
+
+all: process_test swirl_test filter_test stat_test race_test walk_test relay_test MH_test
 
 process_test: $(TEST_SRC)process_test.cc $(SWOBJS)
 	$(CXX) $(IDIR) $(CFLAGS) $(LINK) $^ $(LIBS) -o $@
@@ -59,10 +79,13 @@ walk_test: $(TEST_SRC)walk_test.cc $(WAOBJS)
 relay_test: $(TEST_SRC)relay_test.cc $(REOBJS)
 	$(CXX) $(IDIR) $(CFLAGS) $(LINK) $^ $(LIBS) -o $@
 
+MH_test: $(TEST_SRC)MH_test.cc $(MHOBJS)
+	$(CXX) $(IDIR) $(CFLAGS) $(LINK) $^ $(LIBS) -o $@
+
 swirl_writing_test: $(WRITING_SRC)swirl_writing_test.cc $(SWOBJS)
 	$(CXX) $(IDIR) $(CFLAGS) $(LINK) $^ $(LIBS) -o $@
 
-$(AY_DIR) $(SW_DIR) $(FI_DIR) $(RA_DIR) $(WA_DIR) $(RE_DIR):
+$(AY_DIR) $(SW_DIR) $(FI_DIR) $(RA_DIR) $(WA_DIR) $(RE_DIR) $(MH_DIR):
 	mkdir -p $@
 
 clean_:
@@ -86,8 +109,11 @@ clean_walk:
 clean_relay:
 	rm -f $(RE_DIR)*.o
 
+clean_MH:
+	rm -f $(MH_DIR)*.o
+
 clean_process: clean_swirl
 
-clean: clean_ clean_swirl clean_filter clean_race clean_walk clean_relay
+clean: clean_ clean_swirl clean_filter clean_race clean_walk clean_relay clean_MH
 
-clean_all: clean_ clean_AY clean_swirl clean_filter clean_race clean_walk clean_relay
+clean_all: clean clean_AY

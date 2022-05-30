@@ -11,6 +11,8 @@ classdef relay_data
         gen_ind;
 
         gen;
+
+        gen_end_data;
     end
     methods
         function obj = relay_data(dat_dir_name_, exp_name_, dat_name_, relay_id_)
@@ -43,6 +45,22 @@ classdef relay_data
             obj.specs = specs;
             obj.event0 = event0;
 
+        end
+        function [gen_ind,gen,gen_end_struct] = read_gen_end(obj, gen_ind_)
+            dat_end = fopen([obj.dat_dir_name obj.exp_name obj.dat_name '.re' num2str(obj.relay_id) '_end.redat']);
+            header_end = fread(dat_end,[1, 2], 'int=>int');
+            int_params_end = fread(dat_end,[1, header_end(1)], 'int=>int');
+            double_params_end = fread(dat_end,[1, header_end(2)], 'double=>double');
+            fclose(dat_end);
+
+            gen_end_struct = struct('int_params', int_params_end, 'double_params', double_params_end);
+            gen_last = int_params_end(1);
+            if (nargin==1)
+                gen_ind_set = 1:gen_last;
+            else
+                gen_ind_set = gen_ind_;
+            end
+            [gen_ind, gen] = obj.read_generations(gen_ind_set,gen_last);
         end
         function [gen_ind,gen] = read_generations(obj,gen_ind_, gen_last_)
             gen = relay_generation.empty(gen_last_, 0);

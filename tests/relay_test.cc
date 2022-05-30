@@ -19,9 +19,9 @@ const double t_wheels = 0.0;
 const double noise_tol = 1e-2;
 const double alpha_tol=10.0;
 const double rs_full_factor=1.0;
-const bool test_generation=false;
+const bool test_generation=true;
 const bool run_relay=false;
-const bool run_block_relay=true;
+const bool run_block_relay=false;
 const bool walk_relay=false;
 const bool noise_data=true;
 char proc_loc[] = "./dat_dir/";
@@ -51,18 +51,19 @@ int main()
   wall_par_planes wp0(0,1,0,r),wp1(fa,0.5,0,r),wp2(fa,-0.5,0,r);
   wl.add_wall(&wf); wl.add_wall(&wp0); wl.add_wall(&wp1); wl.add_wall(&wp2);
 
-
   double cl = sp_min.cl_im; // this will do for now, assuming that we aren't learning cl_im
   reporter rep; rep.init_relay(proc_loc, rydat_dir, file_name, relay_id, noise_data, noise_tol*cl);
   referee ref(nlead, npool, param_len, dt_sim, noise_tol, alpha_tol, rs_full_factor, cl);
 
   if (test_generation)
   {
-    int test_id=0, Frames_test=600;
-    int test_relay_id=(noise_data)?1:0;
+    int test_id=2, Frames_test=1201;
+    // int test_relay_id=(noise_data)?1:0;
+    int test_relay_id=2;
+    int npool_test = 1000;
+    referee doc_ref(nlead, npool_test, param_len, dt_sim, noise_tol, alpha_tol, rs_full_factor, cl);
     printf("Testing %d bead generation. Test id: %d, Frames : %d\n", nbeads, test_id, Frames_test);
-    getchar();
-    doctor doc(ref, sp_min,sp_max,wl,t_phys,&rep);
+    doctor doc(doc_ref, sp_min,sp_max,wl,t_phys,&rep);
     doc.init_test(test_id, test_relay_id);
     doc.test_run(Frames_test);
   }

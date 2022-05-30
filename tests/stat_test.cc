@@ -6,7 +6,7 @@
 
 #include "swirl.hh"
 
-char test[]="gauss";
+char test[]="maxmin";
 const int nbeads=3;
 const int ran_id=1;
 const int noise_count = 1000;
@@ -85,5 +85,4 @@ int main()
     par_mat.fprintf_mat(specs_name);
     sprintf(specs_name, "%s%srand_dels", proc_loc, rydat_dir);
     sp_del.fprintf_mat(specs_name);
-
 }

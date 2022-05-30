@@ -19,7 +19,7 @@ classdef relay_plots
             box(ax_,'on');
             hold(ax_, 'on');
             for i=1:len_gp
-                plot(ax_,x, Y(i,:), ' - o', 'Color', [base_color, 0.1+(i-1)*(0.9)/(len_gp-1)], 'LineWidth', 2);
+                plot(ax_,x, Y(i,:), ' - o', 'Color', [base_color, 0.1+(i-1)*(0.9)/(len_gp-0.999)], 'LineWidth', 2);
             end
             plot(ax_, x, Y(len_gp,:), ' - p', 'Color', [0 0 0], 'LineWidth', 2);
             xlim(ax_, [min(x), max(x)]);
@@ -30,6 +30,31 @@ classdef relay_plots
             ylabel(ax_, '$$\frac{\hat{x}_i - x_i}{|\hat{x}_i|}$$', 'Interpreter', 'Latex', 'Fontsize', 14)
             % xlabel(ax_, 'parameters', 'Interpreter', 'Latex', 'Fontsize', 14)
             set(ax_,'xtick',x,'xticklabel',names, 'TickLabelInterpreter', 'Latex', 'Fontsize', 14)
+        end
+
+        function plot_K_vs_gamma(ax_, base_color, re_, ind_, par_true_)
+            [par_lineage, par_mat] = re_.get_lineage_mat(re_.gen(ind_(end)).rec(1));
+
+            x = 1:7;
+
+            Y=((par_true_(x)-par_mat(x,:))./abs(par_true_(x)))';
+
+            [len_gp, Frames] = size(Y);
+            box(ax_,'on');
+            hold(ax_, 'on');
+            
+            for i=1:len_gp
+                scatter(ax_,par_mat(1,i), par_mat(2,i), ' o', 'filled', 'CData', base_color, 'LineWidth', 0.5, 'SizeData', 50, 'MarkerEdgeColor', [0 0 0], 'MarkerFaceAlpha', 0.1+(i-1)*(0.9)/(len_gp-0.999));
+            end
+            % plot(ax_, x, Y(len_gp,:), ' - p', 'Color', [0 0 0], 'LineWidth', 2);
+            % xlim(ax_, [min(x), max(x)]);
+            % ylim(ax_, [min(min(Y)), max(max(Y))]);
+
+            % names = {'$$K$$';'$$\gamma_b$$';'$$\gamma_f$$';'$$\gamma_w$$';'$$\mu_b$$';'$$\mu_f$$';'$$\mu_w$$'};
+
+            ylabel(ax_, '$$K$$', 'Interpreter', 'Latex', 'Fontsize', 14)
+            xlabel(ax_, '$$\gamma_b$$', 'Interpreter', 'Latex', 'Fontsize', 14)
+            % set(ax_,'xtick',x,'xticklabel',names, 'TickLabelInterpreter', 'Latex', 'Fontsize', 14)
         end
 
         function plot_cell_vs_frames(axs_, base_color, x, Ycell, xname, yname, titlename, xind_)
