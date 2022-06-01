@@ -50,8 +50,23 @@ int main()
   // sampling parameters
   MH_io mh_io(proc_loc, test_dir, data_name, MH_id, noise_data, noise_sigma);
   MH_params mh_par(&mh_io, nlead, npool, param_len, dt_sim, t_phys, noise_sigma);
+  MH_train_inputs mhti(&mh_par, &sp_min, &sp_max, &wl, t_wheels);
 
-  MH_trainer mh_train(mh_par, sp_min, sp_max, wl, t_wheels);
+  MH_trainer mh_train(mhti);
+
+  
+
+  // for (int i = 0; i < 12; i++)
+  // {
+  //   printf("max, min: %f, %f\n", *(&(mh_train.sp_max.Kn)+i), *(&(mh_train.sp_min.Kn)+i));
+  // }
+
+  // for (int i = 0; i < 100; i++)
+  // {
+  //   printf("t, o, w: %f %f %f\n", mh_train.ts[i], mh_train.d_ang[i], mh_train.comega_s[i]);
+  // }
+  // printf("t_wheels %f\n", mh_train.t_wheels);
+
 
   return 0;
 }

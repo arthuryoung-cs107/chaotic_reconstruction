@@ -126,12 +126,24 @@ struct MH_params
   MH_io * const io;
 };
 
+struct MH_train_inputs
+{
+  MH_train_inputs(MH_params *par_, swirl_param *sp_min_, swirl_param *sp_max_, wall_list *wl_, double t_wheels_=0.0): par(par_) , sp_min(sp_min_), sp_max(sp_max_), wl(wl_), t_wheels(t_wheels_) {}
+  ~MH_train_inputs() {}
+
+  MH_params * const par;
+  swirl_param * const sp_min,
+              * const sp_max;
+  wall_list * const wl;
+  const double t_wheels;
+};
+
 class MH_trainer : public MH_params
 {
   public:
 
     MH_trainer(MH_params &par_, swirl_param &sp_min_, swirl_param &sp_max_, wall_list &wl_, double t_wheels_=0.0);
-
+    MH_trainer(MH_train_inputs &mhti): MH_trainer(*(mhti.par), *(mhti.sp_min), *(mhti.sp_max), *(mhti.wl), mhti.t_wheels) {}
     ~MH_trainer();
 
     swirl_param sp_min, // lower boundary of parameter space U
@@ -171,6 +183,17 @@ class MH_trainer : public MH_params
 #else
         inline int thread_num() {return 0;}
 #endif
+};
+
+class MH_doctor : public MH_trainer
+{
+  public:
+
+    MH_doctor(MH_train_inputs &mhti);
+    ~MH_doctor();
+
+  private:
+
 };
 
 int find_worst_record(record ** r, int ncap);
