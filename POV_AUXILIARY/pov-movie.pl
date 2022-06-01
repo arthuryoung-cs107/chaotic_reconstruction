@@ -9,7 +9,7 @@ getopts("de:hn:q:rs:vw");
 ## FOR ME: the usage is:
 ## ./pov-movie <switches> <odr directory w txt files> <file prefix> <1 or 2>
 ## make sure ffmpeg and povray are installed, make sure pov_headers is level with this
-## e.g. ./pov-movie -v circ6.odr pts 1
+## e.g. ./pov-movie -d circ6.odr pts 1
 
 # Print help message if -h option is specified
 if($opt_h) {

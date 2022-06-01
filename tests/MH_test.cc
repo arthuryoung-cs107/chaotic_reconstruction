@@ -49,16 +49,9 @@ int main()
 
   // sampling parameters
   MH_io mh_io(proc_loc, test_dir, data_name, MH_id, noise_data, noise_sigma);
+  MH_params mh_par(&mh_io, nlead, npool, param_len, dt_sim, t_phys, noise_sigma);
 
-  // MH_params mh_par(nlead, npool, param_len, dt_sim, t_phys, noise_tol);
-  //
-  // if (test_generation)
-  // {
-  //   int test_id=2,
-  //       Frames_test=1201,
-  //       test_relay_id=2,
-  //       npool_test = 1000;
-  //
-  // }
+  MH_trainer mh_train(mh_par, sp_min, sp_max, wl, t_wheels);
+
   return 0;
 }

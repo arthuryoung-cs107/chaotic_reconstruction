@@ -27,6 +27,8 @@ struct MH_io
   int Frames,
       nbeads;
 
+  void load_reference(double *ts_, double *xs_, double *d_ang_, double * comega_s_, double t_phys_);
+
   private:
     const bool noise_data;
     const double noise_sigma;
@@ -64,15 +66,13 @@ struct record
 
   double  * const dparams,
           * const u;
-
-
 };
 
 class thread_worker: public swirl
 {
     public:
 
-      thread_worker(swirl_param &sp_, proximity_grid * pg_, wall_list &wl_, int nbeads_, int thread_id_, int param_len_, int Frames_, int nlead_, int npool_, double dt_sim_, double t_phys_, double *ts_, double *xs_, double *d_ang_, double *comega_s_);
+      thread_worker(swirl_param &sp_, proximity_grid * pg_, wall_list &wl_, int thread_id_, int ichunk_len_, int dchunk_len_, int param_len_, int nbeads_, int Frames_, int nlead_, int npool_, double dt_sim_, double t_phys_, double *ts_, double *xs_, double *d_ang_, double *comega_s_);
       ~thread_worker();
 
     protected:
@@ -95,23 +95,35 @@ class thread_worker: public swirl
               * const ts,
               * const xs,
               * const d_ang,
-              * const comega_s;
+              * const comega_s,
+              * pvals;
 };
 
 struct MH_params
 {
-  MH_params(int nlead_, int npool_, int param_len_, double dt_sim_, double t_phys_, double sigma_): nlead(nlead_), npool(npool_), param_len(param_len_), dt_sim(dt_sim_), t_phys(t_phys_), sigma(sigma_) {}
-  MH_params(MH_params &par_): nlead(par_.nlead), npool(par_.npool), param_len(par_.param_len), dt_sim(par_.dt_sim), t_phys(par_.t_phys), sigma(par_.sigma) {}
+  MH_params(MH_io *io_, int nlead_, int npool_, int param_len_, double dt_sim_, double t_phys_, double sigma_): io(io_),
+  nbeads(io_->nbeads), Frames(io_->Frames),
+  nlead(nlead_), npool(npool_), param_len(param_len_),
+  dt_sim(dt_sim_), t_phys(t_phys_), sigma(sigma_) {}
+  MH_params(MH_params &par_): io(par_.io),
+  nbeads(par_.nbeads), Frames(par_.Frames),
+  nlead(par_.nlead), npool(par_.npool), param_len(par_.param_len),
+  dt_sim(par_.dt_sim), t_phys(par_.t_phys), sigma(par_.sigma) {}
 
-  ~MH_params();
+  ~MH_params() {}
 
-  const int nlead, // number of leaders we store for review
+  const int nbeads, // number of beads
+            Frames, // number of observation frames
+            nlead, // number of leaders we store for review
             npool, // number of parameter sets we evaluate at a time
             param_len; // length of parameter vector
+
 
   const double  dt_sim, // The maximum simulation timestep to use
                 t_phys, // simulation time scale
                 sigma; // expected standard deviation of noise on reference data
+
+  MH_io * const io;
 };
 
 class MH_trainer : public MH_params
@@ -125,9 +137,6 @@ class MH_trainer : public MH_params
     swirl_param sp_min, // lower boundary of parameter space U
                 sp_max; // upper boundary of parameter space U
 
-    const int nbeads, // the total number of beads
-              Frames; // the total number of data frames
-
     int leader_count, // current number of leaders
         nsuccess, // number of parameters better than current worst leader in recent trial
         ncandidates, // number of candidates to compare to current leaders
@@ -140,31 +149,22 @@ class MH_trainer : public MH_params
 
     double  rho2, // current expected residual
             bres, // current best leader residual
-            wres; // current worst leader residual
+            wres, // current worst leader residual
+            t_wheels; // current training wheels
 
     double * const  ts, // wall time of observed data
            * const  xs, // 2D observed position data
            * const  d_ang, // observed angular position of dish
-           * const  comega_s; // observed average rotational speed of dish
-
-    int ** rec_int_chunk;
-
-    double  **rec_double_chunk,
-            **u_chunk;
-
-    record  ** const records,
-            ** const leaders, ** const pool,
-            ** leader_board, ** candidates;
+           * const  comega_s, // observed average rotational speed of dish
+           ** const u_chunk; // space for parameters
 
     protected:
 
       const int nt; // number of worker threads
 
       wall_list &wl; // a reference to the list of walls for the swirling simulation.
-      proximity_grid** const pg; // array of proximity grids.
+      proximity_grid ** const pg; // array of proximity grids.
       AYrng ** rng; // random number generators
-
-      thread_worker ** const workers; // team of threads for solving and sampling
 
 #ifdef _OPENMP
         inline int thread_num() {return omp_get_thread_num();}
