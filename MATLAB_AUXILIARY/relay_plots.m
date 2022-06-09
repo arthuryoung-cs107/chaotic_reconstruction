@@ -23,7 +23,8 @@ classdef relay_plots
             end
             plot(ax_, x, Y(len_gp,:), ' - p', 'Color', [0 0 0], 'LineWidth', 2);
             xlim(ax_, [min(x), max(x)]);
-            ylim(ax_, [min(min(Y)), max(max(Y))]);
+            % ylim(ax_, [min(min(Y)), max(max(Y))]);
+            ylim(ax_, [-4.0, 1.0]);
 
             names = {'$$K$$';'$$\gamma_b$$';'$$\gamma_f$$';'$$\gamma_w$$';'$$\mu_b$$';'$$\mu_f$$';'$$\mu_w$$'};
 
@@ -42,7 +43,7 @@ classdef relay_plots
             [len_gp, Frames] = size(Y);
             box(ax_,'on');
             hold(ax_, 'on');
-            
+
             for i=1:len_gp
                 scatter(ax_,par_mat(1,i), par_mat(2,i), ' o', 'filled', 'CData', base_color, 'LineWidth', 0.5, 'SizeData', 50, 'MarkerEdgeColor', [0 0 0], 'MarkerFaceAlpha', 0.1+(i-1)*(0.9)/(len_gp-0.999));
             end
