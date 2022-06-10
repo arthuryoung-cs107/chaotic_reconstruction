@@ -1,8 +1,24 @@
 #include "MH_auxiliary.hh"
+#include "MH_tools.hh"
 
-extern "C"
+int set_special_params(int id_, double *vec_)
 {
-  #include "AYaux.h"
+  int id_out=0;
+  if ((id_>=0)&&(id_<special_param_count)) id_out=id_;
+  else printf("WARNING: invalid parameter ID (%d). Using default parameters\n", id_);
+
+  for (int i = 0; i < full_param_len; i++) vec_[i] = special_parameters[id_out][i];
+  return id_out;
+}
+
+int set_special_params(const char *id_, double*vec_)
+{
+  if (strcmp(id_, "true")==0) return set_special_params(0, dvec_);
+  else if (strcmp(id_, "min")==0) return set_special_params(1, dvec_);
+  else if (strcmp(id_, "max")==0) return set_special_params(2, dvec_);
+  else if (strcmp(id_, "pert")==0) return set_special_params(3, dvec_);
+  else if (strcmp(id_, "b3i0r5")==0) return set_special_params(4, dvec_);
+  else return set_special_params(-1, dvec_);
 }
 
 MH_io::MH_io(char * proc_loc_, char * test_dir_, char * data_name_, int id_, bool noise_data_, double noise_sigma_): proc_loc(proc_loc_), test_dir(test_dir_), data_name(data_name_),
@@ -20,7 +36,6 @@ MH_io::~MH_io()
 
 void MH_io::read_fisml(char *ibuf_)
 {
-  // there is certainly a better way of doing this
   int int_buf[3];
   strcpy(ibuf_, ".fisml"); FILE * ref_sml = fopen(ibuf, "r");
   fscanf(ref_sml,"%d %d %d\n",int_buf,int_buf+1,int_buf+2);
@@ -40,9 +55,8 @@ void MH_io::load_reference(double *ts_, double *xs_, double *d_ang_, double * co
 
   if (noise_data)
   {
-    AYrng ran;
-    ran.rng_init_gsl(1);
-    for (int i = 2*nbeads; i < 2*Frames*nbeads; i++) xs_[i]+=ran.rand_gau_gsl(0.0,noise_sigma);
+    MH_rng ran(1);
+    for (int i = 2*nbeads; i < 2*Frames*nbeads; i++) xs_[i]+=ran.rand_gau(0.0,noise_sigma);
   }
 
   // initialize the dish velocity data. Will save time on calculations later
@@ -53,5 +67,4 @@ void MH_io::load_reference(double *ts_, double *xs_, double *d_ang_, double * co
     if(comega>M_PI) comega-=2*M_PI; else if(comega<-M_PI) comega+=2*M_PI;
     comega_s_[i] = t_phys_*comega/(ts_[i]-ts_[i-1]);
   }
-
 }

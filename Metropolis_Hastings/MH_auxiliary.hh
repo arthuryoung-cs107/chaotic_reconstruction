@@ -3,6 +3,25 @@
 
 #include "swirl.hh"
 
+#ifdef _OPENMP
+#include "omp.h"
+#endif
+
+const int full_param_len=14;
+const int special_param_count=5;
+const double special_parameters[][full_param_len] = {
+/* 0  1    2      3     4     5     6   7    8   9   10    11    12    13
+ {rad,mass,Kn    ,gb   ,gf   ,gw   ,mb ,mf  ,mw ,ds ,cx_im,cy_im,cl_im,wallsca} */
+  0.5,1.0, 1000.0,40.0 ,40.0 ,40.0 ,0.5,0.25,0.5,1.8,203.0,178.0,27.6 ,1.0, // 0: default from Rycroft
+  0.5,1.0, 500.0 ,5.0  ,5.0  ,5.0  ,0.1,0.1 ,0.1,1.8,203.0,178.0,27.6 ,1.0, // 1: min from Rycroft
+  0.5,1.0, 5000.0,120.0,120.0,120.0,1.0,1.0 ,1.0,1.8,203.0,178.0,27.6 ,1.0, // 2: max from Rycroft
+  0.5,1.0,1.193724226206541e3,0.047740229534684e3,0.050033742603846e3,0.025898751172936e3,0.000773880324000e3,0.000131158234738e3,0.000439930156805e3,1.8,203.0,178.0,27.6,1.0, // 3: perturbed from stat test
+  0.5,1.0,968.783014762039e+000,41.2628475974082e+000,37.6024843085871e+000,40.1025717087601e+000,786.658543983309e-003,248.062481196825e-003,508.720872282600e-003,1.8,203.0,178.0,27.6,1.0 // 4: solution from nbeads=3, par_id=0, relay_id=5 relay
+};
+
+int set_special_params(int id_, double *vec_);
+int set_special_params(const char *id_, double*vec_);
+
 struct MH_io
 {
   MH_io(char * proc_loc_, char * test_dir_, char * data_name_, int id_, bool noise_data_=false, double noise_sigma_=0.0);
@@ -32,54 +51,33 @@ struct MH_io
     void read_fisml(char * ibuf_);
 };
 
-struct MH_params
-{
-  MH_params(MH_io *io_, int param_len_, int nlead_, int npool_, double dt_sim_, double t_phys_, double sigma_): io(io_),
-  param_len(param_len_), nbeads(io_->nbeads), Frames(io_->Frames), nlead(nlead_), npool(npool_), dt_sim(dt_sim_), t_phys(t_phys_), sigma(sigma_) {}
-  MH_params(MH_params &par_): MH_params(par_.io,par_.param_len,par_.nlead,par_.npool,par_.dt_sim,par_.t_phys,par_.sigma) {}
-
-  ~MH_params() {}
-
-  const int param_len, // length of parameter vector
-            nbeads, // number of beads
-            Frames, // number of observation frames
-            nlead, // number of leaders we store for review
-            npool; // number of parameter sets we evaluate at a time
-
-
-  const double  dt_sim, // The maximum simulation timestep to use
-                t_phys, // simulation time scale
-                sigma; // expected standard deviation of noise on reference data
-
-  MH_io * const io;
-};
 
 struct record_struct
 {
-  record_struct(int param_len_, int nbeads_, int Frames_): param_len(param_len_), nbeads(nbeads_), Frames(Frames_) {}
-  record_struct(record_struct &rec_): record_struct(rec_.param_len, rec_.nbeads, rec_.Frames) {}
+  record_struct(int ulen_, int nbeads_, int Frames_, int ichunk_len_, int dchunk_len_): ulen(ulen_), nbeads(nbeads_), Frames(Frames_), ichunk_len(ichunk_len_), dchunk_len(dchunk_len_) {}
+  record_struct(record_struct &rs_): record_struct(rs_.ulen, rs_.nbeads, rs_.Frames, rs_.ichunk_len, rs_.dchunk_len) {}
   ~record_struct();
 
-  const int param_len,
+  const int ulen,
             nbeads,
-            Frames;
+            Frames,
+            ichunk_len,
+            dchunk_len;
 };
 
 struct thread_worker_struct
 {
-  thread_worker_struct(int param_len_, int nbeads_, int Frames_, int nlead_, int npool_, int ichunk_len_, int dchunk_len_, double dt_sim_, double t_phys_, double *ts_, double *xs_, double *d_ang_, double *comega_s_): param_len(param_len_), nbeads(nbeads_), Frames(Frames_), nlead(nlead_), npool(npool_), ichunk_len(ichunk_len_), dchunk_len(dchunk_len_), dt_sim(dt_sim_), t_phys(t_phys_), ts(ts_), xs(xs_), d_ang(d_ang_), comega_s(comega_s_) {}
-  thread_worker_struct(thread_worker_struct &tws_): thread_worker_struct(tws_.param_len, tws_.nbeads, tws_.Frames, tws_.nlead, tws_.npool, tws_.ichunk_len, tws_.dchunk_len, tws_.dt_sim, tws_.t_phys, tws_.ts, tws_.xs, tws_.d_ang, tws_.comega_s) {}
-  thread_worker_struct(int * ipars_, double * dpars_,double * ts_, double * xs_, double * d_ang_, double * comega_s_): thread_worker_struct(ipars_[0], ipars_[1], ipars_[2], ipars_[3], ipars_[4], get_ichunk_len(), get_dchunk_len(), ts_, xs_, d_ang_, comega_s_) {}
+  thread_worker_struct(int ulen_, int nbeads_, int Frames_, int nlead_, int npool_, double dt_sim_, double t_phys_, double *ts_, double *xs_, double *d_ang_, double *comega_s_): ulen(ulen_), nbeads(nbeads_), Frames(Frames_), nlead(nlead_), npool(npool_), dt_sim(dt_sim_), t_phys(t_phys_), ts(ts_), xs(xs_), d_ang(d_ang_), comega_s(comega_s_) {}
+  thread_worker_struct(thread_worker_struct &tws_): thread_worker_struct(tws_.ulen, tws_.nbeads, tws_.Frames, tws_.nlead, tws_.npool, tws_.dt_sim, tws_.t_phys, tws_.ts, tws_.xs, tws_.d_ang, tws_.comega_s) {}
+  thread_worker_struct(int * ipars_, double * dpars_,double * ts_, double * xs_, double * d_ang_, double * comega_s_): thread_worker_struct(ipars_[0], ipars_[1], ipars_[2], ipars_[3], ipars_[4], ts_, xs_, d_ang_, comega_s_) {}
 
   ~thread_worker_struct() {}
 
-  const int param_len,
+  const int ulen,
             nbeads,
             Frames,
             nlead,
-            npool,
-            ichunk_len,
-            dchunk_len;
+            npool;
 
   const double  dt_sim,
                 t_phys;
@@ -88,11 +86,37 @@ struct thread_worker_struct
           * const xs,
           * const d_ang,
           * const comega_s;
+};
+
+struct MH_params
+{
+  MH_params(MH_io *io_, int ulen_, int nlead_, int npool_, double dt_sim_, double t_phys_, double sigma_): io(io_),
+  ulen(ulen_), nbeads(io_->nbeads), Frames(io_->Frames), nlead(nlead_), npool(npool_), dt_sim(dt_sim_), t_phys(t_phys_), sigma(sigma_) {}
+  MH_params(MH_params &par_): MH_params(par_.io,par_.ulen,par_.nlead,par_.npool,par_.dt_sim,par_.t_phys,par_.sigma) {}
+
+  ~MH_params() {}
+
+  const int ulen, // length of parameter vector
+            nbeads, // number of beads
+            Frames, // number of observation frames
+            nlead, // number of leaders we store for review
+            npool; // number of parameter sets we evaluate at a time
+
+  const double  dt_sim, // The maximum simulation timestep to use
+                t_phys, // simulation time scale
+                sigma; // expected standard deviation of noise on reference data
+
+  MH_io * const io;
 
   protected:
 
-    virtual int get_ichunk_len() = 0;
-    virtual int get_dchunk_len() = 0;
+    #ifdef _OPENMP
+          inline int thread_num() {return omp_get_thread_num();}
+          inline int get_nt() {return omp_get_max_threads();}
+    #else
+          inline int thread_num() {return 0;}
+          inline int get_nt() {return 1;}
+    #endif
 };
 
 struct MH_train_struct
@@ -106,9 +130,6 @@ struct MH_train_struct
               * const sp_max;
   wall_list * const wl;
 
-  inline int get_record_len() {return par->nlead+par->npool;}
-  inline int get_par_nbeads() {return par->io->nbeads;}
-  inline int get_io_obuf_len() {return par->io->obuf_len;}
   inline int get_par_nbeads() {return par->nbeads;}
 };
 

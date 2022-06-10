@@ -4,53 +4,57 @@
 #include "MH_auxiliary.hh"
 #include "MH_tools.hh"
 
-#ifdef _OPENMP
-#include "omp.h"
-#endif
+int find_worst_record(record ** r_, int ncap_);
+int find_best_record(record ** r_, int ncap_);
 
 struct record: public record_struct
 {
-  record(record_struct &rec_, int rid_, double * u_): record_struct(rec_), rid(rid_), u(u_) {}
+  record(record_struct &rs_, int rid_, int * ichunk_, double * dchunk_, double * u_): record_struct(rec_), rid(rid_), ichunk(ichunk_), dchunk(dchunk_), u(u_) {}
   ~record() {}
-
-  bool success;
 
   const int rid;
 
-  double * const u;
+  int * const ichunk;
+
+  double  * const dchunk,
+          * const u;
+
+  inline void draw_ranuni(MH_rng * ran_, double * umin_, double * umax_)
+  {for (int i = 0; i < ulen; i++) u[i] = umin_[i]+(umax_[i]-umin_[i])*ran_->rand_uni();}
 
   virtual int isworse(record * r_) = 0;
   virtual int isbetter(record * r_) = 0;
+
 };
 
 class thread_worker: public swirl, public thread_worker_struct
 {
     public:
 
-      thread_worker(swirl_param &sp_, proximity_grid * pg_, wall_list &wl_, thread_worker_struct &tws, int thread_id_);
-      ~thread_worker();
+      thread_worker(swirl_param &sp_, proximity_grid * pg_, wall_list &wl_, thread_worker_struct &tws_, int thread_id_): swirl(sp_, pg_, wl_, tws.nbeads), thread_worker_struct(tws_),
+      thread_id(thread_id_),
+      u(&Kn), p(new double[2*nbeads*Frames]) {}
+      ~thread_worker() {delete p;}
 
     protected:
 
       const int thread_id;
 
-      int * const ichunk;
-
       double  * const u,
-              * const dchunk;
-
+              * const p;
 };
 
+
+const int MH_train_ilen=9;
+const int MH_train_dlen=3;
 class MH_trainer : public MH_params
 {
   public:
 
-    MH_trainer(MH_params &par_, swirl_param &sp_min_, swirl_param &sp_max_, wall_list &wl_);
-    MH_trainer(MH_train_struct &mhti): MH_trainer(*(mhti.par), *(mhti.sp_min), *(mhti.sp_max), *(mhti.wl)) {}
+    MH_trainer(MH_params &par_, swirl_param &sp_min_, swirl_param &sp_max_, wall_list &wl_, int ichunk_width_, int dchunk_width_);
+    MH_trainer(MH_train_struct &mhts_, int ichunk_width_, int dchunk_width_)
+    : MH_trainer(*(mhts_.par), *(mhts_.sp_min), *(mhts_.sp_max), *(mhts_.wl), ichunk_width_, dchunk_width_) {}
     ~MH_trainer();
-
-    swirl_param sp_min, // lower boundary of parameter space U
-                sp_max; // upper boundary of parameter space U
 
     int leader_count, // current number of leaders
         nsuccess, // number of parameters better than current worst leader in recent trial
@@ -66,36 +70,37 @@ class MH_trainer : public MH_params
             bres, // current best leader residual
             wres; // current worst leader residual
 
-    double * const  ts, // wall time of observed data
-           * const  xs, // 2D observed position data
-           * const  d_ang, // observed angular position of dish
-           * const  comega_s, // observed average rotational speed of dish
-           ** const u_chunk; // space for parameters
-
     protected:
 
-      const int nt; // number of worker threads
+      const int nt, // number of worker threads
+                ichunk_width,
+                dchunk_width;
 
+      int ** const ichunk; // space for records to store integer parameters
+
+      double * const  ts, // wall time of observed data
+             * const  xs, // 2D observed position data
+             * const  d_ang, // observed angular position of dish
+             * const  comega_s, // observed average rotational speed of dish
+             ** const uchunk, // space for parameters
+             ** const dchunk; // space for records to store double parameters
+
+      swirl_param sp_min, // lower boundary of parameter space U
+                  sp_max; // upper boundary of parameter space U
       wall_list &wl; // a reference to the list of walls for the swirling simulation.
       proximity_grid ** const pg; // array of proximity grids.
-      AYrng ** rng; // random number generators
-
-#ifdef _OPENMP
-      inline int thread_num() {return omp_get_thread_num();}
-      inline int get_nt() {return omp_get_max_threads();}
-#else
-      inline int thread_num() {return 0;}
-      inline int get_nt() {return 1;}
-#endif
+      MH_rng ** rng; // random number generators
 };
 
-const int basic_record_ilen=5;
-const int basic_record_dlen=2;
-
+const int basic_rec_ilen=5;
+const int basic_rec_dlen=2;
 struct basic_record: public record
 {
-  basic_record(record_struct &rec_, int rid_, double * u_, int * int_chunk_, double * double_chunk_): record(rec_, rid_, u_), iparams(&gen), dparams(&r2) {}
+  basic_record(record_struct &rs_, int rid_, int * ichunk_, double * dchunk_, double * u_): record(rs_, rid_, ichunk_, dchunk_, u_), basic_rec_ints(&gen), basic_rec_dubs(&r2) {}
+  basic_record(record_struct &rs_, int rid_, int * ichunk_, double * dchunk_, double * u_, MH_rng * ran_, double * umin_, double * umax_): basic_record(rs_, rid_, ichunk_, dchunk_, u_) {draw_ranuni(ran_,umin_,umax_);}
   ~basic_record();
+
+  bool success;
 
   int gen, // generation in which this particle was generated
       parent_gen, // generation this particle comes from
@@ -103,54 +108,39 @@ struct basic_record: public record
       parent_rid, // index position of parent particle
       dup_count; // number of times this particle has been duplicated
 
-  int * const iparams;
+  int * const basic_rec_ints;
 
   double  r2,
           w;
 
-  double * const dparams;
+  double * const basic_rec_dubs;
 };
 
 class basic_thread_worker: public thread_worker, public event_detector
 {
     public:
 
-      basic_thread_worker(thread_work_struct &tws_, int thread_id_, double alpha_tol_): thread_worker(tws_, thread_id_), event_detector(alpha_tol_) {}
+      basic_thread_worker(thread_work_struct &tws_, int thread_id_, double alpha_tol_): thread_worker(tws_, thread_id_), event_detector(nbeads, Frames, alpha_tol_) {}
       ~basic_thread_worker() {}
-
-    protected:
-
-      int * const lead_dup_count, // lead_dup_count = ichunk+0
-          ** const event_frame_count; // event_frame_count[0] = ichunk + nlead
-
-      double  ** const r2_bead,
-              ** const INTr2_bead,
-              ** const alpha_bead,
-              * const p_sim,
-              * const r2_bead_mat;
-
-      virtual int get_ichunk_len()  {return nlead + // lead_dup_count
-                                            (nbeads*Frames); // event_frame_count
-                                    }
-
-      virtual int get_dchunk_len()  {return (nbeads*Frames) + // r2_bead
-                                            (nbeads*3) + // INTr2_bead
-                                            (nbeads*Frames) + // alpha_bead
-                                            (2*nbeads*Frames) + // p_sim
-                                            (nbeads*nbeads); // r2_bead_mat
-                                    }
 };
 
 class basic_MH_trainer: public MH_trainer, public gaussian_likelihood
 {
     public:
 
-      basic_MH_trainer(MH_train_struct &mhts_, double t_wheels0_): MH_trainer(mhts_), gaussian_likelihood(mhts_.par.sigma, mhts_.sp_min.cl_im), t_wheels(t_wheels0_) {}
+      basic_MH_trainer(MH_train_struct &mhts_, int ichunk_width_, int dchunk_width_, double t_wheels0_=-1.0): MH_trainer(mhts_, ichunk_width_, dchunk_width_), gaussian_likelihood(mhts_.par.sigma, mhts_.sp_min.cl_im),
+      t_wheels(t_wheels0_), apply_training_wheels(t_wheels>0.0)
+      umin(&(sp_min.Kn)), umax(&(sp_max.Kn)) {}
       ~basic_MH_trainer() {}
 
+    protected:
+
+      bool apply_training_wheels;
+
       double t_wheels; // current drift fraction
+
+      double  * const umin,
+              * const umax;
 };
-int find_worst_record(record ** r_, int ncap_);
-int find_best_record(record ** r_, int ncap_);
 
 #endif

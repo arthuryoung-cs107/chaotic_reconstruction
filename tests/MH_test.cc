@@ -9,7 +9,7 @@
 const int param_id=0;
 const int MH_id=0;
 
-const int param_len = 12;
+const int ulen = 12;
 const int nbeads=3;
 const int nlead = 12;
 const int npool = 2000;
@@ -55,7 +55,7 @@ int main()
 
   // sampling parameters
   MH_io mh_io(proc_loc, test_dir, data_name, MH_id, noise_data, noise_sigma);
-  MH_params mh_par(&mh_io, param_len, nlead, npool, dt_sim, t_phys, noise_sigma);
+  MH_params mh_par(&mh_io, ulen, nlead, npool, dt_sim, t_phys, noise_sigma);
   MH_train_struct mhts(&mh_par, &sp_min, &sp_max, &wl);
 
   // test parameters
