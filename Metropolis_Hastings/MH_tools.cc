@@ -1,16 +1,18 @@
 #include "MH_tools.hh"
 
-template <class T> T ** Tmatrix(int M_, int N_)
+void fseek_SAFE(FILE *fp,long int offset,int origin)
 {
-  T * chunk = new T[M_*N_],
-    ** rows = new T*[M_];
-  for (int i = 0,j=0; i < M_; i++,j+=N_)
-    rows[i] = chunk+j;
-  return rows;
+  if(fseek(fp,offset,origin)!=0)
+  {
+    printf("fseek_SAFE: error shifting file position by %ld bytes\n",offset);
+    exit(1);
+  }
 }
-
-template <class T> void free_Tmatrix(T ** Tmat_)
+void fread_SAFE(void *ptr,size_t size,size_t count,FILE *fp)
 {
-  delete [] Tmat_[0];
-  delete [] Tmat_;
+  if(fread(ptr,size,count,fp)!=count)
+  {
+    printf("fread_SAFE: can't read file\n");
+    exit(1);
+  }
 }

@@ -20,12 +20,12 @@ int find_best_record(record ** r_, int ncap_)
 }
 
 MH_trainer::MH_trainer(MH_params &par_, swirl_param &sp_min_, swirl_param &sp_max_, wall_list &wl_, int ichunk_width_, int dchunk_width_) : MH_params(par_),
-nt(get_nt()), ichunk_width(ichunk_len_), dchunk_width(dchunk_width_),
+nt(get_nt()), ichunk_width(ichunk_width_), dchunk_width(dchunk_width_),
 ichunk(Tmatrix<int>(nlead+npool, ichunk_width)),
 ts(new double[Frames]), xs(new double[2*nbeads*Frames]), d_ang(new double[Frames]), comega_s(new double[Frames]),
 dchunk(Tmatrix<double>(nlead+npool, dchunk_width)), uchunk(Tmatrix<double>(nlead+npool, ulen)),
 sp_min(sp_min_), sp_max(sp_max_), wl(wl_),
-pg(new proximity_grid*[nt]), rng(new MH_rng*[nt]),
+pg(new proximity_grid*[nt]), rng(new MH_rng*[nt])
 {
   io->load_reference(ts, xs, d_ang, comega_s, t_phys);
 

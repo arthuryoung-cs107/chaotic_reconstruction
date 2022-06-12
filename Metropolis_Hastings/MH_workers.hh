@@ -7,7 +7,7 @@ class MH_medic: public basic_thread_worker
 {
   public:
 
-    MH_medic(thread_work_struct &tws_, int thread_id_, double alpha_tol_, int Frames_test_, char * test_directory_);
+    MH_medic(swirl_param &sp_, proximity_grid *pg_, wall_list &wl_, thread_worker_struct &tws_, int thread_id_, double alpha_tol_, int Frames_test_, char * test_directory_);
     ~MH_medic();
 
   private:
@@ -23,6 +23,4 @@ class MH_medic: public basic_thread_worker
             * const TEST_alpha,
             * const TEST_INTr2;
 };
-
-
 #endif

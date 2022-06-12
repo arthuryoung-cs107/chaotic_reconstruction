@@ -1,24 +1,24 @@
 #include "MH_auxiliary.hh"
 #include "MH_tools.hh"
 
-int set_special_params(int id_, double *vec_)
+int set_special_u(int id_, double *vec_)
 {
   int id_out=0;
-  if ((id_>=0)&&(id_<special_param_count)) id_out=id_;
+  if ((id_>=0)&&(id_<special_u_count)) id_out=id_;
   else printf("WARNING: invalid parameter ID (%d). Using default parameters\n", id_);
 
-  for (int i = 0; i < full_param_len; i++) vec_[i] = special_parameters[id_out][i];
+  for (int i = 0; i < full_ulen; i++) vec_[i] = special_u[id_out][i];
   return id_out;
 }
 
-int set_special_params(const char *id_, double*vec_)
+int set_special_u(const char *id_, double*vec_)
 {
-  if (strcmp(id_, "true")==0) return set_special_params(0, dvec_);
-  else if (strcmp(id_, "min")==0) return set_special_params(1, dvec_);
-  else if (strcmp(id_, "max")==0) return set_special_params(2, dvec_);
-  else if (strcmp(id_, "pert")==0) return set_special_params(3, dvec_);
-  else if (strcmp(id_, "b3i0r5")==0) return set_special_params(4, dvec_);
-  else return set_special_params(-1, dvec_);
+  if (strcmp(id_, "true")==0) return set_special_u(0, vec_);
+  else if (strcmp(id_, "min")==0) return set_special_u(1, vec_);
+  else if (strcmp(id_, "max")==0) return set_special_u(2, vec_);
+  else if (strcmp(id_, "pert")==0) return set_special_u(3, vec_);
+  else if (strcmp(id_, "b3i0r5")==0) return set_special_u(4, vec_);
+  else return set_special_u(-1, vec_);
 }
 
 MH_io::MH_io(char * proc_loc_, char * test_dir_, char * data_name_, int id_, bool noise_data_, double noise_sigma_): proc_loc(proc_loc_), test_dir(test_dir_), data_name(data_name_),
@@ -48,9 +48,9 @@ void MH_io::load_reference(double *ts_, double *xs_, double *d_ang_, double * co
 {
   sprintf(ibuf+ibuf_len, ".filin");
   FILE * inputs = fopen(ibuf, "r");
-  fread_safe(ts_, sizeof(double), Frames, inputs);
-  fread_safe(xs_, sizeof(double), 2*Frames*nbeads, inputs);
-  fread_safe(d_ang_, sizeof(double), Frames, inputs);
+  fread_SAFE(ts_, sizeof(double), Frames, inputs);
+  fread_SAFE(xs_, sizeof(double), 2*Frames*nbeads, inputs);
+  fread_SAFE(d_ang_, sizeof(double), Frames, inputs);
   fclose(inputs);
 
   if (noise_data)

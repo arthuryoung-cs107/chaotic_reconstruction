@@ -7,7 +7,7 @@ class MH_doctor : public basic_MH_trainer
 {
   public:
 
-    MH_doctor(MH_train_struct &mhts_, int test_id_, int Frames_test_, int test_relay_id_, double alpha_tol_);
+    MH_doctor(MH_train_struct &mhts_, int test_id_, int test_relay_id_, int Frames_test_, double alpha_tol_);
     ~MH_doctor();
 
   private:

@@ -1,11 +1,28 @@
 #ifndef MH_TOOLS_HH
 #define MH_TOOLS_HH
 
+#include <cmath>
 #include <gsl/gsl_rng.h>
 #include <gsl/gsl_randist.h>
 
-template <class T> T ** Tmatrix(int M_, int N_);
-template <class T> void free_Tmatrix(T ** Tmat_);
+template <typename T> T ** Tmatrix(int M_, int N_)
+{
+  T * chunk = new T[M_*N_],
+    ** rows = new T*[M_];
+  for (int i = 0,j=0; i < M_; i++,j+=N_)
+    rows[i] = chunk+j;
+  return rows;
+}
+
+template <typename T> void free_Tmatrix(T ** Tmat_)
+{
+  delete [] Tmat_[0];
+  delete [] Tmat_;
+}
+
+
+void fseek_SAFE(FILE *fp,long int offset,int origin);
+void fread_SAFE(void *ptr,size_t size,size_t count,FILE *fp);
 
 struct MH_rng
 {
@@ -17,13 +34,13 @@ struct MH_rng
 
   inline double rand_uni(double low_=0.0,double high_=1.0) {return (gsl_rng_uniform(gsl_gen)-0.5)*(high_-low_) + 0.5*(high_+low_);}
 
-  inline double rand_gau(double mu_=0.0, double sigma_=1.0) {return mu_+gsl_ran_gaussian(gsl_rng,sigma_);}
+  inline double rand_gau(double mu_=0.0, double sigma_=1.0) {return mu_+gsl_ran_gaussian(gsl_gen,sigma_);}
 };
 
 struct gaussian_likelihood
 {
   gaussian_likelihood(double noise_tol_, double cl_): noise_tol(noise_tol_), cl(cl_), coeff(cl*noise_tol) {}
-  ~gaussian_likelihood();
+  ~gaussian_likelihood() {}
 
   const double  noise_tol,
                 cl,
@@ -60,7 +77,6 @@ struct event_detector
           ** const alpha_state_comp,
           ** const r2_comp_regime,
           ** const INTr2_comp_history;
-
 
   inline double alpha_comp(double *a_, double t_p1, double t_m1)
   {return log(a_[0]/a_[2])/log(t_p1/t_m1);}

@@ -7,9 +7,9 @@
 #include "omp.h"
 #endif
 
-const int full_param_len=14;
-const int special_param_count=5;
-const double special_parameters[][full_param_len] = {
+const int full_ulen=14;
+const int special_u_count=5;
+const double special_u[][full_ulen] = {
 /* 0  1    2      3     4     5     6   7    8   9   10    11    12    13
  {rad,mass,Kn    ,gb   ,gf   ,gw   ,mb ,mf  ,mw ,ds ,cx_im,cy_im,cl_im,wallsca} */
   0.5,1.0, 1000.0,40.0 ,40.0 ,40.0 ,0.5,0.25,0.5,1.8,203.0,178.0,27.6 ,1.0, // 0: default from Rycroft
@@ -19,8 +19,8 @@ const double special_parameters[][full_param_len] = {
   0.5,1.0,968.783014762039e+000,41.2628475974082e+000,37.6024843085871e+000,40.1025717087601e+000,786.658543983309e-003,248.062481196825e-003,508.720872282600e-003,1.8,203.0,178.0,27.6,1.0 // 4: solution from nbeads=3, par_id=0, relay_id=5 relay
 };
 
-int set_special_params(int id_, double *vec_);
-int set_special_params(const char *id_, double*vec_);
+int set_special_u(int id_, double *vec_);
+int set_special_u(const char *id_, double*vec_);
 
 struct MH_io
 {
@@ -51,12 +51,11 @@ struct MH_io
     void read_fisml(char * ibuf_);
 };
 
-
 struct record_struct
 {
   record_struct(int ulen_, int nbeads_, int Frames_, int ichunk_len_, int dchunk_len_): ulen(ulen_), nbeads(nbeads_), Frames(Frames_), ichunk_len(ichunk_len_), dchunk_len(dchunk_len_) {}
   record_struct(record_struct &rs_): record_struct(rs_.ulen, rs_.nbeads, rs_.Frames, rs_.ichunk_len, rs_.dchunk_len) {}
-  ~record_struct();
+  ~record_struct() {}
 
   const int ulen,
             nbeads,
@@ -69,7 +68,7 @@ struct thread_worker_struct
 {
   thread_worker_struct(int ulen_, int nbeads_, int Frames_, int nlead_, int npool_, double dt_sim_, double t_phys_, double *ts_, double *xs_, double *d_ang_, double *comega_s_): ulen(ulen_), nbeads(nbeads_), Frames(Frames_), nlead(nlead_), npool(npool_), dt_sim(dt_sim_), t_phys(t_phys_), ts(ts_), xs(xs_), d_ang(d_ang_), comega_s(comega_s_) {}
   thread_worker_struct(thread_worker_struct &tws_): thread_worker_struct(tws_.ulen, tws_.nbeads, tws_.Frames, tws_.nlead, tws_.npool, tws_.dt_sim, tws_.t_phys, tws_.ts, tws_.xs, tws_.d_ang, tws_.comega_s) {}
-  thread_worker_struct(int * ipars_, double * dpars_,double * ts_, double * xs_, double * d_ang_, double * comega_s_): thread_worker_struct(ipars_[0], ipars_[1], ipars_[2], ipars_[3], ipars_[4], ts_, xs_, d_ang_, comega_s_) {}
+  thread_worker_struct(const int * ipars_, const double * dpars_,double * ts_, double * xs_, double * d_ang_, double * comega_s_): thread_worker_struct(ipars_[0], ipars_[1], ipars_[2], ipars_[3], ipars_[4], dpars_[0], dpars_[1], ts_, xs_, d_ang_, comega_s_) {}
 
   ~thread_worker_struct() {}
 
@@ -122,7 +121,7 @@ struct MH_params
 struct MH_train_struct
 {
   MH_train_struct(MH_params *par_, swirl_param *sp_min_, swirl_param *sp_max_, wall_list *wl_): par(par_), sp_min(sp_min_), sp_max(sp_max_), wl(wl_) {}
-  MH_train_struct(MH_train_struct &mhts_): MH_train_struct(mhts_.par, mhts_.sp_min, mhts_.sp_min, mhts_.sp_max, mhts_.wl) {}
+  MH_train_struct(MH_train_struct &mhts_): MH_train_struct(mhts_.par, mhts_.sp_min, mhts_.sp_max, mhts_.wl) {}
   ~MH_train_struct() {}
 
   MH_params * const par;

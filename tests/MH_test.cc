@@ -4,7 +4,7 @@
 #include <cmath>
 #include <assert.h>
 
-#include "MH_learning.hh"
+#include "MH_solvers.hh"
 
 const int param_id=0;
 const int MH_id=0;
@@ -40,8 +40,8 @@ int main()
          t_phys=sqrt(d_phys/g_phys);   // Time unit (s)
 
   double  sp_min_vals[14], sp_max_vals[14];
-  int idmin=set_special_params("min", sp_min_vals),
-  idmax=set_special_params("max", sp_max_vals);
+  int idmin=set_special_u("min", sp_min_vals),
+  idmax=set_special_u("max", sp_max_vals);
 
   swirl_param sp_min(sp_min_vals), sp_max(sp_max_vals);
 
@@ -61,9 +61,12 @@ int main()
   // test parameters
   int test_id=2,
       Frames_test=1201,
-      test_relay_id=2;
+      test_relay_id=2,
+      verbose=true;
 
-  MH_doctor mh_doc(&mhts, test_id, Frames_test, test_relay_id, alpha_tol);
+  MH_doctor mh_doc(mhts, test_id, test_relay_id, Frames_test, alpha_tol);
+
+  // mh_doc.run_test(verbose);
 
   // for (int i = 0; i < 12; i++)
   // {

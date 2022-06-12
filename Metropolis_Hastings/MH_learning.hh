@@ -4,12 +4,9 @@
 #include "MH_auxiliary.hh"
 #include "MH_tools.hh"
 
-int find_worst_record(record ** r_, int ncap_);
-int find_best_record(record ** r_, int ncap_);
-
 struct record: public record_struct
 {
-  record(record_struct &rs_, int rid_, int * ichunk_, double * dchunk_, double * u_): record_struct(rec_), rid(rid_), ichunk(ichunk_), dchunk(dchunk_), u(u_) {}
+  record(record_struct &rs_, int rid_, int * ichunk_, double * dchunk_, double * u_): record_struct(rs_), rid(rid_), ichunk(ichunk_), dchunk(dchunk_), u(u_) {}
   ~record() {}
 
   const int rid;
@@ -22,16 +19,15 @@ struct record: public record_struct
   inline void draw_ranuni(MH_rng * ran_, double * umin_, double * umax_)
   {for (int i = 0; i < ulen; i++) u[i] = umin_[i]+(umax_[i]-umin_[i])*ran_->rand_uni();}
 
-  virtual int isworse(record * r_) = 0;
-  virtual int isbetter(record * r_) = 0;
-
+  virtual int isworse(record * r_) {printf("(record) WARNING: using uninitialized record comparison\n"); return 0;}
+  virtual int isbetter(record * r_) {printf("(record) WARNING: using uninitialized record comparison\n"); return 0;}
 };
 
 class thread_worker: public swirl, public thread_worker_struct
 {
     public:
 
-      thread_worker(swirl_param &sp_, proximity_grid * pg_, wall_list &wl_, thread_worker_struct &tws_, int thread_id_): swirl(sp_, pg_, wl_, tws.nbeads), thread_worker_struct(tws_),
+      thread_worker(swirl_param &sp_, proximity_grid * pg_, wall_list &wl_, thread_worker_struct &tws_, int thread_id_): swirl(sp_, pg_, wl_, tws_.nbeads), thread_worker_struct(tws_),
       thread_id(thread_id_),
       u(&Kn), p(new double[2*nbeads*Frames]) {}
       ~thread_worker() {delete p;}
@@ -98,7 +94,7 @@ struct basic_record: public record
 {
   basic_record(record_struct &rs_, int rid_, int * ichunk_, double * dchunk_, double * u_): record(rs_, rid_, ichunk_, dchunk_, u_), basic_rec_ints(&gen), basic_rec_dubs(&r2) {}
   basic_record(record_struct &rs_, int rid_, int * ichunk_, double * dchunk_, double * u_, MH_rng * ran_, double * umin_, double * umax_): basic_record(rs_, rid_, ichunk_, dchunk_, u_) {draw_ranuni(ran_,umin_,umax_);}
-  ~basic_record();
+  ~basic_record() {}
 
   bool success;
 
@@ -114,13 +110,16 @@ struct basic_record: public record
           w;
 
   double * const basic_rec_dubs;
+
+  virtual int isworse(basic_record * r_) {return r2>r_->r2;}
+  virtual int isbetter(basic_record * r_) {return r2<r_->r2;}
 };
 
 class basic_thread_worker: public thread_worker, public event_detector
 {
     public:
 
-      basic_thread_worker(thread_work_struct &tws_, int thread_id_, double alpha_tol_): thread_worker(tws_, thread_id_), event_detector(nbeads, Frames, alpha_tol_) {}
+      basic_thread_worker(swirl_param &sp_, proximity_grid *pg_, wall_list &wl_, thread_worker_struct &tws_, int thread_id_, double alpha_tol_): thread_worker(sp_, pg_, wl_, tws_, thread_id_), event_detector(nbeads, Frames, alpha_tol_) {}
       ~basic_thread_worker() {}
 };
 
@@ -128,8 +127,8 @@ class basic_MH_trainer: public MH_trainer, public gaussian_likelihood
 {
     public:
 
-      basic_MH_trainer(MH_train_struct &mhts_, int ichunk_width_, int dchunk_width_, double t_wheels0_=-1.0): MH_trainer(mhts_, ichunk_width_, dchunk_width_), gaussian_likelihood(mhts_.par.sigma, mhts_.sp_min.cl_im),
-      t_wheels(t_wheels0_), apply_training_wheels(t_wheels>0.0)
+      basic_MH_trainer(MH_train_struct &mhts_, int ichunk_width_, int dchunk_width_, double t_wheels0_=-1.0): MH_trainer(mhts_, ichunk_width_, dchunk_width_), gaussian_likelihood(mhts_.par->sigma, mhts_.sp_min->cl_im),
+      t_wheels(t_wheels0_), apply_training_wheels(t_wheels>0.0),
       umin(&(sp_min.Kn)), umax(&(sp_max.Kn)) {}
       ~basic_MH_trainer() {}
 
@@ -142,5 +141,8 @@ class basic_MH_trainer: public MH_trainer, public gaussian_likelihood
       double  * const umin,
               * const umax;
 };
+
+int find_worst_record(record ** r_, int ncap_);
+int find_best_record(record ** r_, int ncap_);
 
 #endif
