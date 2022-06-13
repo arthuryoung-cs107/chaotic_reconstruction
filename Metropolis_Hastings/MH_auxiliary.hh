@@ -27,12 +27,6 @@ struct MH_io
   MH_io(char * proc_loc_, char * test_dir_, char * data_name_, int id_, bool noise_data_=false, double noise_sigma_=0.0);
   ~MH_io();
 
-  char  * const proc_loc,
-        * const test_dir,
-        * const data_name,
-        * const obuf,
-        * const ibuf;
-
   const size_t fullbuf_len;
   size_t  obuf_len,
           ibuf_len;
@@ -41,6 +35,12 @@ struct MH_io
 
   int Frames,
       nbeads;
+
+  char  * const proc_loc,
+        * const test_dir,
+        * const data_name,
+        * const obuf,
+        * const ibuf;
 
   void load_reference(double *ts_, double *xs_, double *d_ang_, double * comega_s_, double t_phys_);
 

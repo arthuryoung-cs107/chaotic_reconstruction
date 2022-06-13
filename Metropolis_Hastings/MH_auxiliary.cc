@@ -21,10 +21,11 @@ int set_special_u(const char *id_, double*vec_)
   else return set_special_u(-1, vec_);
 }
 
-MH_io::MH_io(char * proc_loc_, char * test_dir_, char * data_name_, int id_, bool noise_data_, double noise_sigma_): proc_loc(proc_loc_), test_dir(test_dir_), data_name(data_name_),
-id(id_), fullbuf_len(strlen(proc_loc)+strlen(test_dir)+strlen(data_name_)),
+MH_io::MH_io(char * proc_loc_, char * test_dir_, char * data_name_, int id_, bool noise_data_, double noise_sigma_): fullbuf_len(strlen(proc_loc_)+strlen(test_dir_)+strlen(data_name_)),
+proc_loc(proc_loc_), test_dir(test_dir_), data_name(data_name_),
+id(id_),
 noise_data(noise_data_), noise_sigma(noise_sigma_),
-obuf(new char[fullbuf_len+100]), ibuf(new char[fullbuf_len+10])
+obuf(new char[fullbuf_len+100]), ibuf(new char[fullbuf_len+100])
 {
   sprintf(obuf,"%s%s",proc_loc,test_dir); obuf_len=strlen(obuf);
   sprintf(ibuf,"%s%s%s",proc_loc,test_dir,data_name); ibuf_len=strlen(ibuf);

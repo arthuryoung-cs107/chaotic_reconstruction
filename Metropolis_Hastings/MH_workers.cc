@@ -99,8 +99,8 @@ int MH_medic::start_test_u(event_record * rec_, double * t_history_, double &net
   return f_local;
 }
 
-void MH_medic::test_u(event_record * rec_, int i_)
-{  
+void MH_medic::test_u(event_record * rec_, int i_, bool verbose_)
+{
   double t_history[3], net_r2_local;
   int f_local = start_test_u(rec_, t_history, net_r2_local),
       poffset=ndof*f_local,
@@ -192,7 +192,7 @@ void MH_medic::test_u(event_record * rec_, int i_)
 
   // set record data
   rec_->record_event_data(&nf_obs,&net_r2);
-  printf("(thread %d) Tested parameter %d.\n", thread_id,i_);
+  if (verbose_) printf("(thread %d) Tested parameter %d.\n", thread_id,i_);
   write_utest_results(rec_,i_);
 }
 

@@ -3,12 +3,19 @@
 #include <assert.h>
 #include <sys/stat.h>
 
+int check(int check_)
+{
+  printf("check: %d\n", check_);
+  return(check_);
+}
+
 MH_doctor::MH_doctor(MH_train_struct &mhts_, int test_id_, int test_relay_id_, int Frames_test_, double alpha_tol_): basic_MH_trainer(mhts_,comp_event_rec_ichunk_len(mhts_.get_par_nbeads()),comp_event_rec_dchunk_len(mhts_.get_par_nbeads())),
 test_id(test_id_), test_relay_id(test_relay_id_), Frames_test(Frames_test_),
 alpha_tol(alpha_tol_),
 test_buffer(new char[io->obuf_len+100]),
 TEST_refp(new double[2*Frames_test*nbeads]),
-medics(new MH_medic*[nt]), records(new event_record*[nlead+npool])
+medics(new MH_medic*[nt]), records(new event_record*[nlead+npool]),
+leaders(records), pool(records+nlead)
 {
   // write the name of the input data file
   sprintf(test_buffer, "%s%s.re%d_test%d.redat", io->obuf,io->data_name,test_relay_id,test_id);
@@ -18,7 +25,7 @@ medics(new MH_medic*[nt]), records(new event_record*[nlead+npool])
   // read the input parameters
   int header[2];
   fread_SAFE(header, sizeof(int), 2, test_file);
-  assert((header[0]==ulen)&&(header[1]<=npool));
+  assert((header[0]==ulen)&&(header[1]==npool));
   fread_SAFE(uchunk[nlead], sizeof(double), header[0]*header[1], test_file);
   fclose(test_file);
 
@@ -27,7 +34,6 @@ medics(new MH_medic*[nt]), records(new event_record*[nlead+npool])
   test_buf_end = strlen(test_buffer);
   mkdir(test_buffer, S_IRWXU);
   printf("Made test directory: %s\n", test_buffer);
-
 
   // constant structures for initializing thread workers and records
   thread_worker_struct tws(&ulen,&dt_sim,ts,xs,d_ang,comega_s);
@@ -42,8 +48,6 @@ medics(new MH_medic*[nt]), records(new event_record*[nlead+npool])
       for (int i = 0; i < nlead+npool; i++)
         records[i] = new event_record(rs, i, ichunk[i], dchunk[i], uchunk[i]);
   }
-  leaders=records;
-  pool=records+nlead;
 }
 
 MH_doctor::~MH_doctor()
@@ -72,7 +76,7 @@ void MH_doctor::run(bool verbose_)
     #pragma omp for nowait
       for (int i = 0; i < npool; i++)
       {
-        med_t->test_u(pool[i],i);
+        med_t->test_u(pool[i],i, verbose_);
       }
     #pragma omp critical
     {

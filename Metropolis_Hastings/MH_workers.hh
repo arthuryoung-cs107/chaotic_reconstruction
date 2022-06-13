@@ -10,9 +10,10 @@ class MH_medic: public basic_thread_worker
     MH_medic(swirl_param &sp_, proximity_grid *pg_, wall_list &wl_, thread_worker_struct &tws_, int thread_id_, double alpha_tol_, int Frames_test_, char * test_directory_);
     ~MH_medic();
 
-    inline void initialize_utest() {for (int i = 0; i < nbeads*Frames; i++) evcount_comp_state[0][i] = 0;}
-    void test_u(event_record *rec_, int i_);
+    void test_u(event_record *rec_, int i_, bool verbose_);
     bool consolidate_results(int ** evcount_comp_state_agg_, bool first2finish_);
+
+    inline void initialize_utest() {for (int i = 0; i < nbeads*Frames; i++) evcount_comp_state[0][i] = 0;}
 
   private:
 

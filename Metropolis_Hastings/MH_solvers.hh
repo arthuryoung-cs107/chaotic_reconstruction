@@ -14,14 +14,9 @@ class MH_doctor : public basic_MH_trainer
     void stage_diagnostics();
     void close_diagnostics();
 
-    event_record  ** leaders,
-                  ** pool;
-
   private:
 
     size_t test_buf_end;
-
-    char * const test_buffer;
 
     const int test_id,
               test_relay_id,
@@ -29,10 +24,13 @@ class MH_doctor : public basic_MH_trainer
 
     const double alpha_tol;
 
+    char * const test_buffer;
     double  * const TEST_refp;
-
     MH_medic ** const medics;
-    event_record ** const records;
+
+    event_record  ** const records,
+                  ** const leaders,
+                  ** const pool;
 };
 
 #endif

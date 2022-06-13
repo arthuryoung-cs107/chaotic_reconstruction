@@ -48,7 +48,6 @@ struct event_detector
   free_Tmatrix<double>(r2_comp_regime);
   free_Tmatrix<double>(INTr2_comp_history);}
 
-
   const int ncomp, // nbeads
             nstates, // Frames
             dof, // x,y

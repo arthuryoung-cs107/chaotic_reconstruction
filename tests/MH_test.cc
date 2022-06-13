@@ -12,7 +12,7 @@ const int MH_id=0;
 const int ulen = 12;
 const int nbeads=3;
 const int nlead = 12;
-const int npool = 2000;
+const int npool = 1000;
 const double dt_sim = 0.002;
 const double t_wheels = 0.012;
 

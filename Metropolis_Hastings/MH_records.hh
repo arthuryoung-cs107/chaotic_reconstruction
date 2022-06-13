@@ -20,11 +20,10 @@ struct event_record : public basic_record
   int nfobs,
       nfstable,
       nfunstable;
-
-  int * evframe_bead;
-
   double  r2stable,
           r2unstable;
+
+  int * evframe_bead;
 
   double  * r2stable_bead,
           * r2unstable_bead,

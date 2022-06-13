@@ -72,9 +72,6 @@ class MH_trainer : public MH_params
     : MH_trainer(*(mhts_.par), *(mhts_.sp_min), *(mhts_.sp_max), *(mhts_.wl), ichunk_width_, dchunk_width_) {}
     ~MH_trainer();
 
-    int * const MHT_ints;
-    double * const MHT_dubs;
-
     virtual void run(bool verbose_) = 0;
     virtual void stage_diagnostics() = 0;
     virtual void close_diagnostics() = 0;
@@ -101,16 +98,18 @@ class MH_trainer : public MH_params
           ndup_unique, // total number of unique duplications from recent resampling
           nredraw; // total number of trial particles drawn from proposal distribution in recent resampling
 
-      int ** const ichunk; // space for records to store integer parameters
-
       double  rho2, // current expected residual
               bres, // current best leader residual
               wres; // current worst leader residual
+
+      int * const MHT_ints,
+          ** const ichunk; // space for records to store integer parameters
 
       double * const  ts, // wall time of observed data
              * const  xs, // 2D observed position data
              * const  d_ang, // observed angular position of dish
              * const  comega_s, // observed average rotational speed of dish
+             * const MHT_dubs,
              ** const uchunk, // space for parameters
              ** const dchunk; // space for records to store double parameters
 
@@ -137,10 +136,10 @@ struct basic_record: public record
       parent_rid, // index position of parent particle
       dup_count; // number of times this particle has been duplicated
 
-  int * const basic_rec_ints;
-
   double  r2,
           w;
+
+  int * const basic_rec_ints;
 
   double * const basic_rec_dubs;
 
@@ -177,11 +176,11 @@ class basic_thread_worker: public thread_worker, public event_detector
           nf_stable,
           nf_unstable;
 
-      int * const basic_tw_ints;
-
       double  net_r2,
               net_r2_stable,
               net_r2_unstable;
+
+      int * const basic_tw_ints;
 
       double  * const basic_tw_dubs;
 };
@@ -190,10 +189,9 @@ class basic_MH_trainer: public MH_trainer, public gaussian_likelihood
 {
     public:
 
-      basic_MH_trainer(MH_train_struct &mhts_, int ichunk_width_, int dchunk_width_, double t_wheels0_=-1.0): MH_trainer(mhts_, ichunk_width_, dchunk_width_), gaussian_likelihood(mhts_.par->sigma, mhts_.sp_min->cl_im),
-      apply_training_wheels(t_wheels0_>0.0),
+      basic_MH_trainer(MH_train_struct &mhts_, int ichunk_width_, int dchunk_width_, double t_wheels0_=-1.0): MH_trainer(mhts_, ichunk_width_, dchunk_width_), gaussian_likelihood(sigma, mhts_.sp_min->cl_im),
+      apply_training_wheels(t_wheels0_>0.0), t_wheels0(t_wheels0_),
       evcount_bead_frame(Tmatrix<int>(nbeads, Frames)),
-      t_wheels0(t_wheels0_),
       umin(&(sp_min.Kn)), umax(&(sp_max.Kn)) {}
       ~basic_MH_trainer() {free_Tmatrix<int>(evcount_bead_frame);}
 
@@ -207,11 +205,11 @@ class basic_MH_trainer: public MH_trainer, public gaussian_likelihood
 
       bool apply_training_wheels;
 
+      const double t_wheels0; // initial drift fraction
+
+      double t_wheels; // current drift fraction
+
       int ** const evcount_bead_frame;
-
-      const double t_wheels0; // current drift fraction
-
-      double t_wheels;
 
       double  * const umin,
               * const umax;
