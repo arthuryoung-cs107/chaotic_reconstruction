@@ -87,10 +87,12 @@ struct thread_worker_struct
           * const comega_s;
 };
 
+const int MH_params_ilen=5;
+const int MH_params_dlen=3;
 struct MH_params
 {
   MH_params(MH_io *io_, int ulen_, int nlead_, int npool_, double dt_sim_, double t_phys_, double sigma_): io(io_),
-  ulen(ulen_), nbeads(io_->nbeads), Frames(io_->Frames), nlead(nlead_), npool(npool_), dt_sim(dt_sim_), t_phys(t_phys_), sigma(sigma_) {}
+  ulen(ulen_), nbeads(io_->nbeads), Frames(io_->Frames), nlead(nlead_), npool(npool_), dt_sim(dt_sim_), t_phys(t_phys_), sigma(sigma_), MH_params_ints(&ulen), MH_params_dubs(&dt_sim) {}
   MH_params(MH_params &par_): MH_params(par_.io,par_.ulen,par_.nlead,par_.npool,par_.dt_sim,par_.t_phys,par_.sigma) {}
 
   ~MH_params() {}
@@ -109,6 +111,8 @@ struct MH_params
 
   protected:
 
+    void write_MH_params(FILE * file_);
+
     #ifdef _OPENMP
           inline int thread_num() {return omp_get_thread_num();}
           inline int get_nt() {return omp_get_max_threads();}
@@ -116,6 +120,10 @@ struct MH_params
           inline int thread_num() {return 0;}
           inline int get_nt() {return 1;}
     #endif
+
+  private:
+    const int * const MH_params_ints;
+    const double * const MH_params_dubs;
 };
 
 struct MH_train_struct

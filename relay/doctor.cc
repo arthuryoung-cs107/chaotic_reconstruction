@@ -196,7 +196,7 @@ void runner::test_detection(record * rec_, int start_, int end_, int i_)
           alpha_data[i] = alpha_it;
           rec_res[i+n]+=rsq;
         }
-        {rec_res[i]+=rsq; net_smooth_residual+=rsq;}
+        else {rec_res[i]+=rsq; net_smooth_residual+=rsq;}
 
         // write test outputs, being absolutely sure we are writing exactly what is being calculated
         TEST_pos_res[i+foffset]=pos_res[frame_local][i]; TEST_INTpos_res[i+foffset]=INTpos_res[i][0];

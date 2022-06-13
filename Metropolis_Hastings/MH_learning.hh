@@ -21,6 +21,24 @@ struct record: public record_struct
 
   virtual int isworse(record * r_) {printf("(record) WARNING: using uninitialized record comparison\n"); return 0;}
   virtual int isbetter(record * r_) {printf("(record) WARNING: using uninitialized record comparison\n"); return 0;}
+
+  virtual int ilen_full() = 0;
+  virtual int dlen_full() = 0;
+
+  virtual void write_ints(FILE * file_) = 0;
+  virtual void write_dubs(FILE * file_) = 0;
+  inline void write_chunks(FILE * file_)
+  {
+    fwrite(ichunk, sizeof(int), ichunk_len, file_);
+    fwrite(dchunk, sizeof(double), dchunk_len, file_);
+    fwrite(u, sizeof(double), ulen, file_);
+  }
+  inline void write_record_data(FILE * file_)
+  {
+    write_ints(file_);
+    write_dubs(file_);
+    write_chunks(file_);
+  }
 };
 
 class thread_worker: public swirl, public thread_worker_struct
@@ -29,20 +47,22 @@ class thread_worker: public swirl, public thread_worker_struct
 
       thread_worker(swirl_param &sp_, proximity_grid * pg_, wall_list &wl_, thread_worker_struct &tws_, int thread_id_): swirl(sp_, pg_, wl_, tws_.nbeads), thread_worker_struct(tws_),
       thread_id(thread_id_),
-      u(&Kn), p(new double[2*nbeads*Frames]) {}
-      ~thread_worker() {delete p;}
+      u(&Kn), psim(new double[2*nbeads*Frames]) {}
+      ~thread_worker() {delete psim;}
 
     protected:
+
+      void reset_sim(double *utest_, double t0_, double ctheta0_, double comega0_, double *p0_);
 
       const int thread_id;
 
       double  * const u,
-              * const p;
+              * const psim;
 };
 
 
-const int MH_train_ilen=9;
-const int MH_train_dlen=3;
+const int MHT_ilen=9;
+const int MHT_dlen=3;
 class MH_trainer : public MH_params
 {
   public:
@@ -52,19 +72,18 @@ class MH_trainer : public MH_params
     : MH_trainer(*(mhts_.par), *(mhts_.sp_min), *(mhts_.sp_max), *(mhts_.wl), ichunk_width_, dchunk_width_) {}
     ~MH_trainer();
 
-    int leader_count, // current number of leaders
-        nsuccess, // number of parameters better than current worst leader in recent trial
-        ncandidates, // number of candidates to compare to current leaders
-        bleader_rid, // index of current best leader
-        wleader_rid, // index of current worst leader
-        nreplace, // number of leader replacements following evaluation of recent trial
-        ndup, // total number of leader duplication and perturbations from recent resampling
-        ndup_unique, // total number of unique duplications from recent resampling
-        nredraw; // total number of trial particles drawn from proposal distribution in recent resampling
+    int * const MHT_ints;
+    double * const MHT_dubs;
 
-    double  rho2, // current expected residual
-            bres, // current best leader residual
-            wres; // current worst leader residual
+    virtual void run(bool verbose_) = 0;
+    virtual void stage_diagnostics() = 0;
+    virtual void close_diagnostics() = 0;
+
+    virtual void initialize_run()
+    {
+      for (int i = 0; i < MHT_ilen; i++) MHT_ints[i]=0;
+      for (int i = 0; i < MHT_dlen; i++) MHT_dubs[i]=0.0;
+    }
 
     protected:
 
@@ -72,7 +91,21 @@ class MH_trainer : public MH_params
                 ichunk_width,
                 dchunk_width;
 
+      int leader_count, // current number of leaders
+          nsuccess, // number of parameters better than current worst leader in recent trial
+          ncandidates, // number of candidates to compare to current leaders
+          bleader_rid, // index of current best leader
+          wleader_rid, // index of current worst leader
+          nreplace, // number of leader replacements following evaluation of recent trial
+          ndup, // total number of leader duplication and perturbations from recent resampling
+          ndup_unique, // total number of unique duplications from recent resampling
+          nredraw; // total number of trial particles drawn from proposal distribution in recent resampling
+
       int ** const ichunk; // space for records to store integer parameters
+
+      double  rho2, // current expected residual
+              bres, // current best leader residual
+              wres; // current worst leader residual
 
       double * const  ts, // wall time of observed data
              * const  xs, // 2D observed position data
@@ -92,7 +125,7 @@ const int basic_rec_ilen=5;
 const int basic_rec_dlen=2;
 struct basic_record: public record
 {
-  basic_record(record_struct &rs_, int rid_, int * ichunk_, double * dchunk_, double * u_): record(rs_, rid_, ichunk_, dchunk_, u_), basic_rec_ints(&gen), basic_rec_dubs(&r2) {}
+  basic_record(record_struct &rs_, int rid_, int * ichunk_, double * dchunk_, double * u_): record(rs_, rid_, ichunk_, dchunk_, u_), basic_rec_ints(&gen), basic_rec_dubs(&r2) {init_record();}
   basic_record(record_struct &rs_, int rid_, int * ichunk_, double * dchunk_, double * u_, MH_rng * ran_, double * umin_, double * umax_): basic_record(rs_, rid_, ichunk_, dchunk_, u_) {draw_ranuni(ran_,umin_,umax_);}
   ~basic_record() {}
 
@@ -111,16 +144,46 @@ struct basic_record: public record
 
   double * const basic_rec_dubs;
 
+  inline void init_record()
+  {
+    for (int i = 0; i < basic_rec_ilen; i++) basic_rec_ints[i]=0;
+    for (int i = 0; i < basic_rec_dlen; i++) basic_rec_dubs[i]=0.0;
+  }
+
   virtual int isworse(basic_record * r_) {return r2>r_->r2;}
   virtual int isbetter(basic_record * r_) {return r2<r_->r2;}
+
+  virtual void write_ints(FILE * file_) {fwrite(basic_rec_ints, sizeof(int), basic_rec_ilen, file_);}
+  virtual void write_dubs(FILE * file_) {fwrite(basic_rec_dubs, sizeof(double), basic_rec_dlen, file_);}
+  virtual int ilen_full() {return basic_rec_ilen;}
+  virtual int dlen_full() {return basic_rec_dlen;}
 };
 
+const int basic_tw_ilen=2;
+const int basic_tw_dlen=3;
 class basic_thread_worker: public thread_worker, public event_detector
 {
     public:
 
-      basic_thread_worker(swirl_param &sp_, proximity_grid *pg_, wall_list &wl_, thread_worker_struct &tws_, int thread_id_, double alpha_tol_): thread_worker(sp_, pg_, wl_, tws_, thread_id_), event_detector(nbeads, Frames, alpha_tol_) {}
+      basic_thread_worker(swirl_param &sp_, proximity_grid *pg_, wall_list &wl_, thread_worker_struct &tws_, int thread_id_, double alpha_tol_): thread_worker(sp_, pg_, wl_, tws_, thread_id_), event_detector(nbeads, Frames, 2, alpha_tol_),
+      basic_tw_ints(&fevent_early), basic_tw_dubs(&net_r2) {}
       ~basic_thread_worker() {}
+
+    protected:
+
+      int fevent_early,
+          fevent_late,
+          nf_obs,
+          nf_stable,
+          nf_unstable;
+
+      int * const basic_tw_ints;
+
+      double  net_r2,
+              net_r2_stable,
+              net_r2_unstable;
+
+      double  * const basic_tw_dubs;
 };
 
 class basic_MH_trainer: public MH_trainer, public gaussian_likelihood
@@ -128,15 +191,27 @@ class basic_MH_trainer: public MH_trainer, public gaussian_likelihood
     public:
 
       basic_MH_trainer(MH_train_struct &mhts_, int ichunk_width_, int dchunk_width_, double t_wheels0_=-1.0): MH_trainer(mhts_, ichunk_width_, dchunk_width_), gaussian_likelihood(mhts_.par->sigma, mhts_.sp_min->cl_im),
-      t_wheels(t_wheels0_), apply_training_wheels(t_wheels>0.0),
+      apply_training_wheels(t_wheels0_>0.0),
+      evcount_bead_frame(Tmatrix<int>(nbeads, Frames)),
+      t_wheels0(t_wheels0_),
       umin(&(sp_min.Kn)), umax(&(sp_max.Kn)) {}
-      ~basic_MH_trainer() {}
+      ~basic_MH_trainer() {free_Tmatrix<int>(evcount_bead_frame);}
+
+      virtual void initialize_run()
+      {
+        MH_trainer::initialize_run();
+        t_wheels=t_wheels0;
+      }
 
     protected:
 
       bool apply_training_wheels;
 
-      double t_wheels; // current drift fraction
+      int ** const evcount_bead_frame;
+
+      const double t_wheels0; // current drift fraction
+
+      double t_wheels;
 
       double  * const umin,
               * const umax;

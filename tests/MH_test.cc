@@ -65,8 +65,7 @@ int main()
       verbose=true;
 
   MH_doctor mh_doc(mhts, test_id, test_relay_id, Frames_test, alpha_tol);
-
-  // mh_doc.run_test(verbose);
+  mh_doc.run(verbose);
 
   // for (int i = 0; i < 12; i++)
   // {

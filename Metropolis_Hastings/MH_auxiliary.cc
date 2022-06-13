@@ -68,3 +68,12 @@ void MH_io::load_reference(double *ts_, double *xs_, double *d_ang_, double * co
     comega_s_[i] = t_phys_*comega/(ts_[i]-ts_[i-1]);
   }
 }
+
+void MH_params::write_MH_params(FILE * file_)
+{
+  int hlen=2;
+  int header[] = {hlen, MH_params_ilen, MH_params_dlen};
+  fwrite(header, sizeof(int), hlen+1, file_);
+  fwrite(MH_params_ints, sizeof(int), MH_params_ilen, file_);
+  fwrite(MH_params_dubs, sizeof(double), MH_params_dlen, file_);
+}

@@ -10,7 +10,16 @@ class MH_doctor : public basic_MH_trainer
     MH_doctor(MH_train_struct &mhts_, int test_id_, int test_relay_id_, int Frames_test_, double alpha_tol_);
     ~MH_doctor();
 
+    void run(bool verbose_=true);
+    void stage_diagnostics();
+    void close_diagnostics();
+
+    event_record  ** leaders,
+                  ** pool;
+
   private:
+
+    size_t test_buf_end;
 
     char * const test_buffer;
 

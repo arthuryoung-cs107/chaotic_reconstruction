@@ -37,6 +37,38 @@ struct MH_rng
   inline double rand_gau(double mu_=0.0, double sigma_=1.0) {return mu_+gsl_ran_gaussian(gsl_gen,sigma_);}
 };
 
+struct event_detector
+{
+  event_detector(int ncomp_, int nstates_, int dof_, double alpha_tol_): ncomp(ncomp_), nstates(nstates_), dof(dof_), ndof(ncomp*dof), alpha_tol(alpha_tol_),
+  evcount_comp_state(Tmatrix<int>(ncomp,nstates)),
+  r2_state_comp(Tmatrix<double>(nstates,ncomp)), alpha_state_comp(Tmatrix<double>(nstates,ncomp)),r2_comp_regime(Tmatrix<double>(ncomp,ncomp)), INTr2_comp_history(Tmatrix<double>(ncomp,3)) {}
+  ~event_detector() {free_Tmatrix<int>(evcount_comp_state);
+  free_Tmatrix<double>(r2_state_comp);
+  free_Tmatrix<double>(alpha_state_comp);
+  free_Tmatrix<double>(r2_comp_regime);
+  free_Tmatrix<double>(INTr2_comp_history);}
+
+
+  const int ncomp, // nbeads
+            nstates, // Frames
+            dof, // x,y
+            ndof; // dof per state
+
+  int ** const evcount_comp_state;
+
+  const double alpha_tol;
+
+  double  ** const r2_state_comp,
+          ** const alpha_state_comp,
+          ** const r2_comp_regime,
+          ** const INTr2_comp_history;
+
+  inline double alpha_comp(double *a_, double t_p1, double t_m1)
+  {return log(a_[0]/a_[2])/log(t_p1/t_m1);}
+  inline double alpha_comp(double a_p1, double a_m1, double t_p1, double t_m1)
+  {return log(a_p1/a_m1)/log(t_p1/t_m1);}
+};
+
 struct gaussian_likelihood
 {
   gaussian_likelihood(double noise_tol_, double cl_): noise_tol(noise_tol_), cl(cl_), coeff(cl*noise_tol) {}
@@ -52,36 +84,6 @@ struct gaussian_likelihood
     for (int i = 0; i < nbeads_; i++) net_obs+=obs_[i];
     return coeff*coeff*((double)net_obs);
   }
-};
-
-struct event_detector
-{
-  event_detector(int ncomp_, int nstates_, double alpha_tol_):  ncomp(ncomp_), nstates(nstates_), alpha_tol(alpha_tol_),
-  evcount_comp_state(Tmatrix<int>(ncomp,nstates)),
-  r2_state_comp(Tmatrix<double>(nstates,ncomp)), alpha_state_comp(Tmatrix<double>(nstates,ncomp)),r2_comp_regime(Tmatrix<double>(ncomp,ncomp)), INTr2_comp_history(Tmatrix<double>(ncomp,3)) {}
-  ~event_detector() {free_Tmatrix<int>(evcount_comp_state);
-  free_Tmatrix<double>(r2_state_comp);
-  free_Tmatrix<double>(alpha_state_comp);
-  free_Tmatrix<double>(r2_comp_regime);
-  free_Tmatrix<double>(INTr2_comp_history);}
-
-
-  const int ncomp, // nbeads
-            nstates; // Frames
-
-  int ** const evcount_comp_state;
-
-  const double alpha_tol;
-
-  double  ** const r2_state_comp,
-          ** const alpha_state_comp,
-          ** const r2_comp_regime,
-          ** const INTr2_comp_history;
-
-  inline double alpha_comp(double *a_, double t_p1, double t_m1)
-  {return log(a_[0]/a_[2])/log(t_p1/t_m1);}
-  inline double alpha_comp(double a_p1, double a_m1, double t_p1, double t_m1)
-  {return log(a_p1/a_m1)/log(t_p1/t_m1);}
 };
 
 #endif
