@@ -13,13 +13,11 @@ template <typename T> T ** Tmatrix(int M_, int N_)
     rows[i] = chunk+j;
   return rows;
 }
-
 template <typename T> void free_Tmatrix(T ** Tmat_)
 {
   delete [] Tmat_[0];
   delete [] Tmat_;
 }
-
 
 void fseek_SAFE(FILE *fp,long int offset,int origin);
 void fread_SAFE(void *ptr,size_t size,size_t count,FILE *fp);

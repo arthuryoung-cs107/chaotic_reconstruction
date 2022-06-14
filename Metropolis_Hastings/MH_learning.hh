@@ -61,7 +61,7 @@ class thread_worker: public swirl, public thread_worker_struct
 };
 
 
-const int MHT_ilen=9;
+const int MHT_ilen=10;
 const int MHT_dlen=3;
 class MH_trainer : public MH_params
 {
@@ -76,51 +76,56 @@ class MH_trainer : public MH_params
     virtual void stage_diagnostics() = 0;
     virtual void close_diagnostics() = 0;
 
+  protected:
+
+    const int nt, // number of worker threads
+              ichunk_width,
+              dchunk_width;
+
+    int leader_count, // current number of leaders
+        gen_count, // how many pools have been drawn
+        nsuccess, // number of parameters better than current worst leader in recent trial
+        ncandidates, // number of candidates to compare to current leaders
+        bleader_rid, // index of current best leader
+        wleader_rid, // index of current worst leader
+        nreplace, // number of leader replacements following evaluation of recent trial
+        ndup, // total number of leader duplication and perturbations from recent resampling
+        ndup_unique, // total number of unique duplications from recent resampling
+        nredraw; // total number of trial particles drawn from proposal distribution in recent resampling
+
+    double  rho2, // current expected residual
+            bres, // current best leader residual
+            wres; // current worst leader residual
+
+    int * const MHT_ints,
+        ** const ichunk; // space for records to store integer parameters
+
+    double * const  ts, // wall time of observed data
+           * const  xs, // 2D observed position data
+           * const  d_ang, // observed angular position of dish
+           * const  comega_s, // observed average rotational speed of dish
+           * const  MHT_dubs,
+           ** const uchunk, // space for parameters
+           ** const dchunk; // space for records to store double parameters
+
+    swirl_param sp_min, // lower boundary of parameter space U
+                sp_max; // upper boundary of parameter space U
+    wall_list &wl; // a reference to the list of walls for the swirling simulation.
+    proximity_grid ** const pg; // array of proximity grids.
+    MH_rng ** rng; // random number generators
+
+    virtual void write_it_ints(FILE * file_) {fwrite(MHT_ints, sizeof(int), MHT_ilen, file_);}
+    virtual void write_it_dubs(FILE * file_) {fwrite(MHT_dubs, sizeof(double), MHT_dlen, file_);}
     virtual void initialize_run()
     {
       for (int i = 0; i < MHT_ilen; i++) MHT_ints[i]=0;
       for (int i = 0; i < MHT_dlen; i++) MHT_dubs[i]=0.0;
     }
-
-    protected:
-
-      const int nt, // number of worker threads
-                ichunk_width,
-                dchunk_width;
-
-      int leader_count, // current number of leaders
-          nsuccess, // number of parameters better than current worst leader in recent trial
-          ncandidates, // number of candidates to compare to current leaders
-          bleader_rid, // index of current best leader
-          wleader_rid, // index of current worst leader
-          nreplace, // number of leader replacements following evaluation of recent trial
-          ndup, // total number of leader duplication and perturbations from recent resampling
-          ndup_unique, // total number of unique duplications from recent resampling
-          nredraw; // total number of trial particles drawn from proposal distribution in recent resampling
-
-      double  rho2, // current expected residual
-              bres, // current best leader residual
-              wres; // current worst leader residual
-
-      int * const MHT_ints,
-          ** const ichunk; // space for records to store integer parameters
-
-      double * const  ts, // wall time of observed data
-             * const  xs, // 2D observed position data
-             * const  d_ang, // observed angular position of dish
-             * const  comega_s, // observed average rotational speed of dish
-             * const MHT_dubs,
-             ** const uchunk, // space for parameters
-             ** const dchunk; // space for records to store double parameters
-
-      swirl_param sp_min, // lower boundary of parameter space U
-                  sp_max; // upper boundary of parameter space U
-      wall_list &wl; // a reference to the list of walls for the swirling simulation.
-      proximity_grid ** const pg; // array of proximity grids.
-      MH_rng ** rng; // random number generators
+    virtual int it_ilen_full() {return basic_MH_trainer::it_ilen_full() + genetic_train_it_ilen;}
+    virtual int it_dlen_full() {return basic_MH_trainer::it_dlen_full() + genetic_train_it_dlen;}
 };
 
-const int basic_rec_ilen=5;
+const int basic_rec_ilen=7;
 const int basic_rec_dlen=2;
 struct basic_record: public record
 {
@@ -130,11 +135,13 @@ struct basic_record: public record
 
   bool success;
 
-  int gen, // generation in which this particle was generated
-      parent_gen, // generation this particle comes from
-      parent_count, // number of particle ancestors
-      parent_rid, // index position of parent particle
-      dup_count; // number of times this particle has been duplicated
+  int gen, // 0: generation in which this particle was generated
+      class, // 1: leader class this particle belongs to, if any
+      dup_count // 2: number of times this particle has been duplicated
+      parent_count, // 3: number of particle ancestors
+      parent_gen, // 4: generation this particle comes from
+      parent_class, // 5: leader class this particle comes from
+      parent_rid; // 6: index position of parent particle
 
   double  r2,
           w;
@@ -145,8 +152,8 @@ struct basic_record: public record
 
   inline void init_record()
   {
-    for (int i = 0; i < basic_rec_ilen; i++) basic_rec_ints[i]=0;
-    for (int i = 0; i < basic_rec_dlen; i++) basic_rec_dubs[i]=0.0;
+    gen=dup_count=parent_count=0; r2=w=0.0;
+    parent_gen=class=parent_rid=-1;
   }
 
   virtual int isworse(basic_record * r_) {return r2>r_->r2;}
@@ -158,7 +165,7 @@ struct basic_record: public record
   virtual int dlen_full() {return basic_rec_dlen;}
 };
 
-const int basic_tw_ilen=2;
+const int basic_tw_ilen=5;
 const int basic_tw_dlen=3;
 class basic_thread_worker: public thread_worker, public event_detector
 {
@@ -195,12 +202,6 @@ class basic_MH_trainer: public MH_trainer, public gaussian_likelihood
       umin(&(sp_min.Kn)), umax(&(sp_max.Kn)) {}
       ~basic_MH_trainer() {free_Tmatrix<int>(evcount_bead_frame);}
 
-      virtual void initialize_run()
-      {
-        MH_trainer::initialize_run();
-        t_wheels=t_wheels0;
-      }
-
     protected:
 
       bool apply_training_wheels;
@@ -213,6 +214,15 @@ class basic_MH_trainer: public MH_trainer, public gaussian_likelihood
 
       double  * const umin,
               * const umax;
+
+      virtual int it_ilen_full() {return MH_trainer::it_ilen_full();}
+      virtual int it_dlen_full() {return MH_trainer::it_dlen_full();}
+
+      virtual void initialize_run()
+      {
+        MH_trainer::initialize_run();
+        t_wheels=t_wheels0;
+      }
 };
 
 int find_worst_record(record ** r_, int ncap_);

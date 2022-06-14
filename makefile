@@ -79,7 +79,10 @@ walk_test: $(TEST_SRC)walk_test.cc $(WAOBJS)
 relay_test: $(TEST_SRC)relay_test.cc $(REOBJS)
 	$(CXX) $(IDIR) $(CFLAGS) $(LINK) $^ $(LIBS) -o $@
 
-MH_test: $(TEST_SRC)MH_test.cc $(MHOBJS)
+MH_u_test: $(TEST_SRC)MH_u_test.cc $(MHOBJS)
+	$(CXX) $(IDIR) $(CFLAGS) $(LINK) $^ $(LIBS) -o $@
+
+MH_learn_test: $(TEST_SRC)MH_learn_test.cc $(MHOBJS)
 	$(CXX) $(IDIR) $(CFLAGS) $(LINK) $^ $(LIBS) -o $@
 
 swirl_writing_test: $(WRITING_SRC)swirl_writing_test.cc $(SWOBJS)

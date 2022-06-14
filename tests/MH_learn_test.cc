@@ -14,7 +14,8 @@ const int nbeads=3;
 const int nlead = 12;
 const int npool = 1000;
 const double dt_sim = 0.002;
-const double t_wheels = 0.012;
+// const double t_wheels = 0.012;
+const double t_wheels = -1.0;
 
 const double noise_sigma = 1e-1;
 const double alpha_tol=10.0;
@@ -58,26 +59,7 @@ int main()
   MH_params mh_par(&mh_io, ulen, nlead, npool, dt_sim, t_phys, noise_sigma);
   MH_train_struct mhts(&mh_par, &sp_min, &sp_max, &wl);
 
-  // test parameters
-  int test_id=2,
-      Frames_test=1201,
-      test_relay_id=2,
-      verbose=true;
-
-  MH_doctor mh_doc(mhts, test_id, test_relay_id, Frames_test, alpha_tol);
-  mh_doc.run(verbose);
-
-  // for (int i = 0; i < 12; i++)
-  // {
-  //   printf("max, min: %f, %f\n", *(&(mh_train.sp_max.Kn)+i), *(&(mh_train.sp_min.Kn)+i));
-  // }
-
-  // for (int i = 0; i < 100; i++)
-  // {
-  //   printf("t, o, w: %f %f %f\n", mh_train.ts[i], mh_train.d_ang[i], mh_train.comega_s[i]);
-  // }
-  // printf("t_wheels %f\n", mh_train.t_wheels);
-
-
+  MH_genetic mh_gen(mhts,t_wheels,generations,alpha_tol);
+  // mh_gen.run(verbose);
   return 0;
 }

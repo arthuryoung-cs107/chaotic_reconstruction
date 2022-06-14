@@ -38,6 +38,9 @@ struct event_record : public basic_record
   {nfobs=int_data_[0]; nfstable=int_data_[1]; nfunstable=int_data_[2];
   r2=double_data_[0]; r2stable=double_data_[1]; r2unstable=double_data_[2];}
 
+  inline void write_event_record_header(FILE * file_, int len_=0)
+  {int hlen = 5; int header[] = {hlen, len_, ilen_full(), dlen_full(), ichunk_len, dchunk_len}; fwrite(header, sizeof(int), hlen+1, file_);}
+
   private:
     int * const event_rec_ints;
     double  * const event_rec_dubs;

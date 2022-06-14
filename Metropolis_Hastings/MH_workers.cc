@@ -1,5 +1,220 @@
 #include "MH_workers.hh"
 
+//MH_examiner
+
+MH_examiner::MH_examiner(swirl_param  &sp_, proximity_grid *pg_, wall_list &wl_, thread_worker_struct &tws_, int thread_id_, double alpha_tol_): basic_thread_worker(sp_, pg_, wl_, tws_, thread_id_, alpha_tol_),
+nobs_bead_Frame(Tmatrix<int>(nbeads,Frames)),
+mur2_Frame_bead(Tmatrix<double>(Frames, nbeads)), stdr2_Frame_bead(Tmatrix<double>(Frames, nbeads)),
+mualpha_Frame_bead(Tmatrix<double>(Frames, nbeads)), stdalpha_Frame_bead(Tmatrix<double>(Frames, nbeads))
+{}
+
+MH_examiner::~MH_examiner()
+{
+  free_Tmatrix<int>(nobs_bead_Frame);
+  free_Tmatrix<double>(mur2_Frame_bead); free_Tmatrix<double>(stdr2_Frame_bead);
+  free_Tmatrix<double>(mualpha_Frame_bead); free_Tmatrix<double>(stdalpha_Frame_bead);
+}
+
+bool MH_examiner::report_results(bool first2finish_, int ** nev_b_f_, int ** nobs_b_f_, double ** r2_f_b_, double **alpha_f_b_)
+{
+  if (first2finish_)
+    for (int i = 0; i < nbeads*Frames; i++)
+    {
+      evcount_bead_frame_[0][i] = evcount_comp_state[0][i];
+
+    }
+
+  else
+    for (int i = 0; i < nbeads*Frames; i++) evcount_bead_frame_[0][i] += evcount_comp_state[0][i];
+
+  return false;
+}
+
+void MH_examiner::consolidate_results()
+{
+  for (int i = 0; i < nbeads; i++)
+  {
+    int nobs_local=test_count,
+        f_it=0,
+        evcount_local;
+    double  invnobs_local=1.0/(test_count),
+            *evcount_Frames=evcount_comp_state[i],
+            *nobs_Frames=nobs_bead_Frame[i];
+    while (nobs_local>0)
+    {
+      if (evcount_local=evcount_Frames[f_it]) nobs_local-=evcount_local;
+      nobs_Frames[f_it++] = nobs_local;
+    }
+  }
+}
+
+void MH_examiner::update_event_data(int f_local_, double *r2i_, double *alphai_)
+{
+  test_count++;
+  fevent_early=fevent_late=f_event[0];
+  nf_stable=0;
+  for (int i = 0; i < nbeads; i++)
+  {
+    int fevent_it = f_event[i];
+    nf_stable+=fevent_it;
+    evcount_comp_state[i][fevent_it]++;
+    if (fevent_it<fevent_early) fevent_early = fevent_it;
+    if (fevent_it>fevent_late) fevent_late = fevent_it;
+  }
+  nf_obs=fevent_late*nbeads;
+  nf_unstable=nf_obs-nf_stable;
+  for (int i = 0; i < nbeads*f_local; i++)
+  {
+    mur2_Frame_bead[0][i]+=r2i_[i]=r2_state_comp[0][i];
+    mualpha_Frame_bead[0][i]+=alphai_[i]=alpha_state_comp[0][i];
+  }
+}
+
+void MH_examiner::start_detecting_events(event_record * rec_, double * t_history_ double &net_r2_local_)
+{
+  reset_sim(rec_->u, ts[0]/t_phys, d_ang[0], comega_s[0], xs);
+
+  int f_local=0,
+      poffset=0,
+      foffset=0;
+  double net_r2_local=0.0, *pref = xs;
+
+  int * f_event=rec_->evframe_bead;
+  double  *r2_stable=rec_->r2stable_bead,
+          *r2_unstable=rec_->r2unstable_bead;
+
+  // initialize t=tstart data
+  t_history_[0]=t_history_[1]=ts[0];
+  for (int i = 0, j = 0; i < nbeads; i++,j+=2)
+  {
+    double  x_sim=q[i].x, y_sim=q[i].y,
+            x_now=(x_sim-cx)*cl_im+cx_im, y_now=(y_sim-cy)*cl_im+cy_im;
+    net_r2_local+=r2_state_comp[0][i]=0.0;
+
+    INTr2_comp_history[i][0]=INTr2_comp_history[i][1]=0.0;
+    alpha_state_comp[0][i]=NAN;
+
+    // initialize component aggregates
+    f_event[i]=0;
+    r2_stable[i]=r2_unstable[i]=0.0;
+  }
+  // step to frame 1, begin computing divergence from data
+  f_local++; poffset+=ndof; foffset+=nbeads; pref+=ndof;
+  advance((ts[f_local]-ts[f_local-1])/t_phys, d_ang[f_local-1], comega_s[f_local], dt_sim);
+  t_history_[2]=t_history_[1]; t_history_[1]=t_history_[0]; t_history_[0]=ts[f_local];
+  for (int i = 0, j = 0; i < nbeads; i++,j+=2)
+  {
+    double  x_sim=q[i].x, y_sim=q[i].y,
+            x_now=(x_sim-cx)*cl_im+cx_im, y_now=(y_sim-cy)*cl_im+cy_im,
+            x_ref=pref[j], y_ref=pref[j+1],
+            xerr=x_now-x_ref, yerr=y_now-y_ref, rsq=xerr*xerr+yerr*yerr;
+    net_r2_local+=r2_state_comp[f_local][i]=rsq;
+
+    INTr2_comp_history[i][2]=INTr2_comp_history[i][1]; INTr2_comp_history[i][1]=INTr2_comp_history[i][0];
+    INTr2_comp_history[i][0]+=0.5*(rsq+r2_state_comp[f_local-1][i])*(t_history_[0]-t_history_[1]);
+    alpha_state_comp[f_local][i]=NAN;
+
+    r2_stable[i]+=rsq;
+  }
+
+  // step to frame 2, compute divergence from data as we will in the body of the detection
+  f_local++; poffset+=ndof; foffset+=nbeads; pref+=ndof;
+  advance((ts[f_local]-ts[f_local-1])/t_phys, d_ang[f_local-1], comega_s[f_local], dt_sim);
+  t_history_[2]=t_history_[1]; t_history_[1]=t_history_[0]; t_history_[0]=ts[f_local];
+  for (int i = 0, j = 0; i < nbeads; i++,j+=2)
+  {
+    double  x_sim=q[i].x, y_sim=q[i].y,
+            x_now=(x_sim-cx)*cl_im+cx_im, y_now=(y_sim-cy)*cl_im+cy_im,
+            x_ref=pref[j], y_ref=pref[j+1],
+            xerr=x_now-x_ref, yerr=y_now-y_ref, rsq=xerr*xerr+yerr*yerr;
+    net_r2_local+=r2_state_comp[f_local][i]=rsq;
+
+    INTr2_comp_history[i][2]=INTr2_comp_history[i][1]; INTr2_comp_history[i][1]=INTr2_comp_history[i][0];
+    INTr2_comp_history[i][0]+=0.5*(rsq+r2_state_comp[f_local-1][i])*(t_history_[0]-t_history_[1]);
+
+    r2_stable[i]+=rsq;
+  }
+  net_r2_local_=net_r2_local;
+  return f_local;
+}
+
+void MH_examiner::detect_events(event_record *rec_, double *r2i_, double *alphai_)
+{
+  double t_history[3], net_r2_local;
+  int f_local = start_detecting_events(rec_, t_history, net_r2_local),
+      poffset=ndof*f_local,
+      foffset=nbeads*f_local,
+      *f_event=rec_->evframe_bead;
+
+  double  *pref=xs+poffset,
+          *r2_stable=rec_->r2stable_bead,
+          *r2_unstable=rec_->r2unstable_bead,
+          *alpha_bead=rec_->alpha_bead,
+          net_r2_stable_local=net_r2_local,
+          net_r2_unstable_local=0.0;
+  do
+  {
+    f_local++; poffset+=ndof; pref+=ndof;
+    advance((ts[f_local]-ts[f_local-1])/t_phys, d_ang[f_local-1], comega_s[f_local], dt_sim);
+    t_history[2]=t_history[1]; t_history[1]=t_history[0]; t_history[0]=ts[f_local];
+    bool all_events_detected=true;
+    for (int i = 0, j = 0; i < nbeads; i++,j+=2)
+    {
+      double  x_sim=q[i].x, y_sim=q[i].y,
+              x_now=(x_sim-cx)*cl_im+cx_im, y_now=(y_sim-cy)*cl_im+cy_im,
+              x_ref=pref[j], y_ref=pref[j+1],
+              xerr=x_now-x_ref, yerr=y_now-y_ref, rsq=xerr*xerr+yerr*yerr;
+      r2_state_comp[f_local][i]=rsq; net_r2_local+=rsq;
+      INTr2_comp_history[i][2]=INTr2_comp_history[i][1]; INTr2_comp_history[i][1]=INTr2_comp_history[i][0];
+      INTr2_comp_history[i][0]+=0.5*(rsq+r2_state_comp[f_local-1][i])*(t_history[0]-t_history[1]);
+      double alpha_it = alpha_state_comp[f_local-1][i]=alpha_comp(INTr2_comp_history[i], t_history[0], t_history[2]);
+
+      if (!(f_event[i]))
+      {
+        all_events_detected=false;
+        if (alpha_it>alpha_tol)
+        {
+          f_event[i]=f_local-1;
+          alpha_bead[i]=alpha_it;
+          r2_unstable[i]=rsq;
+          net_r2_unstable_local+=rsq;
+        }
+        else
+        {
+          r2_stable[i]+=rsq;
+          net_r2_stable_local+=rsq;
+        }
+      }
+      else
+      {
+        r2_unstable[i]+=rsq;
+        net_r2_unstable_local+=rsq;
+      }
+    }
+    if (all_events_detected) break;
+    else if ((f_local+1)==Frames)
+    {
+      for (int i = 0; i < nbeads; i++) if (!(f_event[i]))
+      {
+        f_event[i] = f_local-1;
+        alpha_bead[i] = alpha_state_comp[f_local-1][i];
+      }
+      break;
+    }
+  } while(true);
+
+  net_r2=net_r2_local;
+  net_r2_stable=net_r2_stable_local;
+  net_r2_unstable=net_r2_unstable_local;
+
+  // set thread worker statistics data
+  update_event_data(f_local, r2i_, alphai_);
+  // set record data
+  rec_->record_event_data(&nf_obs,&net_r2);
+}
+
+// MH_medic
+
 MH_medic::MH_medic(swirl_param  &sp_, proximity_grid *pg_, wall_list &wl_, thread_worker_struct &tws_, int thread_id_, double alpha_tol_, int Frames_test_, char * test_buffer_): basic_thread_worker(sp_, pg_, wl_, tws_, thread_id_, alpha_tol_),
 Frames_test(Frames_test_),
 buf_end(strlen(test_buffer_)), mtest_buffer(new char[buf_end+50]),
@@ -198,9 +413,6 @@ void MH_medic::test_u(event_record * rec_, int i_, bool verbose_)
 
 void MH_medic::write_utest_results(event_record *rec_, int i_)
 {
-  int header_len=4;
-  int header[]={header_len,rec_->ilen_full(),rec_->dlen_full(),rec_->ichunk_len,rec_->dchunk_len};
-
   sprintf(mtest_buffer+buf_end, "par%d.redat", i_);
   FILE * data_file = fopen(mtest_buffer, "wb");
   fwrite(header,sizeof(int),header_len+1,data_file);
@@ -211,11 +423,12 @@ void MH_medic::write_utest_results(event_record *rec_, int i_)
   fwrite(TEST_r2,sizeof(double),nbeads*Frames_test,data_file);
   fwrite(TEST_alpha,sizeof(double),nbeads*Frames_test,data_file);
   fwrite(TEST_INTr2,sizeof(double),nbeads*Frames_test,data_file);
+  rec_->write_event_record_header(data_file);
   rec_->write_record_data(data_file);
   fclose(data_file);
 }
 
-bool MH_medic::consolidate_results(int ** evcount_bead_frame_, bool first2finish_)
+bool MH_medic::report_results(bool first2finish_, int ** evcount_bead_frame_)
 {
   if (first2finish_)
     for (int i = 0; i < nbeads*Frames; i++) evcount_bead_frame_[0][i] = evcount_comp_state[0][i];
