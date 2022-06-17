@@ -19,8 +19,10 @@ struct record: public record_struct
   inline void draw_ranuni(MH_rng * ran_, double * umin_, double * umax_)
   {for (int i = 0; i < ulen; i++) u[i] = umin_[i]+(umax_[i]-umin_[i])*ran_->rand_uni();}
 
-  virtual int isworse(record * r_) {printf("(record) WARNING: using uninitialized record comparison\n"); return 0;}
-  virtual int isbetter(record * r_) {printf("(record) WARNING: using uninitialized record comparison\n"); return 0;}
+  virtual int take_record(record * rec_) {printf("(record::take_record) WARNING: using uninitialized record copying\n"); return 0;}
+
+  virtual int isworse(record * r_) {printf("(record::isworse) WARNING: using uninitialized record comparison\n"); return 0;}
+  virtual int isbetter(record * r_) {printf("(record::isbetter) WARNING: using uninitialized record comparison\n"); return 0;}
 
   virtual int ilen_full() = 0;
   virtual int dlen_full() = 0;
@@ -153,12 +155,20 @@ struct basic_record: public record
   inline void init_record()
   {
     gen=dup_count=parent_count=0; r2=w=0.0;
-    parent_gen=Class=parent_rid=-1;
+    Class=parent_Class=parent_gen=parent_rid=-1;
   }
-
+  virtual int take_record(basic_record * rec_)
+  {
+    if (rid!=rec_->rid) // successful replacement
+    {
+      memcpy(basic_rec_ints, rec_->basic_rec_ints, basic_rec_ilen*sizeof(int));
+      memcpy(basic_rec_dubs, rec_->basic_rec_dubs, basic_rec_dlen*sizeof(double));
+      return 1;
+    }
+    else return 0;
+  }
   virtual int isworse(basic_record * r_) {return r2>r_->r2;}
   virtual int isbetter(basic_record * r_) {return r2<r_->r2;}
-
   virtual void write_ints(FILE * file_) {fwrite(basic_rec_ints, sizeof(int), basic_rec_ilen, file_);}
   virtual void write_dubs(FILE * file_) {fwrite(basic_rec_dubs, sizeof(double), basic_rec_dlen, file_);}
   virtual int ilen_full() {return basic_rec_ilen;}
@@ -222,5 +232,8 @@ class basic_MH_trainer: public MH_trainer, public gaussian_likelihood
 
 int find_worst_record(record ** r_, int ncap_);
 int find_best_record(record ** r_, int ncap_);
+void pick_nworst_records(record ** rin_, record ** rout_, int n_, int ncap_);
+void pick_nbest_record(record ** rin_, record ** rout_, int n_, int ncap_);
+void take_records(record ** rin_, record ** rout_, int ncap_);
 
 #endif

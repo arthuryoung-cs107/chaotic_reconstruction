@@ -104,10 +104,15 @@ void MH_genetic::post_event_resampling(event_record ** recs_, int n_)
     for (int i = 0; i < n_; i++)
     {
       ex_t->restore_event_record(recs_[i],r2_pool_Framebead[i]);
+      recs_[i]->set_stable_comparison();
+      candidates[i]=recs_[i];
     }
   }
+  if (n_!=npool) printf("(MH_genetic::post_event_resampling) Warning: n_!=npool\n");
 
   // collect leaders
+  pick_nbest_records(recs_,leader_board,nlead,n_);
+  take_records(leader_board,leaders,nlead);
 
   Class_count++;
 

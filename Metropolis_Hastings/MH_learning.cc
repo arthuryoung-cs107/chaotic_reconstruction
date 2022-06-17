@@ -19,6 +19,36 @@ int find_best_record(record ** r_, int ncap_)
   return best_index;
 }
 
+void pick_nworst_records(record ** rin_, record ** rout_, int n_, int ncap_)
+{
+  for (int i = 0; i < n_; i++) rout_[i]=rin_[i];
+  int i_best_worst = find_best_record(rout_,n_);
+  for (int i = n_; i < ncap_; i++)
+    if (rout_[i_best_worst]->isbetter(rin_[i]))
+    {
+      rout_[i_best_worst] = rin_[i];
+      i_best_worst=find_best_record(rout_,n_);
+    }
+}
+void pick_nbest_record(record ** rin_, record ** rout_, int n_, int ncap_)
+{
+  for (int i = 0; i < n_; i++) rout_[i]=rin_[i];
+  int i_worst_best = find_worst_record(rout_,n_);
+  for (int i = n_; i < ncap_; i++)
+    if (rout_[i_worst_best]->isworse(rin_[i]))
+    {
+      rout_[i_worst_best] = rin_[i];
+      i_worst_best=find_worst_record(rout_,n_);
+    }
+}
+
+int take_records(record **rin_, record ** rout_, int ncap_)
+{
+  int nrepl=0;
+  for (int i = 0; i < ncap_; i++) nrepl+=rout_[i]->take_record(rin_[i]);
+  return nrepl;
+}
+
 // thread_worker
 
 void thread_worker::reset_sim(double *utest_, double t0_, double ctheta0_, double comega0_, double *p0_)
