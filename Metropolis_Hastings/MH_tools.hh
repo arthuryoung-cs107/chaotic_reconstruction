@@ -47,7 +47,8 @@ struct system_struct
 struct event_detector: public virtual system_struct
 {
   event_detector(int ncomp_, int nstates_, int dof_, double alpha_tol_): system_struct(ncomp_,nstates_), dof(dof_), ndof(ncomp*dof), alpha_tol(alpha_tol_),
-  r2_state_comp(Tmatrix<double>(nstates,ncomp)), alpha_state_comp(Tmatrix<double>(nstates,ncomp)), INTr2_comp_history(Tmatrix<double>(ncomp,3)), r2_regime_comp(Tmatrix<double>(ncomp,ncomp)) {}
+  r2_state_comp(Tmatrix<double>(nstates,ncomp)), alpha_state_comp(Tmatrix<double>(nstates,ncomp)),
+  INTr2_comp_history(Tmatrix<double>(ncomp,3)), r2_regime_comp(Tmatrix<double>(ncomp,ncomp)) {}
   ~event_detector()
   {
     free_Tmatrix<double>(r2_state_comp); free_Tmatrix<double>(alpha_state_comp);
@@ -55,8 +56,8 @@ struct event_detector: public virtual system_struct
   }
 
   const int dof, // x,y
-            ndof, // dof per state
-            stev_early,
+            ndof; // dof per state
+        int stev_early,
             stev_late;
 
   const double alpha_tol;
@@ -105,30 +106,21 @@ struct event_block: public virtual system_struct
           ** const stdalpha_state_comp;
 
 
+  virtual void synchronise_event_data(int stev_earliest_, int stev_latest_, int *stev_c_, int *stev_o_, int *comps_o_, double *rho2_r_);
   virtual bool report_event_data(bool first2finish_, int &stev_earliest_, int &stev_latest_, int *stev_c_, int ** nev_s_c_, int ** nobs_s_c_, double ** r2_s_c_, double **alpha_s_c_);
   virtual void consolidate_event_data(int ntest_);
+  virtual void clear_event_data();
+  virtual void define_event_block(double sigma_scaled_);
 
-  virtual void define_event_block(double sigma_scaled_)
+  inline void set_state_counts(int &nstate_obs_, int &nstate_stable_, int &nstate_unstable_)
   {
-    // compute expected residuals for each regime component
-    for (int i = 0; i < ncomp; i++)
-      rho2_regime[i]=(sigma_scaled_*sigma_scaled_)*((double)(2*stev_comp[i]));
+    int nstate_stable_local=0;
+    for (int i = 0; i < ncomp; i++) nstate_stable_local+=stev_comp[i];
+    nstate_obs_=ncomp*stev_ordered[ncomp-1];
+    nstate_stable_=nstate_stable_local;
+    nstate_unstable_=nstate_obs_-nstate_stable_;
   }
-  virtual void clear_event_data()
-  {
-    stev_latest=0;
-    stev_earliest=nstates;
-    for (int i=0,k=0; i < ncomp; i++)
-    {
-      stev_comp[i]=0;
-      for (int j = 0; j < nstates; i++,k++)
-      {
-        nev_state_comp[0][k]=nobs_state_comp[0][k]=0;
-        mur2_state_comp[0][k]=stdr2_state_comp[0][k]=
-        mualpha_state_comp[0][k]=stdalpha_state_comp[0][k]=0.0;
-      }
-    }
-  }
+
   inline int earliest(int *frames_ordered_, int &early_index_, int index_start_)
   {
     int out = frames_ordered_[index_start_]; early_index_= index_start_;

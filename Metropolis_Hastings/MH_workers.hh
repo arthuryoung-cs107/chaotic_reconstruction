@@ -14,8 +14,13 @@ class MH_examiner: public basic_thread_worker, public event_block
     void consolidate_event_data();
     void update_event_data(int final_frame_, double *r2i_, double *alphai_);
     void detect_events(event_record *rec_, double *r2i_, double *alphai_);
-    
+
     void clear_event_data() {event_block::clear_event_data(); test_count=0;}
+    void synchronise_event_data(int *nf_, int stev_earliest_, int stev_latest_, int *stev_c_, int *stev_o_, int *comps_o_, double *rho2_r_)
+    {
+      nf_obs=nf_[0]; nf_stable=nf_[1]; nf_unstable=nf_[2];
+      event_block::synchronise_event_data(stev_earliest_,stev_latest_,stev_c_,stev_o_,comps_o_,rho2_r_);
+    }
 
   private:
     int test_count;

@@ -74,7 +74,7 @@ void MH_genetic::find_events()
   clear_event_data();
   #pragma omp parallel
   {
-    MH_examiner *ex_t = examiner[thread_num()];
+    MH_examiner *ex_t = examiners[thread_num()];
     ex_t->clear_event_data();
     #pragma omp for nowait
     for (int i = 0; i < ncheck; i++)
@@ -87,35 +87,32 @@ void MH_genetic::find_events()
       first2finish=ex_t->report_event_data(first2finish,stev_earliest,stev_latest,stev_comp_,nev_state_comp, nobs_state_comp, mur2_state_comp, mualpha_state_comp);
     }
   }
-  consolidate_event_data();
-  define_event_block(sigma);
-  report_event_data(rec_check, ncheck);
-  if (gen_count==0) post_event_resampling(rec_check, ncheck);
+  consolidate_event_data(); // sort event states chronologically, given stev_comp is already set
+  define_event_block(); // compute expected residuals using presumed noise level
+  synchronise_event_data(); // set event data of thread workers to the consolidated values
+  report_event_data(rec_check, ncheck); // finish event stats and write out results
+  if (gen_count==0) post_event_resampling(rec_check, ncheck); // restore records, sort by performance, and redraw generation
 }
 
 void MH_genetic::post_event_resampling(event_record ** recs_, int n_)
 {
-  // start by using the r2_pool_Framebead data to adjust the records back to the correct event data
-  int evframe_latest=stev_ordered[nbeads-1];
-  #pragma omp parallel for
-  for (int i = 0; i < n_; i++)
+  // start by using the r2_pool_Framebead data to adjust the records back to the correct event data1
+  #pragma omp parallel
   {
-    double r2stable=0.0,r2_unstable=0.0;
-    for (int i_frame=0,k=0; i_frame <= evframe_latest; i_frame++)
-      for (int i_bead = 0; i_bead < nbeads; i_bead++,k++)
-        if (i_frame<=stev_comp[i])
-        {
-          r2_stable+=r2_pool_Framebead[i][k];
-
-        }
-        else
-        {
-          r2_unstable+=r2_pool_Framebead[i][k];
-          
-        }
+    MH_examiner *ex_t = examiners[thread_num()];
+    #pragma omp for
+    for (int i = 0; i < n_; i++)
+    {
+      ex_t->restore_event_record(recs_[i],r2_pool_Framebead[i]);
+    }
   }
 
-  class_count++;
+  // collect leaders
+
+  Class_count++;
+
+  // resample pool
+
   gen_count++;
 }
 

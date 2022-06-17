@@ -136,11 +136,11 @@ struct basic_record: public record
   bool success;
 
   int gen, // 0: generation in which this particle was generated
-      class, // 1: leader class this particle belongs to, if any
+      Class, // 1: leader Class this particle belongs to, if any
       dup_count // 2: number of times this particle has been duplicated
       parent_count, // 3: number of particle ancestors
       parent_gen, // 4: generation this particle comes from
-      parent_class, // 5: leader class this particle comes from
+      parent_Class, // 5: leader Class this particle comes from
       parent_rid; // 6: index position of parent particle
 
   double  r2,
@@ -153,7 +153,7 @@ struct basic_record: public record
   inline void init_record()
   {
     gen=dup_count=parent_count=0; r2=w=0.0;
-    parent_gen=class=parent_rid=-1;
+    parent_gen=Class=parent_rid=-1;
   }
 
   virtual int isworse(basic_record * r_) {return r2>r_->r2;}
@@ -206,7 +206,7 @@ class basic_MH_trainer: public MH_trainer, public gaussian_likelihood
       const double t_wheels0; // initial drift fraction
 
       double t_wheels; // current drift fraction
-      
+
       double  * const umin,
               * const umax;
 

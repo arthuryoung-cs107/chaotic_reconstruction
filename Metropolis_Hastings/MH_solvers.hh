@@ -19,7 +19,6 @@ class MH_genetic : public basic_MH_trainer, public event_block
     void close_diagnostics();
     void report_event_data(event_record **recs_, int n_);
 
-    void define_event_block() {event_block::define_event_block(sigma_scaled);}
     void consolidate_event_data()
     {
       for (int i = 0; i < nbeads; i++)
@@ -28,6 +27,18 @@ class MH_genetic : public basic_MH_trainer, public event_block
         stev_ordered[i]=stev_comp[i];
       }
       event_block::consolidate_event_data();
+    }
+    void define_event_block()
+    {event_block::define_event_block(sigma_scaled);}
+    void synchronise_event_data()
+    {
+      int nf_obs, nf_stable, nf_unstable;
+      set_state_counts(nf_obs, nf_stable, nf_unstable);
+      #pragma omp parallel
+      {
+        MH_examiner *ex_t=examiners[thread_num()];
+        ex_t->synchronise_event_data(&nf_obs, stev_earliest,stev_latest,stev_comp,stev_ordered,comps_ordered,rho2_regime);
+      }
     }
     void clear_event_data()
     {
@@ -47,7 +58,7 @@ class MH_genetic : public basic_MH_trainer, public event_block
     void initialize_run()
     {
       basic_MH_trainer::initialize_run();
-      class_count=event_block_count=0;
+      Class_count=event_block_count=0;
       prob_best=prob_worst=0.0;
     }
     void write_it_ints(FILE * file_)
@@ -63,9 +74,9 @@ class MH_genetic : public basic_MH_trainer, public event_block
 
   protected:
 
-    const int class_max;
+    const int Class_max;
 
-          int class_count,
+          int Class_count,
               event_block_count;
 
     const double  alpha_tol;

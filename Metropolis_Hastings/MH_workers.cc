@@ -2,6 +2,28 @@
 
 //MH_examiner
 
+void MH_examiner::restore_event_record(event_record *rec_, double *r2_Fb_)
+{
+  double  netr2=0.0,
+          netr2_stable=0.0,
+          netr2_unstable=0.0,
+          *r2_stable=rec_->r2stable_bead,
+          *r2_unstable=rec_->r2unstable_bead;
+
+  for (int i_frame=0,k=0; i_frame <= evframe_latest; i_frame++)
+    for (int i_bead = 0; i_bead < nbeads; i_bead++,k++)
+      if (i_frame<=stev_comp[i])
+      {
+        netr2_stable+=
+
+      }
+      else
+      {
+        r2_unstable+=r2_pool_Framebead[i][k];
+
+      }
+}
+
 void MH_examiner::consolidate_event_data()
 {
   int s_it=0;
@@ -16,7 +38,8 @@ void MH_examiner::consolidate_event_data()
     if (found_all) break;
     else if (s_it++==stev_latest)
     {
-      for ( i = 0; i < ncomp; i++) if (!(order_comp[i])) stev_comp[i]=stev_latest;        
+      printf("(MH_examiner::consolidate_event_data) this shouldn't happen\n");
+      for ( i = 0; i < ncomp; i++) if (!(order_comp[i])) stev_comp[i]=stev_latest;
       break;
     }
   } while (true);
