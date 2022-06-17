@@ -5,9 +5,9 @@ run AYfigprops.m
 write_figs = false;
 write_all_figs = true;
 
-make_beadalpha_plots=true;
+make_beadalpha_plots=false;
 make_alpha_plots=false;
-make_collision_plots=false;
+make_collision_plots=true;
 make_stat_plots=false;
 make_convergence_plots=false;
 make_path_plots = false;

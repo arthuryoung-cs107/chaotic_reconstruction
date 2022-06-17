@@ -35,9 +35,6 @@ void thread_worker::reset_sim(double *utest_, double t0_, double ctheta0_, doubl
 }
 
 
-
-
-
 // MH_trainer
 
 MH_trainer::MH_trainer(MH_params &par_, swirl_param &sp_min_, swirl_param &sp_max_, wall_list &wl_, int ichunk_width_, int dchunk_width_) : MH_params(par_),

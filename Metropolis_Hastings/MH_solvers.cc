@@ -5,14 +5,12 @@
 
 // MH_genetic
 
-MH_genetic::MH_genetic(MH_train_struct &mhts_, double t_wheels0_, int gen_max_, double alpha_tol_): basic_MH_trainer(mhts_,comp_event_rec_ichunk_len(mhts_.get_par_nbeads()),comp_event_rec_dchunk_len(mhts_.get_par_nbeads()), t_wheels0_),
+MH_genetic::MH_genetic(MH_train_struct &mhts_, double t_wheels0_, int gen_max_, double alpha_tol_): basic_MH_trainer(mhts_,comp_event_rec_ichunk_len(mhts_.get_par_nbeads()),comp_event_rec_dchunk_len(mhts_.get_par_nbeads()), t_wheels0_), event_block(nbeads, Frames),
 leader_gen_max(gen_max_), alpha_tol(alpha_tol_),
 genetic_train_const_ints(&leader_gen_max), genetic_train_const_dubs(&alpha_tol),
 genetic_train_ints(&leader_gen_count), genetic_train_dubs(&prob_best),
 obuf(new char[io->obuf_len+100]),
 r2_pool_Framebead(Tmatrix<double>(npool,Frames*nbeads)), alpha_pool_Framebead(Tmatrix<double>(npool,Frames*nbeads)),
-mur2_Frame_bead(Tmatrix<double>(Frames, nbeads)), stdr2_Frame_bead(Tmatrix<double>(Frames, nbeads)),
-mualpha_Frame_bead(Tmatrix<double>(Frames, nbeads)), stdalpha_Frame_bead(Tmatrix<double>(Frames, nbeads)),
 examiners(new MH_examiner*[nt]), records(new event_record*[nlead+npool]),
 leaders(records), pool(records+nlead),
 leader_board(new event_record*[nlead+npool]), candidates(leader_board+nlead)
@@ -24,7 +22,7 @@ leader_board(new event_record*[nlead+npool]), candidates(leader_board+nlead)
   printf("Made test directory: %s\n", obuf);
 
   // constant structures for initializing thread workers and records
-  thread_worker_struct tws(&ulen,&dt_sim,ts,xs,d_ang,comega_s);
+  thread_worker_struct tws(ulen,nbeads,Frames,nlead,npool,dt_sim,t_phys,ts,xs,d_ang,comega_s);
   record_struct rs(ulen,nbeads,Frames,ichunk_width,dchunk_width);
 
   #pragma omp parallel
@@ -54,28 +52,8 @@ MH_genetic::~MH_genetic()
   delete [] examiners;
 
   free_Tmatrix<double>(r2_pool_Framebead); free_Tmatrix<double>(alpha_pool_Framebead);
-  free_Tmatrix<double>(mur2_Frame_bead); free_Tmatrix<double>(stdr2_Frame_bead);
-  free_Tmatrix<double>(mualpha_Frame_bead); free_Tmatrix<double>(stdalpha_Frame_bead);
 
   delete [] obuf;
-}
-
-void MH_genetic::inspect_event_data()
-{}
-
-void MH_genetic::clear_event_data()
-{
-  #pragma omp parallel
-  {
-    double * clear_buf;
-    #pragma omp for nowait
-    for (int i = 0; i < npool; i++)
-    {clear_buf=r2_pool_Framebead[i]; for (int j = 0; j < nbeads*Frames; j++) clear_buf[j]=0.0;}
-
-    #pragma omp for nowait
-    for (int i = 0; i < npool; i++)
-    {clear_buf=alpha_pool_Framebead[i]; for (int j = 0; j < nbeads*Frames; j++) clear_buf[j]=0.0;}
-  }
 }
 
 void MH_genetic::find_events()
@@ -103,13 +81,91 @@ void MH_genetic::find_events()
     {
       ex_t->detect_events(rec_check[i], r2_pool_Framebead[i], alpha_pool_Framebead[i]);
     }
-    ex_t->consolidate_results();
+    ex_t->consolidate_event_data();
     #pragma omp critical
     {
-      first2finish=ex_t->report_results(mur2);
+      first2finish=ex_t->report_event_data(first2finish,stev_earliest,stev_latest,stev_comp_,nev_state_comp, nobs_state_comp, mur2_state_comp, mualpha_state_comp);
     }
   }
-  inspect_event_data();
+  consolidate_event_data();
+  define_event_block(sigma);
+  report_event_data(rec_check, ncheck);
+  if (gen_count==0) post_event_resampling(rec_check, ncheck);
+}
+
+void MH_genetic::post_event_resampling(event_record ** recs_, int n_)
+{
+  // start by using the r2_pool_Framebead data to adjust the records back to the correct event data
+  int evframe_latest=stev_ordered[nbeads-1];
+  #pragma omp parallel for
+  for (int i = 0; i < n_; i++)
+  {
+    double r2stable=0.0,r2_unstable=0.0;
+    for (int i_frame=0,k=0; i_frame <= evframe_latest; i_frame++)
+      for (int i_bead = 0; i_bead < nbeads; i_bead++,k++)
+        if (i_frame<=stev_comp[i])
+        {
+          r2_stable+=r2_pool_Framebead[i][k];
+
+        }
+        else
+        {
+          r2_unstable+=r2_pool_Framebead[i][k];
+          
+        }
+  }
+
+  class_count++;
+  gen_count++;
+}
+
+void MH_genetic::report_event_data(event_record **recs_, int n_)
+{
+  // begin by finishing computation of event detection statistics
+  #pragma omp parallel
+  {
+    // finish computing mean residuals for each component of the state space
+    #pragma omp for
+    for (int i = 0; i < nbeads*stev_latest; i++)
+    {
+      double  nobs_inv = 1.0/((double)(nobs_state_comp[0][i])),
+              nobsm1_inv = 1.0/((double)(nobs_state_comp[0][i]-1)),
+              mur2_i = mur2_state_comp[0][i]*=nobs_inv,
+              mualpha_i = mualpha_state_comp[0][i]*=nobs_inv,
+              var_r2=0.0,
+              var_alpha=0.0;
+
+      for (int j = 0; j < n_; j++) if ((recs_[j]->nf_obs/nbeads)>=(i/nbeads))
+      {
+        double  diffr2 = r2_pool_Framebead[j][i]-mur2_i,
+                diffalpha = alpha_pool_Framebead[j][i]-mualpha_i;
+        var_r2+=diffr2*diffr2;
+        var_alpha+=diffalpha*diffalpha;
+      }
+      stdr2_state_comp[0][i]=sqrt(var_r2*nobsm1_inv);
+      stdalpha_state_comp[0][i]=sqrt(var_alpha*nobsm1_inv);
+    }
+  }
+
+  // write event data
+  int hlen=2;
+  int header[] = {hlen, n_, stev_latest};
+  sprintf(obuf+obuf_end, "event_block%d.mhdat",event_block_count);
+  FILE * data_file = fopen(obuf, "wb");
+  fwrite(stev_comp, sizeof(int), nbeads, data_file);
+  fwrite(stev_ordered, sizeof(int), nbeads, data_file);
+  fwrite(comps_ordered, sizeof(int), nbeads, data_file);
+  fwrite(nev_state_comp, sizeof(int), nbeads*stev_latest, data_file);
+  fwrite(nobs_state_comp, sizeof(int), nbeads*stev_latest, data_file);
+  fwrite(rho2_regime, sizeof(double), nbeads, data_file);
+  fwrite(mur2_state_comp, sizeof(double), nbeads*stev_latest, data_file);
+  fwrite(stdr2_state_comp, sizeof(double), nbeads*stev_latest, data_file);
+  fwrite(mualpha_state_comp, sizeof(double), nbeads*stev_latest, data_file);
+  fwrite(stdalpha_state_comp, sizeof(double), nbeads*stev_latest, data_file);
+  recs_[0]->write_event_record_header(data_file,n_);
+  for (int i = 0; i < nlead+npool; i++) recs_[i]->write_record_data(data_file);
+  fclose(data_file);
+  event_block_count++;
 }
 
 void MH_genetic::stage_diagnostics()
@@ -156,10 +212,9 @@ void MH_genetic::run(bool verbose_)
   close_diagnostics();
 }
 
-
 // MH_doctor
 
-MH_doctor::MH_doctor(MH_train_struct &mhts_, int test_id_, int test_relay_id_, int Frames_test_, double alpha_tol_): basic_MH_trainer(mhts_,comp_event_rec_ichunk_len(mhts_.get_par_nbeads()),comp_event_rec_dchunk_len(mhts_.get_par_nbeads())),
+MH_doctor::MH_doctor(MH_train_struct &mhts_, int test_id_, int test_relay_id_, int Frames_test_, double alpha_tol_): basic_MH_trainer(mhts_,comp_event_rec_ichunk_len(mhts_.get_par_nbeads()),comp_event_rec_dchunk_len(mhts_.get_par_nbeads())), event_block(nbeads, Frames),
 test_id(test_id_), test_relay_id(test_relay_id_), Frames_test(Frames_test_),
 alpha_tol(alpha_tol_),
 test_buffer(new char[io->obuf_len+100]),
@@ -186,7 +241,7 @@ leaders(records), pool(records+nlead)
   printf("Made test directory: %s\n", test_buffer);
 
   // constant structures for initializing thread workers and records
-  thread_worker_struct tws(&ulen,&dt_sim,ts,xs,d_ang,comega_s);
+  thread_worker_struct tws(ulen,nbeads,Frames,nlead,npool,dt_sim,t_phys,ts,xs,d_ang,comega_s);
   record_struct rs(ulen,nbeads,Frames,ichunk_width,dchunk_width);
 
   #pragma omp parallel
@@ -221,7 +276,7 @@ void MH_doctor::run(bool verbose_)
   {
     int tid=thread_num();
     MH_medic *med_t = medics[tid];
-    med_t->initialize_utest();
+    med_t->clear_event_data();
     #pragma omp for nowait
       for (int i = 0; i < npool; i++)
       {
@@ -229,7 +284,7 @@ void MH_doctor::run(bool verbose_)
       }
     #pragma omp critical
     {
-      first2finish = med_t->report_results(first2finish, evcount_bead_frame);
+      first2finish=med_t->report_event_data(first2finish,stev_earliest,stev_latest,nev_state_comp, nobs_state_comp, mur2_state_comp, mualpha_state_comp);
     }
   }
   close_diagnostics();

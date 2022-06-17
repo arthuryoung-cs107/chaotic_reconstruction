@@ -7,7 +7,7 @@ const int genetic_train_const_ilen=1;
 const int genetic_train_const_dlen=1;
 const int genetic_train_it_ilen=2;
 const int genetic_train_it_dlen=2;
-class MH_genetic : public basic_MH_trainer
+class MH_genetic : public basic_MH_trainer, public event_block
 {
   public:
 
@@ -17,11 +17,38 @@ class MH_genetic : public basic_MH_trainer
     void run(bool verbose_=true);
     void stage_diagnostics();
     void close_diagnostics();
+    void report_event_data(event_record **recs_, int n_);
 
-    virtual void initialize_run()
+    void define_event_block() {event_block::define_event_block(sigma_scaled);}
+    void consolidate_event_data()
+    {
+      for (int i = 0; i < nbeads; i++)
+      {
+        comps_ordered[i]=i;
+        stev_ordered[i]=stev_comp[i];
+      }
+      event_block::consolidate_event_data();
+    }
+    void clear_event_data()
+    {
+      event_block::clear_event_data();
+      #pragma omp parallel
+      {
+        double * clear_buf;
+        #pragma omp for nowait
+        for (int i = 0; i < npool; i++)
+        {clear_buf=r2_pool_Framebead[i]; for (int j = 0; j < nbeads*Frames; j++) clear_buf[j]=0.0;}
+
+        #pragma omp for nowait
+        for (int i = 0; i < npool; i++)
+        {clear_buf=alpha_pool_Framebead[i]; for (int j = 0; j < nbeads*Frames; j++) clear_buf[j]=0.0;}
+      }
+    }
+    void initialize_run()
     {
       basic_MH_trainer::initialize_run();
-      class_count=class_count=0;
+      class_count=event_block_count=0;
+      prob_best=prob_worst=0.0;
     }
     void write_it_ints(FILE * file_)
     {
@@ -46,8 +73,6 @@ class MH_genetic : public basic_MH_trainer
           double  prob_best,
                   prob_worst;
 
-    void inspect_event_data(); 
-
     int it_ilen_full() {return basic_MH_trainer::it_ilen_full() + genetic_train_it_ilen;}
     int it_dlen_full() {return basic_MH_trainer::it_dlen_full() + genetic_train_it_dlen;}
 
@@ -63,11 +88,7 @@ class MH_genetic : public basic_MH_trainer
     const double  * const genetic_train_const_dubs;
           double  * const genetic_train_it_dubs,
                   ** const r2_pool_Framebead,
-                  ** const alpha_pool_Framebead,
-                  ** const mur2_Frame_bead,
-                  ** const stdr2_Frame_bead,
-                  ** const mualpha_Frame_bead,
-                  ** const stdalpha_Frame_bead;
+                  ** const alpha_pool_Framebead;
 
     MH_examiner ** const examiners;
 
@@ -77,10 +98,10 @@ class MH_genetic : public basic_MH_trainer
                   ** const leader_board,
                   ** const candidates;
 
-    void clear_event_data();
+    void post_event_resampling(event_record ** recs_, int n_);
 };
 
-class MH_doctor : public basic_MH_trainer
+class MH_doctor : public basic_MH_trainer, public event_block
 {
   public:
 

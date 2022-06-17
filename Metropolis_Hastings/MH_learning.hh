@@ -165,21 +165,19 @@ struct basic_record: public record
   virtual int dlen_full() {return basic_rec_dlen;}
 };
 
-const int basic_tw_ilen=5;
+const int basic_tw_ilen=3;
 const int basic_tw_dlen=3;
 class basic_thread_worker: public thread_worker, public event_detector
 {
     public:
 
       basic_thread_worker(swirl_param &sp_, proximity_grid *pg_, wall_list &wl_, thread_worker_struct &tws_, int thread_id_, double alpha_tol_): thread_worker(sp_, pg_, wl_, tws_, thread_id_), event_detector(nbeads, Frames, 2, alpha_tol_),
-      basic_tw_ints(&fevent_early), basic_tw_dubs(&net_r2) {}
+      basic_tw_ints(&nf_obs), basic_tw_dubs(&net_r2) {}
       ~basic_thread_worker() {}
 
     protected:
 
-      int fevent_early,
-          fevent_late,
-          nf_obs,
+      int nf_obs,
           nf_stable,
           nf_unstable;
 
@@ -198,9 +196,8 @@ class basic_MH_trainer: public MH_trainer, public gaussian_likelihood
 
       basic_MH_trainer(MH_train_struct &mhts_, int ichunk_width_, int dchunk_width_, double t_wheels0_=-1.0): MH_trainer(mhts_, ichunk_width_, dchunk_width_), gaussian_likelihood(sigma, mhts_.sp_min->cl_im),
       apply_training_wheels(t_wheels0_>0.0), t_wheels0(t_wheels0_),
-      evcount_bead_frame(Tmatrix<int>(nbeads, Frames)),
       umin(&(sp_min.Kn)), umax(&(sp_max.Kn)) {}
-      ~basic_MH_trainer() {free_Tmatrix<int>(evcount_bead_frame);}
+      ~basic_MH_trainer() {}
 
     protected:
 
@@ -209,9 +206,7 @@ class basic_MH_trainer: public MH_trainer, public gaussian_likelihood
       const double t_wheels0; // initial drift fraction
 
       double t_wheels; // current drift fraction
-
-      int ** const evcount_bead_frame;
-
+      
       double  * const umin,
               * const umax;
 

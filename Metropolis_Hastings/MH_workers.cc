@@ -2,72 +2,49 @@
 
 //MH_examiner
 
-MH_examiner::MH_examiner(swirl_param  &sp_, proximity_grid *pg_, wall_list &wl_, thread_worker_struct &tws_, int thread_id_, double alpha_tol_): basic_thread_worker(sp_, pg_, wl_, tws_, thread_id_, alpha_tol_),
-nobs_bead_Frame(Tmatrix<int>(nbeads,Frames)),
-mur2_Frame_bead(Tmatrix<double>(Frames, nbeads)), stdr2_Frame_bead(Tmatrix<double>(Frames, nbeads)),
-mualpha_Frame_bead(Tmatrix<double>(Frames, nbeads)), stdalpha_Frame_bead(Tmatrix<double>(Frames, nbeads))
-{}
-
-MH_examiner::~MH_examiner()
+void MH_examiner::consolidate_event_data()
 {
-  free_Tmatrix<int>(nobs_bead_Frame);
-  free_Tmatrix<double>(mur2_Frame_bead); free_Tmatrix<double>(stdr2_Frame_bead);
-  free_Tmatrix<double>(mualpha_Frame_bead); free_Tmatrix<double>(stdalpha_Frame_bead);
-}
-
-bool MH_examiner::report_results(bool first2finish_, int ** nev_b_f_, int ** nobs_b_f_, double ** r2_f_b_, double **alpha_f_b_)
-{
-  if (first2finish_)
-    for (int i = 0; i < nbeads*Frames; i++)
-    {
-      evcount_bead_frame_[0][i] = evcount_comp_state[0][i];
-
-    }
-
-  else
-    for (int i = 0; i < nbeads*Frames; i++) evcount_bead_frame_[0][i] += evcount_comp_state[0][i];
-
-  return false;
-}
-
-void MH_examiner::consolidate_results()
-{
-  for (int i = 0; i < nbeads; i++)
+  int s_it=0;
+  do
   {
-    int nobs_local=test_count,
-        f_it=0,
-        evcount_local;
-    double  invnobs_local=1.0/(test_count),
-            *evcount_Frames=evcount_comp_state[i],
-            *nobs_Frames=nobs_bead_Frame[i];
-    while (nobs_local>0)
+    bool found_all=true;
+    for ( i = 0; i < ncomp; i++) if (!(stev_comp[i]))
     {
-      if (evcount_local=evcount_Frames[f_it]) nobs_local-=evcount_local;
-      nobs_Frames[f_it++] = nobs_local;
+      found_all=false;
+      if (nev_state_comp[s_it][i]) stev_comp[i]=s_it;
     }
-  }
+    if (found_all) break;
+    else if (s_it++==stev_latest)
+    {
+      for ( i = 0; i < ncomp; i++) if (!(order_comp[i])) stev_comp[i]=stev_latest;        
+      break;
+    }
+  } while (true);
 }
 
-void MH_examiner::update_event_data(int f_local_, double *r2i_, double *alphai_)
+void MH_examiner::update_event_data(int final_frame_, int *f_event, double *r2i_, double *alphai_)
 {
   test_count++;
-  fevent_early=fevent_late=f_event[0];
+  stev_early=stev_late=f_event[0];
   nf_stable=0;
-  for (int i = 0; i < nbeads; i++)
+  for (int i=0, k=0; i < nbeads; i++)
   {
     int fevent_it = f_event[i];
     nf_stable+=fevent_it;
-    evcount_comp_state[i][fevent_it]++;
-    if (fevent_it<fevent_early) fevent_early = fevent_it;
-    if (fevent_it>fevent_late) fevent_late = fevent_it;
+    nev_state_comp[fevent_it][i]++;
+    if (fevent_it<stev_early) stev_early = fevent_it;
+    if (fevent_it>stev_late) stev_late = fevent_it;
+    for (int j = 0; j < final_frame_; j++,k++)
+    {
+      mur2_state_comp[0][k]+=r2i_[k]=r2_state_comp[0][k];
+      mualpha_state_comp[0][k]+=alphai_[k]=alpha_state_comp[0][k];
+      nobs_state_comp[0][k]++;
+    }
   }
-  nf_obs=fevent_late*nbeads;
+  nf_obs=stev_late*nbeads;
   nf_unstable=nf_obs-nf_stable;
-  for (int i = 0; i < nbeads*f_local; i++)
-  {
-    mur2_Frame_bead[0][i]+=r2i_[i]=r2_state_comp[0][i];
-    mualpha_Frame_bead[0][i]+=alphai_[i]=alpha_state_comp[0][i];
-  }
+  if (stev_early<stev_earliest) stev_earliest=stev_early;
+  if (stev_late>stev_latest) stev_latest=stev_late;
 }
 
 void MH_examiner::start_detecting_events(event_record * rec_, double * t_history_ double &net_r2_local_)
@@ -168,7 +145,6 @@ void MH_examiner::detect_events(event_record *rec_, double *r2i_, double *alphai
       INTr2_comp_history[i][2]=INTr2_comp_history[i][1]; INTr2_comp_history[i][1]=INTr2_comp_history[i][0];
       INTr2_comp_history[i][0]+=0.5*(rsq+r2_state_comp[f_local-1][i])*(t_history[0]-t_history[1]);
       double alpha_it = alpha_state_comp[f_local-1][i]=alpha_comp(INTr2_comp_history[i], t_history[0], t_history[2]);
-
       if (!(f_event[i]))
       {
         all_events_detected=false;
@@ -202,20 +178,19 @@ void MH_examiner::detect_events(event_record *rec_, double *r2i_, double *alphai
       break;
     }
   } while(true);
-
   net_r2=net_r2_local;
   net_r2_stable=net_r2_stable_local;
   net_r2_unstable=net_r2_unstable_local;
 
   // set thread worker statistics data
-  update_event_data(f_local, r2i_, alphai_);
+  update_event_data(f_local, f_event, r2i_, alphai_);
   // set record data
   rec_->record_event_data(&nf_obs,&net_r2);
 }
 
 // MH_medic
 
-MH_medic::MH_medic(swirl_param  &sp_, proximity_grid *pg_, wall_list &wl_, thread_worker_struct &tws_, int thread_id_, double alpha_tol_, int Frames_test_, char * test_buffer_): basic_thread_worker(sp_, pg_, wl_, tws_, thread_id_, alpha_tol_),
+MH_medic::MH_medic(swirl_param  &sp_, proximity_grid *pg_, wall_list &wl_, thread_worker_struct &tws_, int thread_id_, double alpha_tol_, int Frames_test_, char * test_buffer_): basic_thread_worker(sp_, pg_, wl_, tws_, thread_id_, alpha_tol_), event_block(nbeads,Frames),
 Frames_test(Frames_test_),
 buf_end(strlen(test_buffer_)), mtest_buffer(new char[buf_end+50]),
 TEST_p(new double[ndof*Frames_test]), TEST_r2(new double[nbeads*Frames_test]), TEST_alpha(new double[nbeads*Frames_test]), TEST_INTr2(new double[nbeads*Frames_test])
@@ -392,17 +367,17 @@ void MH_medic::test_u(event_record * rec_, int i_, bool verbose_)
   net_r2_stable=net_r2_stable_local;
   net_r2_unstable=net_r2_unstable_local;
 
-  fevent_early=fevent_late=f_event[0];
+  stev_early=stev_late=f_event[0];
   nf_stable=0;
   for (int i = 0; i < nbeads; i++)
   {
     int fevent_it = f_event[i];
     nf_stable+=fevent_it;
-    evcount_comp_state[i][fevent_it]++;
-    if (fevent_it<fevent_early) fevent_early = fevent_it;
-    if (fevent_it>fevent_late) fevent_late = fevent_it;
+    nev_state_comp[fevent_it][i]++;
+    if (fevent_it<stev_early) stev_early = fevent_it;
+    if (fevent_it>stev_late) stev_late = fevent_it;
   }
-  nf_obs=fevent_late*nbeads;
+  nf_obs=stev_late*nbeads;
   nf_unstable=nf_obs-nf_stable;
 
   // set record data
@@ -413,6 +388,8 @@ void MH_medic::test_u(event_record * rec_, int i_, bool verbose_)
 
 void MH_medic::write_utest_results(event_record *rec_, int i_)
 {
+  int header_len = 2;
+  int header[] = {header_len, int_len, double_len};
   sprintf(mtest_buffer+buf_end, "par%d.redat", i_);
   FILE * data_file = fopen(mtest_buffer, "wb");
   fwrite(header,sizeof(int),header_len+1,data_file);
@@ -428,11 +405,11 @@ void MH_medic::write_utest_results(event_record *rec_, int i_)
   fclose(data_file);
 }
 
-bool MH_medic::report_results(bool first2finish_, int ** evcount_bead_frame_)
+bool MH_medic::report_results(bool first2finish_, int ** nev_state_comp_)
 {
   if (first2finish_)
-    for (int i = 0; i < nbeads*Frames; i++) evcount_bead_frame_[0][i] = evcount_comp_state[0][i];
+    for (int i = 0; i < nbeads*Frames; i++) nev_state_comp_[0][i] = nev_state_comp[0][i];
   else
-    for (int i = 0; i < nbeads*Frames; i++) evcount_bead_frame_[0][i] += evcount_comp_state[0][i];
+    for (int i = 0; i < nbeads*Frames; i++) nev_state_comp_[0][i] += nev_state_comp[0][i];
   return false;
 }

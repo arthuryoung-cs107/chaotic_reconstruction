@@ -6,7 +6,7 @@
 
 #include "particle_relay.hh"
 
-const int nbeads=5;
+const int nbeads=3;
 const int param_id=0;
 const int relay_id=1;
 const int generations=200;
