@@ -123,11 +123,11 @@ struct MH_params: public virtual swirl_system_struct
     }
 
     #ifdef _OPENMP
-          inline int thread_num() {return omp_get_thread_num();}
-          inline int get_nt() {return omp_get_max_threads();}
+      inline int thread_num() {return omp_get_thread_num();}
+      inline int get_nt() {return omp_get_max_threads();}
     #else
-          inline int thread_num() {return 0;}
-          inline int get_nt() {return 1;}
+      inline int thread_num() {return 0;}
+      inline int get_nt() {return 1;}
     #endif
 };
 

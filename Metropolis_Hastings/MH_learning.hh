@@ -24,9 +24,6 @@ struct record: public record_struct
   virtual int isworse(record * r_) {printf("(record::isworse) WARNING: using uninitialized record comparison\n"); return 0;}
   virtual int isbetter(record * r_) {printf("(record::isbetter) WARNING: using uninitialized record comparison\n"); return 0;}
 
-  virtual int ilen_full() = 0;
-  virtual int dlen_full() = 0;
-
   virtual void write_ints(FILE * file_) = 0;
   virtual void write_dubs(FILE * file_) = 0;
   inline void write_chunks(FILE * file_)
@@ -63,8 +60,8 @@ class thread_worker: public swirl, public thread_worker_struct
 };
 
 
-const int MHT_ilen=10;
-const int MHT_dlen=3;
+const int MHT_it_ilen=10;
+const int MHT_it_dlen=3;
 class MH_trainer : public MH_params
 {
   public:
@@ -96,17 +93,17 @@ class MH_trainer : public MH_params
         nredraw; // total number of trial particles drawn from proposal distribution in recent resampling
 
     double  rho2, // current expected residual
-            bres, // current best leader residual
-            wres; // current worst leader residual
+            br2, // current best leader residual
+            wr2; // current worst leader residual
 
-    int * const MHT_ints,
+    int * const MHT_it_ints,
         ** const ichunk; // space for records to store integer parameters
 
     double * const  ts, // wall time of observed data
            * const  xs, // 2D observed position data
            * const  d_ang, // observed angular position of dish
            * const  comega_s, // observed average rotational speed of dish
-           * const  MHT_dubs,
+           * const  MHT_it_dubs,
            ** const uchunk, // space for parameters
            ** const dchunk; // space for records to store double parameters
 
@@ -116,22 +113,26 @@ class MH_trainer : public MH_params
     proximity_grid ** const pg; // array of proximity grids.
     MH_rng ** rng; // random number generators
 
-    virtual void write_it_ints(FILE * file_) {fwrite(MHT_ints, sizeof(int), MHT_ilen, file_);}
-    virtual void write_it_dubs(FILE * file_) {fwrite(MHT_dubs, sizeof(double), MHT_dlen, file_);}
-    virtual void initialize_run()
+    inline void write_MHT_it_ints(FILE * file_) {fwrite(MHT_it_ints, sizeof(int), MHT_it_ilen, file_);}
+    inline void write_MHT_it_dubs(FILE * file_) {fwrite(MHT_it_dubs, sizeof(double), MHT_dlen, file_);}
+    inline void initialize_MHT_run()
     {
-      for (int i = 0; i < MHT_ilen; i++) MHT_ints[i]=0;
-      for (int i = 0; i < MHT_dlen; i++) MHT_dubs[i]=0.0;
+      for (int i = 0; i < MHT_it_ilen; i++) MHT_it_ints[i]=0;
+      for (int i = 0; i < MHT_dlen; i++) MHT_it_dubs[i]=0.0;
     }
-    virtual int it_ilen_full() {return basic_MH_trainer::it_ilen_full() + genetic_train_it_ilen;}
-    virtual int it_dlen_full() {return basic_MH_trainer::it_dlen_full() + genetic_train_it_dlen;}
+    inline int take_records(record ** rin_, record ** rout_, int ncap_)
+    {
+      int nrepl=0;
+      for (int i = 0; i < ncap_; i++) nrepl+=rout_[i]->take_record(rin_[i]);
+      return nrepl;
+    }
 };
 
 const int basic_rec_ilen=7;
 const int basic_rec_dlen=2;
 struct basic_record: public record
 {
-  basic_record(record_struct &rs_, int rid_, int * ichunk_, double * dchunk_, double * u_): record(rs_, rid_, ichunk_, dchunk_, u_), basic_rec_ints(&gen), basic_rec_dubs(&r2) {init_record();}
+  basic_record(record_struct &rs_, int rid_, int * ichunk_, double * dchunk_, double * u_): record(rs_, rid_, ichunk_, dchunk_, u_), basic_rec_ints(&gen), basic_rec_dubs(&r2) {init_basic_record();}
   basic_record(record_struct &rs_, int rid_, int * ichunk_, double * dchunk_, double * u_, MH_rng * ran_, double * umin_, double * umax_): basic_record(rs_, rid_, ichunk_, dchunk_, u_) {draw_ranuni(ran_,umin_,umax_);}
   ~basic_record() {}
 
@@ -141,9 +142,9 @@ struct basic_record: public record
       Class, // 1: leader Class this particle belongs to, if any
       dup_count // 2: number of times this particle has been duplicated
       parent_count, // 3: number of particle ancestors
-      parent_gen, // 4: generation this particle comes from
-      parent_Class, // 5: leader Class this particle comes from
-      parent_rid; // 6: index position of parent particle
+      parent_rid; // 4: index position of parent particle
+      parent_gen, // 5: generation this particle comes from
+      parent_Class, // 6: leader Class this particle comes from
 
   double  r2,
           w;
@@ -152,12 +153,17 @@ struct basic_record: public record
 
   double * const basic_rec_dubs;
 
-  inline void init_record()
+  virtual int isworse(basic_record * r_) {return r2>r_->r2;}
+  virtual int isbetter(basic_record * r_) {return r2<r_->r2;}
+
+  inline void init_basic_record(int gen_=0,int Class_=-1,int dup_count_=0,int parent_count_=0,int parent_rid_=-1,int parent_gen_=-1,int parent_Class_=-1,double r2_=0.0,double w_=0.0)
   {
-    gen=dup_count=parent_count=0; r2=w=0.0;
-    Class=parent_Class=parent_gen=parent_rid=-1;
+    gen=gen_; Class=Class_; dup_count=dup_count_;
+    parent_count=parent_count_; parent_rid=parent_rid_
+    parent_gen=parent_gen_; parent_Class=parent_Class_;
+    r2=r2_; w=w_;
   }
-  virtual int take_record(basic_record * rec_)
+  inline int take_basic_record(basic_record * rec_)
   {
     if (rid!=rec_->rid) // successful replacement
     {
@@ -167,12 +173,10 @@ struct basic_record: public record
     }
     else return 0;
   }
-  virtual int isworse(basic_record * r_) {return r2>r_->r2;}
-  virtual int isbetter(basic_record * r_) {return r2<r_->r2;}
-  virtual void write_ints(FILE * file_) {fwrite(basic_rec_ints, sizeof(int), basic_rec_ilen, file_);}
-  virtual void write_dubs(FILE * file_) {fwrite(basic_rec_dubs, sizeof(double), basic_rec_dlen, file_);}
-  virtual int ilen_full() {return basic_rec_ilen;}
-  virtual int dlen_full() {return basic_rec_dlen;}
+  inline int basic_rec_ilen_full() {return basic_rec_ilen;}
+  inline int basic_rec_dlen_full() {return basic_rec_dlen;}
+  inline void write_basic_rec_ints(FILE * file_) {fwrite(basic_rec_ints, sizeof(int), basic_rec_ilen, file_);}
+  inline void write_basic_rec_dubs(FILE * file_) {fwrite(basic_rec_dubs, sizeof(double), basic_rec_dlen, file_);}
 };
 
 const int basic_tw_ilen=3;
@@ -182,8 +186,11 @@ class basic_thread_worker: public thread_worker, public event_detector
     public:
 
       basic_thread_worker(swirl_param &sp_, proximity_grid *pg_, wall_list &wl_, thread_worker_struct &tws_, int thread_id_, double alpha_tol_): thread_worker(sp_, pg_, wl_, tws_, thread_id_), event_detector(nbeads, Frames, 2, alpha_tol_),
-      basic_tw_ints(&nf_obs), basic_tw_dubs(&net_r2) {}
-      ~basic_thread_worker() {}
+        basic_tw_ints(&nf_obs), basic_tw_dubs(&net_r2),
+        int_wkspc(new int[nlead]) {}
+      ~basic_thread_worker() {delete [] int_wkspc;}
+
+      int * const int_wkspc;
 
     protected:
 
@@ -206,8 +213,10 @@ class basic_MH_trainer: public MH_trainer, public gaussian_likelihood
 
       basic_MH_trainer(MH_train_struct &mhts_, int ichunk_width_, int dchunk_width_, double t_wheels0_=-1.0): MH_trainer(mhts_, ichunk_width_, dchunk_width_), gaussian_likelihood(sigma, mhts_.sp_min->cl_im),
       apply_training_wheels(t_wheels0_>0.0), t_wheels0(t_wheels0_),
-      umin(&(sp_min.Kn)), umax(&(sp_max.Kn)) {}
-      ~basic_MH_trainer() {}
+      umin(&(sp_min.Kn)), umax(&(sp_max.Kn)),
+      ndup_leaders(new int[nlead]), w_leaders(new double[nlead]) {}
+
+      ~basic_MH_trainer() {delete [] ndup_leaders; delete [] w_leaders;}
 
     protected:
 
@@ -217,23 +226,26 @@ class basic_MH_trainer: public MH_trainer, public gaussian_likelihood
 
       double t_wheels; // current drift fraction
 
+      int * const ndup_leaders;
+
       double  * const umin,
-              * const umax;
+              * const umax,
+              * const w_leaders;
 
-      virtual int it_ilen_full() {return MH_trainer::it_ilen_full();}
-      virtual int it_dlen_full() {return MH_trainer::it_dlen_full();}
+      virtual double compute_weights(double r2_min_, basic_record ** recs_, int n_);
+      virtual void duplicate_u(basic_record * rec_pool_, basic_record * rec_lead_, MH_rng * rng_t_);
+      virtual void respawn_pool(double w_sum_, basic_thread_worker **tws_, basic_record ** pool_, basic_record ** leaders_);
 
-      virtual void initialize_run()
-      {
-        MH_trainer::initialize_run();
-        t_wheels=t_wheels0;
-      }
+      virtual void redraw_u(basic_record * rec_pool_, MH_rng * rng_t_)
+      {rec_pool_->draw_ranuni(rng_t_,umin,umax); rec_pool_->init_basic_record(gen_count);}
+      virtual int basic_train_it_ilen_full() {return MHT_it_ilen;}
+      virtual int basic_train_it_dlen_full() {return MHT_it_dlen;}
+      inline void initialize_basic_trainer_run() {MH_trainer::initialize_MHT_run(); t_wheels=t_wheels0;}
 };
 
 int find_worst_record(record ** r_, int ncap_);
 int find_best_record(record ** r_, int ncap_);
 void pick_nworst_records(record ** rin_, record ** rout_, int n_, int ncap_);
 void pick_nbest_record(record ** rin_, record ** rout_, int n_, int ncap_);
-void take_records(record ** rin_, record ** rout_, int ncap_);
 
 #endif

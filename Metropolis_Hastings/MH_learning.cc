@@ -42,13 +42,6 @@ void pick_nbest_record(record ** rin_, record ** rout_, int n_, int ncap_)
     }
 }
 
-int take_records(record **rin_, record ** rout_, int ncap_)
-{
-  int nrepl=0;
-  for (int i = 0; i < ncap_; i++) nrepl+=rout_[i]->take_record(rin_[i]);
-  return nrepl;
-}
-
 // thread_worker
 
 void thread_worker::reset_sim(double *utest_, double t0_, double ctheta0_, double comega0_, double *p0_)
@@ -68,7 +61,7 @@ void thread_worker::reset_sim(double *utest_, double t0_, double ctheta0_, doubl
 // MH_trainer
 
 MH_trainer::MH_trainer(MH_params &par_, swirl_param &sp_min_, swirl_param &sp_max_, wall_list &wl_, int ichunk_width_, int dchunk_width_) : MH_params(par_),
-MHT_ints(&leader_count), MHT_dubs(&rho2),
+MHT_it_ints(&leader_count), MHT_it_dubs(&rho2),
 nt(get_nt()), ichunk_width(ichunk_width_), dchunk_width(dchunk_width_),
 ichunk(Tmatrix<int>(nlead+npool, ichunk_width)),
 ts(new double[Frames]), xs(new double[2*nbeads*Frames]), d_ang(new double[Frames]), comega_s(new double[Frames]),
@@ -104,4 +97,56 @@ MH_trainer::~MH_trainer()
   }
   delete [] pg;
   delete [] rng;
+}
+
+double basic_MH_trainer::compute_weights(double r2_min_, basic_record ** recs_, int n_)
+{
+  double  wsum=0.0,
+          r_min_=sqrt(r2_min_),
+          rho_=sqrt(rho2);
+
+  #pragma omp parallel for reduction(+:wsum)
+  for (int i = 0; i < n_; i++)
+  {
+    wsum+=w_leaders[i]=recs_[i]->w=gaussian_likelihood::compute_weight(sqrt(recs_[i]->r2compare),r_min_,rho_);
+  }
+  return wsum;
+}
+
+
+void basic_MH_trainer::respawn_pool(double w_sum_, basic_thread_worker ** tws_, basic_record ** pool_, basic_record ** leaders_)
+{
+  memset(ndup_leaders,0,nlead*sizeof(int));
+  ndup=nredraw=ndup_unique=0;
+
+  #pragma omp_parallel
+  {
+    int tid = thread_num(),
+        *dup_t = tws_[tid]->int_wkspc;
+    MH_rng * rng_t = rng[tid];
+    memset(dup_t,0,nlead*sizeof(int));
+    #pragma omp for reduction(+:ndup) reduction(+:nredraw) nowait
+    for (int i = 0; i < npool; i++)
+    {
+      int j=0;
+      double uni = (w_sum_/rs_full_factor)*rng_t->rand_uni();
+      while ((j<leader_count)&&(uni>0.0)) uni-=w_leaders[j++];
+      if (j>0)
+      {
+        if (uni<0.0)
+        {ndup++; dup_t[--j]++; duplicate_u(pool_[i],leaders_[j],rng_t);}
+        else
+        {nredraw++; redraw_u(pool_[i],rng_t);}
+      }
+      else
+      {nredraw++; redraw_u(pool_[i],rng_t);}
+    }
+    #pragma omp critical
+    {
+      for (int i = 0; i < leader_count; i++) ndup_leaders[i]+=dup_t[i];
+    }
+  }
+  
+  for (int i = 0; i < leader_count; i++) if (ndup_leaders[i])
+  {leaders[i]->dup_count+=ndup_leaders[i]; ndup_unique++;}
 }

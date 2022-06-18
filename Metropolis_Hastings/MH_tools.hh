@@ -148,8 +148,11 @@ struct gaussian_likelihood
                 cl,
                 sigma_scaled;
 
-  inline double compute_weight();
-
+  inline double compute_weight(double r_, double r_min_, double rho_)
+  {
+    // arguments provided unsquared so that we can avoid issues with machine precision
+    return exp(0.5*((r_min_-r_)/rho_)*((r_min_+r_)/rho_));
+  }
   inline double expected_r2(int * obs_states_, int ncomp_, int ndof_=2)
   {
     int net_obs=0;

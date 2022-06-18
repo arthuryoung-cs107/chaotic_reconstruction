@@ -36,8 +36,9 @@ struct event_record : public basic_record
   int take_record(event_record *r_);
   int isworse(event_record * r_) {return r2compare>r_->r2compare;}
   int isbetter(event_record * r_) {return r2compare<r_->r2compare;}
-  int ilen_full() {return basic_record::ilen_full() + event_rec_ilen;}
-  int dlen_full() {return basic_record::dlen_full() + event_rec_dlen;}
+
+  inline int event_rec_ilen_full() {return basic_record::basic_rec_ilen_full + event_rec_ilen;}
+  inline int event_rec_dlen_full() {return basic_record::basic_rec_dlen_full + event_rec_dlen;}  
   inline double set_net_comparison() {return r2compare=r2;}
   inline double set_stable_comparison() {return r2compare=r2_stable;}
   inline double set_unstable_comparison() {return r2compare=r2_unstable;}
