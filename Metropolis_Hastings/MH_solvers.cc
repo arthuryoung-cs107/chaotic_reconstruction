@@ -91,34 +91,57 @@ void MH_genetic::find_events()
   define_event_block(); // compute expected residuals using presumed noise level
   synchronise_event_data(); // set event data of thread workers to the consolidated values
   report_event_data(rec_check, ncheck); // finish event stats and write out results
+  set_stable_training(); // set the expected residual to be that expected from the stable data
   if (gen_count==0) post_event_resampling(rec_check, ncheck); // restore records, sort by performance, and redraw generation
 }
 
 void MH_genetic::post_event_resampling(event_record ** recs_, int n_)
 {
-  // start by using the r2_pool_Framebead data to adjust the records back to the correct event data1
+
+  // start by using the r2_pool_Framebead data to adjust the records back to the correct event data
+  double r2_min=DBL_MAX;
   #pragma omp parallel
   {
     MH_examiner *ex_t = examiners[thread_num()];
-    #pragma omp for
+    #pragma omp for reduction(min:r2_min)
     for (int i = 0; i < n_; i++)
     {
       ex_t->restore_event_record(recs_[i],r2_pool_Framebead[i]);
-      recs_[i]->set_stable_comparison();
+      double r2_it = recs_[i]->set_stable_comparison();
+      if (r2_it<r2_min) r2_min=r2_it;
       candidates[i]=recs_[i];
     }
   }
+
   if (n_!=npool) printf("(MH_genetic::post_event_resampling) Warning: n_!=npool\n");
 
   // collect leaders
   pick_nbest_records(recs_,leader_board,nlead,n_);
   take_records(leader_board,leaders,nlead);
-
   Class_count++;
 
   // resample pool
-
+  double w_sum = compute_weights(r2_min,rho2,leaders,nlead);
+  respawn_pool(w_sum);
   gen_count++;
+}
+
+double MH_genetic::compute_weights(double r2_min_, event_record ** recs_, int n_)
+{
+  double  wsum=0.0,
+          rho2compare=rho2;
+
+  #pragma omp parallel for reduction(+:wsum)
+  for (int i = 0; i < n_; i++)
+  {
+    wsum+=recs_[i]->w=gaussian_likelihood::compute_weight(recs_[i]->r2compare,rho2compare);
+  }
+  return wsum;
+}
+
+void MH_genetic::respawn_pool(double w_sum_)
+{
+
 }
 
 void MH_genetic::report_event_data(event_record **recs_, int n_)

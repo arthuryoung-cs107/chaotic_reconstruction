@@ -148,12 +148,16 @@ struct gaussian_likelihood
                 cl,
                 sigma_scaled;
 
-  inline double expected_r2(int * obs_, int nbeads_)
+  inline double compute_weight();
+
+  inline double expected_r2(int * obs_states_, int ncomp_, int ndof_=2)
   {
     int net_obs=0;
-    for (int i = 0; i < nbeads_; i++) net_obs+=obs_[i];
+    for (int i = 0; i < ncomp_; i++) net_obs+=ndof_*obs_states_[i];
     return sigma_scaled*sigma_scaled*((double)net_obs);
   }
 };
+
+double
 
 #endif

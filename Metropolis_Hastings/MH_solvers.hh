@@ -18,7 +18,10 @@ class MH_genetic : public basic_MH_trainer, public event_block
     void stage_diagnostics();
     void close_diagnostics();
     void report_event_data(event_record **recs_, int n_);
+    double compute_weights(double r2_min_, event_record ** recs_, int n_);
 
+    inline void set_stable_training()
+    {rho2=gaussian_likelihood::expected_r2(stev_comp,nbeads);}
     void consolidate_event_data()
     {
       for (int i = 0; i < nbeads; i++)
