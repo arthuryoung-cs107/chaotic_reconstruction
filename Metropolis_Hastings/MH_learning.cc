@@ -1,47 +1,5 @@
 #include "MH_learning.hh"
 
-int find_worst_record(record ** r_, int ncap_)
-{
-  int worst_index = 0;
-  for (int i = 1; i < ncap_; i++)
-    if (r_[worst_index]->isbetter(r_[i]))
-      worst_index = i;
-
-  return worst_index;
-}
-
-int find_best_record(record ** r_, int ncap_)
-{
-  int best_index = 0;
-  for (int i = 1; i < ncap_; i++)
-    if (r_[best_index]->isworse(r_[i]))
-      best_index = i;
-  return best_index;
-}
-
-void pick_nworst_records(record ** rin_, record ** rout_, int n_, int ncap_)
-{
-  for (int i = 0; i < n_; i++) rout_[i]=rin_[i];
-  int i_best_worst = find_best_record(rout_,n_);
-  for (int i = n_; i < ncap_; i++)
-    if (rout_[i_best_worst]->isbetter(rin_[i]))
-    {
-      rout_[i_best_worst] = rin_[i];
-      i_best_worst=find_best_record(rout_,n_);
-    }
-}
-void pick_nbest_record(record ** rin_, record ** rout_, int n_, int ncap_)
-{
-  for (int i = 0; i < n_; i++) rout_[i]=rin_[i];
-  int i_worst_best = find_worst_record(rout_,n_);
-  for (int i = n_; i < ncap_; i++)
-    if (rout_[i_worst_best]->isworse(rin_[i]))
-    {
-      rout_[i_worst_best] = rin_[i];
-      i_worst_best=find_worst_record(rout_,n_);
-    }
-}
-
 // thread_worker
 
 void thread_worker::reset_sim(double *utest_, double t0_, double ctheta0_, double comega0_, double *p0_)
@@ -146,7 +104,7 @@ void basic_MH_trainer::respawn_pool(double w_sum_, basic_thread_worker ** tws_, 
       for (int i = 0; i < leader_count; i++) ndup_leaders[i]+=dup_t[i];
     }
   }
-  
+
   for (int i = 0; i < leader_count; i++) if (ndup_leaders[i])
   {leaders[i]->dup_count+=ndup_leaders[i]; ndup_unique++;}
 }

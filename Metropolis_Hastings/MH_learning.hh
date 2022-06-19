@@ -19,7 +19,7 @@ struct record: public record_struct
   inline void draw_ranuni(MH_rng * ran_, double * umin_, double * umax_)
   {for (int i = 0; i < ulen; i++) u[i] = umin_[i]+(umax_[i]-umin_[i])*ran_->rand_uni();}
 
-  virtual int take_record(record * rec_) {printf("(record::take_record) WARNING: using uninitialized record copying\n"); return 0;}
+  virtual int take_record(record * rec_) = 0;
 
   virtual int isworse(record * r_) {printf("(record::isworse) WARNING: using uninitialized record comparison\n"); return 0;}
   virtual int isbetter(record * r_) {printf("(record::isbetter) WARNING: using uninitialized record comparison\n"); return 0;}
@@ -113,19 +113,58 @@ class MH_trainer : public MH_params
     proximity_grid ** const pg; // array of proximity grids.
     MH_rng ** rng; // random number generators
 
-    inline void write_MHT_it_ints(FILE * file_) {fwrite(MHT_it_ints, sizeof(int), MHT_it_ilen, file_);}
-    inline void write_MHT_it_dubs(FILE * file_) {fwrite(MHT_it_dubs, sizeof(double), MHT_dlen, file_);}
     inline void initialize_MHT_run()
     {
       for (int i = 0; i < MHT_it_ilen; i++) MHT_it_ints[i]=0;
       for (int i = 0; i < MHT_dlen; i++) MHT_it_dubs[i]=0.0;
     }
-    inline int take_records(record ** rin_, record ** rout_, int ncap_)
+    inline int find_worst_record(record ** r_, int ncap_)
+    {
+      int worst_index = 0;
+      for (int i = 1; i < ncap_; i++)
+        if (r_[worst_index]->isbetter(r_[i]))
+          worst_index = i;
+
+      return worst_index;
+    }
+    inline int find_best_record(record ** r_, int ncap_)
+    {
+      int best_index = 0;
+      for (int i = 1; i < ncap_; i++)
+        if (r_[best_index]->isworse(r_[i]))
+          best_index = i;
+      return best_index;
+    }
+    inline void pick_nworst_records(record ** rin_, record ** rout_, int n_, int ncap_)
+    {
+      for (int i = 0; i < n_; i++) rout_[i]=rin_[i];
+      int i_best_worst = find_best_record(rout_,n_);
+      for (int i = n_; i < ncap_; i++)
+        if (rout_[i_best_worst]->isbetter(rin_[i]))
+        {
+          rout_[i_best_worst] = rin_[i];
+          i_best_worst=find_best_record(rout_,n_);
+        }
+    }
+    inline void pick_nbest_record(record ** rin_, record ** rout_, int n_, int ncap_)
+    {
+      for (int i = 0; i < n_; i++) rout_[i]=rin_[i];
+      int i_worst_best = find_worst_record(rout_,n_);
+      for (int i = n_; i < ncap_; i++)
+        if (rout_[i_worst_best]->isworse(rin_[i]))
+        {
+          rout_[i_worst_best] = rin_[i];
+          i_worst_best=find_worst_record(rout_,n_);
+        }
+    }
+    inline int take_records(record ** rin_, record ** rout_, int * repl_list_, int ncap_)
     {
       int nrepl=0;
-      for (int i = 0; i < ncap_; i++) nrepl+=rout_[i]->take_record(rin_[i]);
+      for (int i = 0; i < ncap_; i++) if (rout_[i]->take_record(rin_[i])) repl_list[nrepl++]=i;
       return nrepl;
     }
+    inline void write_MHT_it_ints(FILE * file_) {fwrite(MHT_it_ints, sizeof(int), MHT_it_ilen, file_);}
+    inline void write_MHT_it_dubs(FILE * file_) {fwrite(MHT_it_dubs, sizeof(double), MHT_dlen, file_);}
 };
 
 const int basic_rec_ilen=7;
@@ -140,11 +179,11 @@ struct basic_record: public record
 
   int gen, // 0: generation in which this particle was generated
       Class, // 1: leader Class this particle belongs to, if any
-      dup_count // 2: number of times this particle has been duplicated
+      dup_count, // 2: number of times this particle has been duplicated
       parent_count, // 3: number of particle ancestors
-      parent_rid; // 4: index position of parent particle
+      parent_rid, // 4: index position of parent particle
       parent_gen, // 5: generation this particle comes from
-      parent_Class, // 6: leader Class this particle comes from
+      parent_Class; // 6: leader Class this particle comes from
 
   double  r2,
           w;
@@ -214,9 +253,10 @@ class basic_MH_trainer: public MH_trainer, public gaussian_likelihood
       basic_MH_trainer(MH_train_struct &mhts_, int ichunk_width_, int dchunk_width_, double t_wheels0_=-1.0): MH_trainer(mhts_, ichunk_width_, dchunk_width_), gaussian_likelihood(sigma, mhts_.sp_min->cl_im),
       apply_training_wheels(t_wheels0_>0.0), t_wheels0(t_wheels0_),
       umin(&(sp_min.Kn)), umax(&(sp_max.Kn)),
-      ndup_leaders(new int[nlead]), w_leaders(new double[nlead]) {}
+      ndup_leaders(new int[nlead]), irepl_leaders(new int[nlead]),
+      w_leaders(new double[nlead]) {}
 
-      ~basic_MH_trainer() {delete [] ndup_leaders; delete [] w_leaders;}
+      ~basic_MH_trainer() {delete [] ndup_leaders; delete [] irepl_leaders; delete [] w_leaders;}
 
     protected:
 
@@ -226,26 +266,22 @@ class basic_MH_trainer: public MH_trainer, public gaussian_likelihood
 
       double t_wheels; // current drift fraction
 
-      int * const ndup_leaders;
+      int * const ndup_leaders,
+          * const irepl_leaders;
 
       double  * const umin,
               * const umax,
               * const w_leaders;
 
       virtual double compute_weights(double r2_min_, basic_record ** recs_, int n_);
-      virtual void duplicate_u(basic_record * rec_pool_, basic_record * rec_lead_, MH_rng * rng_t_);
       virtual void respawn_pool(double w_sum_, basic_thread_worker **tws_, basic_record ** pool_, basic_record ** leaders_);
 
+      virtual void duplicate_u(basic_record * rec_pool_, basic_record * rec_lead_, MH_rng * rng_t_);
       virtual void redraw_u(basic_record * rec_pool_, MH_rng * rng_t_)
       {rec_pool_->draw_ranuni(rng_t_,umin,umax); rec_pool_->init_basic_record(gen_count);}
       virtual int basic_train_it_ilen_full() {return MHT_it_ilen;}
       virtual int basic_train_it_dlen_full() {return MHT_it_dlen;}
       inline void initialize_basic_trainer_run() {MH_trainer::initialize_MHT_run(); t_wheels=t_wheels0;}
 };
-
-int find_worst_record(record ** r_, int ncap_);
-int find_best_record(record ** r_, int ncap_);
-void pick_nworst_records(record ** rin_, record ** rout_, int n_, int ncap_);
-void pick_nbest_record(record ** rin_, record ** rout_, int n_, int ncap_);
 
 #endif

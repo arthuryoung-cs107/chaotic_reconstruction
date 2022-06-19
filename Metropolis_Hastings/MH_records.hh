@@ -30,18 +30,20 @@ struct event_record : public basic_record
           * r2unstable_bead,
           * alpha_bead;
 
-  void write_ints(FILE * file_);
-  void write_dubs(FILE * file_);
+  void write_ints(FILE * file_) {write_event_rec_ints(file_);}
+  void write_dubs(FILE * file_) {write_event_rec_dubs(file_);}
 
   int take_record(event_record *r_);
   int isworse(event_record * r_) {return r2compare>r_->r2compare;}
   int isbetter(event_record * r_) {return r2compare<r_->r2compare;}
 
-  inline int event_rec_ilen_full() {return basic_record::basic_rec_ilen_full + event_rec_ilen;}
-  inline int event_rec_dlen_full() {return basic_record::basic_rec_dlen_full + event_rec_dlen;}  
+  inline int event_rec_ilen_full() {return basic_rec_ilen_full() + event_rec_ilen;}
+  inline int event_rec_dlen_full() {return basic_rec_dlen_full() + event_rec_dlen;}
   inline double set_net_comparison() {return r2compare=r2;}
   inline double set_stable_comparison() {return r2compare=r2_stable;}
   inline double set_unstable_comparison() {return r2compare=r2_unstable;}
+  inline void write_event_rec_ints(FILE * file_) {write_basic_rec_ints(file_); fwrite(event_rec_ints,sizeof(int),event_rec_ilen,file_);}
+  inline void write_event_rec_dubs(FILE * file_) {write_basic_rec_dubs(file_); fwrite(event_rec_dubs,sizeof(dubs),event_rec_dlen,file_);}
   inline void record_event_data(int *int_data_, double * double_data_)
   {nfobs=int_data_[0]; nfstable=int_data_[1]; nfunstable=int_data_[2];
   r2=double_data_[0]; r2stable=double_data_[1]; r2unstable=double_data_[2];}

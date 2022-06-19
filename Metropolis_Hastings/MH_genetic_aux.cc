@@ -29,31 +29,31 @@ void MH_genetic::find_events()
     rec_check=leaders;
     ncheck=leader_count;
   }
-  clear_event_data();
+  clear_genetic_event_data();
   #pragma omp parallel
   {
     MH_examiner *ex_t = examiners[thread_num()];
-    ex_t->clear_event_data();
+    ex_t->clear_examiner_event_data();
     #pragma omp for nowait
     for (int i = 0; i < ncheck; i++)
     {
       ex_t->detect_events(rec_check[i], r2_pool_Framebead[i], alpha_pool_Framebead[i]);
     }
-    ex_t->consolidate_event_data();
+    ex_t->consolidate_examiner_event_data();
     #pragma omp critical
     {
       first2finish=ex_t->event_block::report_event_data(first2finish,stev_earliest,stev_latest,stev_comp_,nev_state_comp, nobs_state_comp, mur2_state_comp, mualpha_state_comp);
     }
   }
-  consolidate_event_data(); // sort event states chronologically, given stev_comp is already set
+  consolidate_genetic_event_data(); // sort event states chronologically, given stev_comp is already set
   event_block::define_event_block(sigma_scaled); // compute expected residuals using presumed noise level
-  synchronise_event_data(); // set event data of thread workers to the consolidated values
-  report_event_data(rec_check, ncheck); // finish event stats and write out results
+  synchronise_genetic_event_data(); // set event data of thread workers to the consolidated values
+  report_genetic_event_data(rec_check, ncheck); // finish event stats and write out results
   set_stable_training(); // set the expected residual to be that expected from the stable data
   if (gen_count==0) post_event_resampling(rec_check, ncheck); // restore records, sort by performance, and redraw generation
 }
 
-void MH_genetic::clear_event_data()
+void MH_genetic::clear_genetic_event_data()
 {
   event_block::clear_event_data();
   #pragma omp parallel
@@ -82,7 +82,7 @@ void MH_genetic::consolidate_genetic_event_data()
 void MH_genetic::synchronise_genetic_event_data()
 {
   int nf_obs, nf_stable, nf_unstable;
-  set_state_counts(nf_obs, nf_stable, nf_unstable);
+  event_block::set_state_counts(nf_obs, nf_stable, nf_unstable);
   #pragma omp parallel
   {
     MH_examiner *ex_t=examiners[thread_num()];
@@ -160,11 +160,11 @@ void MH_genetic::post_event_resampling(event_record ** recs_, int n_)
 
   // collect leaders
   pick_nbest_records(recs_,leader_board,nlead,n_);
-  take_records(leader_board,leaders,nlead);
+  set_leader_records();
   Class_count++;
 
   // resample pool
-  double w_sum = compute_weights(r2_min,rho2,leaders,nlead);
+  double w_sum = basic_MH_trainer::compute_weights(r2_min,rho2,leaders,nlead);
   basic_MH_trainer::respawn_pool(w_sum,examiners,pool,leaders);
   gen_count++;
 }

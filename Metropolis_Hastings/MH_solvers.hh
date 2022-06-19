@@ -32,12 +32,27 @@ class MH_genetic : public basic_MH_trainer, public event_block
 
     void stage_diagnostics();
     void close_diagnostics();
-    void clear_event_data();
+    void clear_genetic_event_data();
     void consolidate_genetic_event_data();
     void report_genetic_event_data(event_record **recs_, int n_);
     void synchronise_genetic_event_data();
     void post_event_resampling(event_record ** recs_, int n_);
 
+    inline void set_leader_records()
+    {
+      nreplace=MH_trainer::take_records(leader_board,leaders,irepl_leaders,nlead);
+      for (int i = 0; i < nreplace; i++) leaders[i]->init_basic_record(gen_count,Class_count);
+    }
+    inline void initialize_genetic_run()
+    {
+      initialize_basic_trainer_run();
+      Class_count=event_block_count=0;
+      prob_best=prob_worst=0.0;
+    }
+    inline void set_stable_training()
+    {rho2=gaussian_likelihood::expected_r2(stev_comp,nbeads);}
+    inline int genetic_it_ilen_full() {return basic_MH_trainer::basic_train_it_ilen_full() + genetic_train_it_ilen;}
+    inline int genetic_it_dlen_full() {return basic_MH_trainer::basic_train_it_dlen_full() + genetic_train_it_dlen;}
     inline void write_genetic_it_ints(FILE * file_)
     {
       write_MHT_it_ints(file_);
@@ -48,17 +63,6 @@ class MH_genetic : public basic_MH_trainer, public event_block
       write_MHT_it_dubs(file_);
       fwrite(genetic_train_it_dubs, sizeof(double), genetic_train_it_dlen, file_);
     }
-    inline void initialize_genetic_run()
-    {
-      initialize_basic_trainer_run();
-      Class_count=event_block_count=0;
-      prob_best=prob_worst=0.0;
-    }
-
-    inline void set_stable_training()
-    {rho2=gaussian_likelihood::expected_r2(stev_comp,nbeads);}
-    inline int genetic_it_ilen_full() {return basic_MH_trainer::it_ilen_full() + genetic_train_it_ilen;}
-    inline int genetic_it_dlen_full() {return basic_MH_trainer::it_dlen_full() + genetic_train_it_dlen;}
 
   private:
 
