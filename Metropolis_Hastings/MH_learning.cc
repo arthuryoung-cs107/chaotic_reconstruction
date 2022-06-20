@@ -108,3 +108,12 @@ void basic_MH_trainer::respawn_pool(double w_sum_, basic_thread_worker ** tws_, 
   for (int i = 0; i < leader_count; i++) if (ndup_leaders[i])
   {leaders[i]->dup_count+=ndup_leaders[i]; ndup_unique++;}
 }
+
+void basic_MH_trainer::basic_duplicate_u(basic_record *rec_child_, basic_record *rec_parent_, MH_rng *rng_t_)
+{
+  double  r_ = sqrt(rec_pool_->r2compare),
+          r_rat = r_/sqrt(rho2),
+          sigma_fac = max(0.25*(1.0-exp(0.5*(1.0-r_rat)*(1.0+r_rat))), 0.0),
+          *u_child=rec_child_->u,
+          *u_parent=rec_parent_->u;
+}

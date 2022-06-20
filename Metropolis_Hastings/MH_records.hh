@@ -6,7 +6,7 @@
 int comp_event_rec_ichunk_len(int nbeads_);
 int comp_event_rec_dchunk_len(int nbeads_);
 const int event_rec_ilen = 3;
-const int event_rec_dlen = 3;
+const int event_rec_dlen = 2;
 struct event_record : public basic_record
 {
   event_record(record_struct &rs_, int rid_, int * ichunk_, double * dchunk_, double * u_): basic_record(rs_, rid_, ichunk_, dchunk_, u_),
@@ -21,8 +21,7 @@ struct event_record : public basic_record
       nfstable,
       nfunstable;
   double  r2stable,
-          r2unstable,
-          r2compare;
+          r2unstable;
 
   int * evframe_bead;
 

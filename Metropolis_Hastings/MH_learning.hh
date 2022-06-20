@@ -21,8 +21,8 @@ struct record: public record_struct
 
   virtual int take_record(record * rec_) = 0;
 
-  virtual int isworse(record * r_) {printf("(record::isworse) WARNING: using uninitialized record comparison\n"); return 0;}
-  virtual int isbetter(record * r_) {printf("(record::isbetter) WARNING: using uninitialized record comparison\n"); return 0;}
+  virtual int isworse(record * r_) = 0;
+  virtual int isbetter(record * r_) = 0;
 
   virtual void write_ints(FILE * file_) = 0;
   virtual void write_dubs(FILE * file_) = 0;
@@ -113,6 +113,8 @@ class MH_trainer : public MH_params
     proximity_grid ** const pg; // array of proximity grids.
     MH_rng ** rng; // random number generators
 
+    inline void redraw_u_uni(record * rec_pool_, MH_rng * rng_t_)
+    {rec_pool_->draw_ranuni(rng_t_,umin,umax);}
     inline void initialize_MHT_run()
     {
       for (int i = 0; i < MHT_it_ilen; i++) MHT_it_ints[i]=0;
@@ -124,7 +126,6 @@ class MH_trainer : public MH_params
       for (int i = 1; i < ncap_; i++)
         if (r_[worst_index]->isbetter(r_[i]))
           worst_index = i;
-
       return worst_index;
     }
     inline int find_best_record(record ** r_, int ncap_)
@@ -165,13 +166,15 @@ class MH_trainer : public MH_params
     }
     inline void write_MHT_it_ints(FILE * file_) {fwrite(MHT_it_ints, sizeof(int), MHT_it_ilen, file_);}
     inline void write_MHT_it_dubs(FILE * file_) {fwrite(MHT_it_dubs, sizeof(double), MHT_dlen, file_);}
+    inline double max(double a_,double b_ ) {return (a_>b_)?a_:b_;}
+    inline double min(double a_,double b_ ) {return (a_<b_)?a_:b_;}
 };
 
 const int basic_rec_ilen=7;
-const int basic_rec_dlen=2;
+const int basic_rec_dlen=3;
 struct basic_record: public record
 {
-  basic_record(record_struct &rs_, int rid_, int * ichunk_, double * dchunk_, double * u_): record(rs_, rid_, ichunk_, dchunk_, u_), basic_rec_ints(&gen), basic_rec_dubs(&r2) {init_basic_record();}
+  basic_record(record_struct &rs_, int rid_, int * ichunk_, double * dchunk_, double * u_): record(rs_, rid_, ichunk_, dchunk_, u_), basic_rec_ints(&gen), basic_rec_dubs(&rcompare) {init_basic_record();}
   basic_record(record_struct &rs_, int rid_, int * ichunk_, double * dchunk_, double * u_, MH_rng * ran_, double * umin_, double * umax_): basic_record(rs_, rid_, ichunk_, dchunk_, u_) {draw_ranuni(ran_,umin_,umax_);}
   ~basic_record() {}
 
@@ -185,7 +188,8 @@ struct basic_record: public record
       parent_gen, // 5: generation this particle comes from
       parent_Class; // 6: leader Class this particle comes from
 
-  double  r2,
+  double  r2compare,
+          r2,
           w;
 
   int * const basic_rec_ints;
@@ -275,12 +279,23 @@ class basic_MH_trainer: public MH_trainer, public gaussian_likelihood
 
       virtual double compute_weights(double r2_min_, basic_record ** recs_, int n_);
       virtual void respawn_pool(double w_sum_, basic_thread_worker **tws_, basic_record ** pool_, basic_record ** leaders_);
+      virtual void
 
-      virtual void duplicate_u(basic_record * rec_pool_, basic_record * rec_lead_, MH_rng * rng_t_);
+
+
       virtual void redraw_u(basic_record * rec_pool_, MH_rng * rng_t_)
-      {rec_pool_->draw_ranuni(rng_t_,umin,umax); rec_pool_->init_basic_record(gen_count);}
-      virtual int basic_train_it_ilen_full() {return MHT_it_ilen;}
-      virtual int basic_train_it_dlen_full() {return MHT_it_dlen;}
+      {redraw_u_uni(rec_pool_, rng_t_); rec_pool_->init_basic_record(gen_count);}
+      inline void basic_duplicate_u(double *umin_,double *umax_,double *u_parent_,double *u_child_,MH_rng *rng_t_)
+      {
+        for (int i = 0; i < ulen; i++)
+        {
+          double z = rng_t_->rand_gau();
+          u_child[i]=u_parent[i] + z*sigma_fac*((z>0.0)?():());
+        }
+
+      }
+      inline int basic_train_it_ilen_full() {return MHT_it_ilen;}
+      inline int basic_train_it_dlen_full() {return MHT_it_dlen;}
       inline void initialize_basic_trainer_run() {MH_trainer::initialize_MHT_run(); t_wheels=t_wheels0;}
 };
 
