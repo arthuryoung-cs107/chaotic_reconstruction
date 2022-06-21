@@ -107,11 +107,20 @@ struct event_block: public virtual system_struct
 
 
   virtual void synchronise_event_data(int stev_earliest_, int stev_latest_, int *stev_c_, int *stev_o_, int *comps_o_, double *rho2_r_);
-  virtual bool report_event_data(bool first2finish_, int &stev_earliest_, int &stev_latest_, int *stev_c_, int ** nev_s_c_, int ** nobs_s_c_, double ** r2_s_c_, double **alpha_s_c_);
   virtual void consolidate_event_data(int ntest_);
   virtual void clear_event_data();
   virtual void define_event_block(double sigma_scaled_);
 
+  inline void report_event_data(int ** nev_s_c_, int ** nobs_s_c_, double ** r2_s_c_, double **alpha_s_c_)
+  {
+    for (int i = 0; i < ncomp*stev_latest; i++)
+    {
+      nev_s_c_[0][i] += nev_state_comp[0][i];
+      nobs_s_c_[0][i] += nobs_state_comp[0][i];
+      r2_s_c_[0][i] += mur2_state_comp[0][i];
+      alpha_s_c_[0][i] += mualpha_state_comp[0][i];
+    }
+  }
   inline void set_state_counts(int &nstate_obs_, int &nstate_stable_, int &nstate_unstable_)
   {
     int nstate_stable_local=0;
@@ -120,7 +129,6 @@ struct event_block: public virtual system_struct
     nstate_stable_=nstate_stable_local;
     nstate_unstable_=nstate_obs_-nstate_stable_;
   }
-
   inline int earliest(int *frames_ordered_, int &early_index_, int index_start_)
   {
     int out = frames_ordered_[index_start_]; early_index_= index_start_;
@@ -153,12 +161,18 @@ struct gaussian_likelihood
     // arguments provided unsquared so that we can avoid issues with machine precision
     return exp(0.5*((r_min_-r_)/rho_)*((r_min_+r_)/rho_));
   }
+  inline double compute_prob(double r_, double rho_)
+  {return (1.0/(rho_*sqrt(root2pi)))*exp(-0.5*(r_/rho_)*(r_/rho_));}  
   inline double expected_r2(int * obs_states_, int ncomp_, int ndof_=2)
   {
     int net_obs=0;
     for (int i = 0; i < ncomp_; i++) net_obs+=ndof_*obs_states_[i];
     return sigma_scaled*sigma_scaled*((double)net_obs);
   }
+
+  private:
+    const double root2pi=sqrt(2.0*M_PI);
+
 };
 
 double

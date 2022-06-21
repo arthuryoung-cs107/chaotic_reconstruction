@@ -2,74 +2,6 @@
 
 //MH_examiner
 
-void MH_examiner::start_detecting_events(event_record * rec_, double * t_history_ double &net_r2_local_)
-{
-  reset_sim(rec_->u, ts[0]/t_phys, d_ang[0], comega_s[0], xs);
-
-  int f_local=0,
-      poffset=0,
-      foffset=0;
-  double net_r2_local=0.0, *pref = xs;
-
-  int * f_event=rec_->evframe_bead;
-  double  *r2_stable=rec_->r2stable_bead,
-          *r2_unstable=rec_->r2unstable_bead;
-
-  // initialize t=tstart data
-  t_history_[0]=t_history_[1]=ts[0];
-  for (int i = 0, j = 0; i < nbeads; i++,j+=2)
-  {
-    double  x_sim=q[i].x, y_sim=q[i].y,
-            x_now=(x_sim-cx)*cl_im+cx_im, y_now=(y_sim-cy)*cl_im+cy_im;
-    net_r2_local+=r2_state_comp[0][i]=0.0;
-
-    INTr2_comp_history[i][0]=INTr2_comp_history[i][1]=0.0;
-    alpha_state_comp[0][i]=NAN;
-
-    // initialize component aggregates
-    f_event[i]=0;
-    r2_stable[i]=r2_unstable[i]=0.0;
-  }
-  // step to frame 1, begin computing divergence from data
-  f_local++; poffset+=ndof; foffset+=nbeads; pref+=ndof;
-  advance((ts[f_local]-ts[f_local-1])/t_phys, d_ang[f_local-1], comega_s[f_local], dt_sim);
-  t_history_[2]=t_history_[1]; t_history_[1]=t_history_[0]; t_history_[0]=ts[f_local];
-  for (int i = 0, j = 0; i < nbeads; i++,j+=2)
-  {
-    double  x_sim=q[i].x, y_sim=q[i].y,
-            x_now=(x_sim-cx)*cl_im+cx_im, y_now=(y_sim-cy)*cl_im+cy_im,
-            x_ref=pref[j], y_ref=pref[j+1],
-            xerr=x_now-x_ref, yerr=y_now-y_ref, rsq=xerr*xerr+yerr*yerr;
-    net_r2_local+=r2_state_comp[f_local][i]=rsq;
-
-    INTr2_comp_history[i][2]=INTr2_comp_history[i][1]; INTr2_comp_history[i][1]=INTr2_comp_history[i][0];
-    INTr2_comp_history[i][0]+=0.5*(rsq+r2_state_comp[f_local-1][i])*(t_history_[0]-t_history_[1]);
-    alpha_state_comp[f_local][i]=NAN;
-
-    r2_stable[i]+=rsq;
-  }
-
-  // step to frame 2, compute divergence from data as we will in the body of the detection
-  f_local++; poffset+=ndof; foffset+=nbeads; pref+=ndof;
-  advance((ts[f_local]-ts[f_local-1])/t_phys, d_ang[f_local-1], comega_s[f_local], dt_sim);
-  t_history_[2]=t_history_[1]; t_history_[1]=t_history_[0]; t_history_[0]=ts[f_local];
-  for (int i = 0, j = 0; i < nbeads; i++,j+=2)
-  {
-    double  x_sim=q[i].x, y_sim=q[i].y,
-            x_now=(x_sim-cx)*cl_im+cx_im, y_now=(y_sim-cy)*cl_im+cy_im,
-            x_ref=pref[j], y_ref=pref[j+1],
-            xerr=x_now-x_ref, yerr=y_now-y_ref, rsq=xerr*xerr+yerr*yerr;
-    net_r2_local+=r2_state_comp[f_local][i]=rsq;
-
-    INTr2_comp_history[i][2]=INTr2_comp_history[i][1]; INTr2_comp_history[i][1]=INTr2_comp_history[i][0];
-    INTr2_comp_history[i][0]+=0.5*(rsq+r2_state_comp[f_local-1][i])*(t_history_[0]-t_history_[1]);
-
-    r2_stable[i]+=rsq;
-  }
-  net_r2_local_=net_r2_local;
-  return f_local;
-}
-
 void MH_examiner::detect_events(event_record *rec_, double *r2i_, double *alphai_)
 {
   double t_history[3], net_r2_local;
@@ -145,7 +77,7 @@ void MH_examiner::detect_events(event_record *rec_, double *r2i_, double *alphai
 
 void MH_examiner::update_event_data(int final_frame_, int *f_event, double *r2i_, double *alphai_)
 {
-  test_count++;
+  ntest++;
   stev_early=stev_late=f_event[0];
   nf_stable=0;
   for (int i=0, k=0; i < nbeads; i++)
@@ -168,6 +100,67 @@ void MH_examiner::update_event_data(int final_frame_, int *f_event, double *r2i_
   if (stev_late>stev_latest) stev_latest=stev_late;
 }
 
+
+bool MH_examiner::examine_u(event_record *rec_, int i_, double r2success_threshold_)
+{
+  thread_worker::reset_sim(rec_->u, ts[0]/t_phys, d_ang[0], comega_s[0], xs);
+  int poffset=0;
+  // run the length of the event block, storing bead positions
+  for (int i_f = 1; i_f <= stev_latest; i_f++)
+  {
+    poffset+=ndof;
+    advance((ts[i_f]-ts[i_f-1])/t_phys, d_ang[i_f-1], comega_s[i_f], dt_sim);
+    for (int i = 0, j = poffset; i < nbeads; i++,j+=2) {psim[j]=q[i].x; psim[j+1]=q[i].y;}
+  }
+  // process the event block
+  double  net_r2_local=0.0,
+          net_r2_stable_local=0.0,
+          net_r2_unstable_local=0.0,
+          *pref=xs,
+          *r2_stable_comp=rec_->r2stable_bead,
+          *r2_unstable_comp=rec_->r2unstable_bead;
+  poffset=0;
+  clear_examiner_residuals(r2_stable_comp,r2_unstable_comp);
+  for (int i_f = 1; i_f <= stev_latest; i_f++)
+  {
+    poffset+=ndof; pref+=ndof;
+    for (int i = 0, j = poffset, k = 0; i < nbeads; i++,j+=2,k+=2)
+    {
+      double  x_sim=psim[j], y_sim=psim[j+1],
+              x_now=(x_sim-cx)*cl_im+cx_im, y_now=(y_sim-cy)*cl_im+cy_im,
+              x_ref=pref[j], y_ref=pref[j+1],
+              xerr=x_now-x_ref, yerr=y_now-y_ref, rsq=xerr*xerr+yerr*yerr;
+      net_r2_local+=r2_state_comp[i_f][k]=rsq;
+      if (i<stev_comp[i]) // stable regime
+      {
+        net_r2_stable_local+=rsq;
+        r2_stable_comp[i]+=rsq;
+      }
+      else // unstable regime
+      {
+        net_r2_unstable_local+=rsq;
+        r2_unstable_comp[i]+=rsq;
+      }
+    }
+  }
+  net_r2=net_r2_local;
+  net_r2_stable=net_r2_stable_local;
+  net_r2_unstable=net_r2_unstable_local;
+
+  bool success_local = update_training_data(i_,r2success_threshold_);
+  rec_->record_training_data(&net_r2,success_local);
+  return success_local;
+}
+
+bool MH_examiner::update_training_data(int i_, double r2success_threshold_)
+{
+  ntest++;
+  bool success_local=((stable_training_flag)?net_r2_stable:net_r2_unstable)<r2success_threshold_;
+  if (success_local) int_wkspc[nsuccess_test++] = i_;
+  return success_local;
+}
+
+
 // MH_medic
 
 MH_medic::MH_medic(swirl_param  &sp_, proximity_grid *pg_, wall_list &wl_, thread_worker_struct &tws_, int thread_id_, double alpha_tol_, int Frames_test_, char * test_buffer_): basic_thread_worker(sp_, pg_, wl_, tws_, thread_id_, alpha_tol_), event_block(nbeads,Frames),
@@ -183,90 +176,6 @@ MH_medic::~MH_medic()
   delete [] TEST_r2;
   delete [] TEST_alpha;
   delete [] TEST_INTr2;
-}
-
-int MH_medic::start_test_u(event_record * rec_, double * t_history_, double &net_r2_local_)
-{
-  for (int i = 0; i < nbeads*Frames; i++) r2_state_comp[0][i] = alpha_state_comp[0][i] = 0.0;
-
-  reset_sim(rec_->u, ts[0]/t_phys, d_ang[0], comega_s[0], xs);
-
-  int f_local=0,
-      poffset=0,
-      foffset=0;
-  double net_r2_local=0.0, *pref = xs;
-
-  int * f_event=rec_->evframe_bead;
-  double  *r2_stable=rec_->r2stable_bead,
-          *r2_unstable=rec_->r2unstable_bead;
-
-  // initialize t=tstart data
-  t_history_[0]=t_history_[1]=ts[0];
-  for (int i = 0, j = 0; i < nbeads; i++,j+=2)
-  {
-    f_event[i]=0;
-    r2_stable[i]=r2_unstable[i]=r2_state_comp[0][i]=
-    INTr2_comp_history[i][0]=INTr2_comp_history[i][1]=INTr2_comp_history[i][2]=0.0;
-    alpha_state_comp[0][i]=NAN;
-
-    double  x_sim=q[i].x, y_sim=q[i].y,
-            x_now=(x_sim-cx)*cl_im+cx_im, y_now=(y_sim-cy)*cl_im+cy_im;
-    psim[j]=x_sim; psim[j+1]=y_sim;
-
-    // set medic data
-    TEST_p[j]=x_now; TEST_p[j+1]=y_now;
-    TEST_r2[i]=r2_state_comp[0][i];
-    TEST_INTr2[i]=INTr2_comp_history[i][0];
-    TEST_alpha[i]=alpha_state_comp[0][i];
-  }
-  // step to frame 1, begin computing divergence from data
-  f_local++; poffset+=ndof; foffset+=nbeads; pref+=ndof;
-  advance((ts[f_local]-ts[f_local-1])/t_phys, d_ang[f_local-1], comega_s[f_local], dt_sim);
-  t_history_[2]=t_history_[1]; t_history_[1]=t_history_[0]; t_history_[0]=ts[f_local];
-  for (int i = 0, j = 0; i < nbeads; i++,j+=2)
-  {
-    double  x_sim=q[i].x, y_sim=q[i].y,
-            x_now=(x_sim-cx)*cl_im+cx_im, y_now=(y_sim-cy)*cl_im+cy_im,
-            x_ref=pref[j], y_ref=pref[j+1],
-            xerr=x_now-x_ref, yerr=y_now-y_ref, rsq=xerr*xerr+yerr*yerr;
-    psim[j+poffset]=x_sim; psim[j+1+poffset]=y_sim;
-
-    net_r2_local+=r2_state_comp[f_local][i]=rsq;
-    r2_stable[i]+=rsq;
-
-    INTr2_comp_history[i][2]=INTr2_comp_history[i][1]; INTr2_comp_history[i][1]=INTr2_comp_history[i][0];
-    INTr2_comp_history[i][0]+=0.5*(rsq+r2_state_comp[f_local-1][i])*(t_history_[0]-t_history_[1]);
-    alpha_state_comp[f_local][i]=NAN;
-
-    // set medic data
-    TEST_p[j+poffset]=x_now;TEST_p[j+1+poffset]=y_now;
-    TEST_r2[i+foffset]=r2_state_comp[f_local][i];TEST_INTr2[i+foffset]=INTr2_comp_history[i][0];
-    TEST_alpha[i+foffset]=alpha_state_comp[f_local][i];
-  }
-
-  // step to frame 2, compute divergence from data as we will in the body of the detection
-  f_local++; poffset+=ndof; foffset+=nbeads; pref+=ndof;
-  advance((ts[f_local]-ts[f_local-1])/t_phys, d_ang[f_local-1], comega_s[f_local], dt_sim);
-  t_history_[2]=t_history_[1]; t_history_[1]=t_history_[0]; t_history_[0]=ts[f_local];
-  for (int i = 0, j = 0; i < nbeads; i++,j+=2)
-  {
-    double  x_sim=q[i].x, y_sim=q[i].y,
-            x_now=(x_sim-cx)*cl_im+cx_im, y_now=(y_sim-cy)*cl_im+cy_im,
-            x_ref=pref[j], y_ref=pref[j+1],
-            xerr=x_now-x_ref, yerr=y_now-y_ref, rsq=xerr*xerr+yerr*yerr;
-    psim[j+poffset]=x_sim; psim[j+1+poffset]=y_sim;
-
-    net_r2_local+=r2_state_comp[f_local][i]=rsq;
-    r2_stable[i]+=rsq;
-    INTr2_comp_history[i][2]=INTr2_comp_history[i][1]; INTr2_comp_history[i][1]=INTr2_comp_history[i][0];
-    INTr2_comp_history[i][0]+=0.5*(rsq+r2_state_comp[f_local-1][i])*(t_history_[0]-t_history_[1]);
-
-    // set medic data
-    TEST_p[j+poffset]=x_now;TEST_p[j+1+poffset]=y_now;
-    TEST_r2[i+foffset]=r2_state_comp[f_local][i];TEST_INTr2[i+foffset]=INTr2_comp_history[i][0];
-  }
-  net_r2_local_=net_r2_local;
-  return f_local;
 }
 
 void MH_medic::test_u(event_record * rec_, int i_, bool verbose_)
@@ -380,7 +289,7 @@ void MH_medic::write_utest_results(event_record *rec_, int i_)
   fwrite(TEST_r2,sizeof(double),nbeads*Frames_test,data_file);
   fwrite(TEST_alpha,sizeof(double),nbeads*Frames_test,data_file);
   fwrite(TEST_INTr2,sizeof(double),nbeads*Frames_test,data_file);
-  rec_->write_event_record_header(data_file);
+  rec_->write_event_record_full_header(data_file);
   rec_->write_record_data(data_file);
   fclose(data_file);
 }

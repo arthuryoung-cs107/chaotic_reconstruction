@@ -10,7 +10,10 @@ void thread_worker::reset_sim(double *utest_, double t0_, double ctheta0_, doubl
   set_swirl(ctheta0_, comega0_);
   for (int i = 0, j = 0; i < nbeads; i++,j+=2)
   {
-    q[i].set_pos(((p0_[j]-cx_im)/cl_im)+cx, ((p0_[j+1]-cy_im)/cl_im)+cy, rad);
+    double  x_it=((p0_[j]-cx_im)/cl_im)+cx,
+            y_it=((p0_[j+1]-cy_im)/cl_im)+cy;
+    psim[j]=x_it; psim[j+1]=y_it;
+    q[i].set_pos(x_it,y_it,rad);
     q[i].zero_rest();
   }
 }
@@ -55,6 +58,70 @@ MH_trainer::~MH_trainer()
   }
   delete [] pg;
   delete [] rng;
+}
+
+int MH_trainer::find_worst_record(record ** r_, int ncap_)
+{
+  int worst_index = 0;
+  for (int i = 1; i < ncap_; i++)
+    if (r_[worst_index]->isbetter(r_[i]))
+      worst_index = i;
+  return worst_index;
+}
+
+int MH_trainer::find_best_record(record ** r_, int ncap_)
+{
+  int best_index = 0;
+  for (int i = 1; i < ncap_; i++)
+    if (r_[best_index]->isworse(r_[i]))
+      best_index = i;
+  return best_index;
+}
+
+void MH_trainer::pick_nworst_records(record ** rin_, record ** rout_, int n_, int ncap_)
+{
+  for (int i = 0; i < n_; i++) rout_[i]=rin_[i];
+  int i_best_worst = find_best_record(rout_,n_);
+  for (int i = n_; i < ncap_; i++)
+    if (rout_[i_best_worst]->isbetter(rin_[i]))
+    {
+      rout_[i_best_worst] = rin_[i];
+      i_best_worst=find_best_record(rout_,n_);
+    }
+}
+
+void MH_trainer::pick_nbest_records(record ** rin_, record ** rout_, int n_, int ncap_)
+{
+  for (int i = 0; i < n_; i++) rout_[i]=rin_[i];
+  int i_worst_best = find_worst_record(rout_,n_);
+  for (int i = n_; i < ncap_; i++)
+    if (rout_[i_worst_best]->isworse(rin_[i]))
+    {
+      rout_[i_worst_best] = rin_[i];
+      i_worst_best=find_worst_record(rout_,n_);
+    }
+}
+
+void MH_trainer::pick_nworst_records(record ** rin_, int n_, int ncap_)
+{
+  int i_best_worst = find_best_record(rin_,n_);
+  for (int i = n_; i < ncap_; i++)
+    if (rin_[i_best_worst]->isbetter(rin_[i]))
+    {
+      rin_[i_best_worst] = rin_[i];
+      i_best_worst=find_best_record(rin_,n_);
+    }
+}
+
+void MH_trainer::pick_nbest_records(record ** rin_, int n_, int ncap_)
+{
+  int i_worst_best = find_worst_record(rin_,n_);
+  for (int i = n_; i < ncap_; i++)
+    if (rin_[i_worst_best]->isworse(rin_[i]))
+    {
+      rin_[i_worst_best] = rin_[i];
+      i_worst_best=find_worst_record(rin_,n_);
+    }
 }
 
 double basic_MH_trainer::compute_weights(double r2_min_, basic_record ** recs_, int n_)
@@ -109,11 +176,19 @@ void basic_MH_trainer::respawn_pool(double w_sum_, basic_thread_worker ** tws_, 
   {leaders[i]->dup_count+=ndup_leaders[i]; ndup_unique++;}
 }
 
-void basic_MH_trainer::basic_duplicate_u(basic_record *rec_child_, basic_record *rec_parent_, MH_rng *rng_t_)
+void basic_MH_trainer::duplicate_u(basic_record *rec_child_, basic_record *rec_parent_, MH_rng *rng_t_)
 {
   double  r_ = sqrt(rec_pool_->r2compare),
           r_rat = r_/sqrt(rho2),
           sigma_fac = max(0.25*(1.0-exp(0.5*(1.0-r_rat)*(1.0+r_rat))), 0.0),
           *u_child=rec_child_->u,
           *u_parent=rec_parent_->u;
+  for (int i = 0; i < ulen; i++)
+  {
+    double z = rng_t_->rand_gau();
+    u_child[i]=u_parent[i] + z*sigma_fac*((z>0.0)?(umax[i]-u_parent[i]):(u_parent[i]-umin[i]));
+    if (u_child[i]>umax[i]) u_child[i]=umax[i];
+    if (u_child[i]<umin[i]) u_child[i]=umin[i];
+  }
+  rec_child_->init_basic_record(gen_count);
 }

@@ -54,30 +54,6 @@ void event_block::clear_event_data()
   }
 }
 
-bool event_block::report_event_data(bool first2finish_, int &stev_earliest_, int &stev_latest_, int *stev_c_, int ** nev_s_c_, int ** nobs_s_c_, double ** r2_s_c_, double **alpha_s_c_)
-{
-  for (int i = 0; i < ncomp*stev_latest; i++)
-  {
-    nev_s_c_[0][i] += nev_state_comp[0][i];
-    nobs_s_c_[0][i] += nobs_state_comp[0][i];
-    r2_s_c_[0][i] += mur2_state_comp[0][i];
-    alpha_s_c_[0][i] += mualpha_state_comp[0][i];
-  }
-  if (first2finish_)
-  {
-    stev_earliest_=stev_earliest;
-    stev_latest_=stev_latest;
-    for (int i = 0; i < ncomp; i++) stev_c_[i]=stev_comp[i];
-  }
-  else
-  {
-    if (stev_earliest<stev_earliest_) stev_earliest_=stev_earliest;
-    if (stev_latest<stev_latest_) stev_latest_=stev_latest;
-    for (int i = 0; i < ncomp; i++) if (stev_comp[i]<stev_c_[i]) stev_c_[i]=stev_comp[i];
-  }
-  return false;
-}
-
 void event_block::consolidate_event_data()
 {
   // assumes that stev_comp, stev_ordered, and comps_ordered are already initialized.

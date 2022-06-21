@@ -113,50 +113,19 @@ class MH_trainer : public MH_params
     proximity_grid ** const pg; // array of proximity grids.
     MH_rng ** rng; // random number generators
 
+    virtual int find_worst_record(record ** r_, int ncap_);
+    virtual int find_best_record(record **r_, int ncap_);
+    virtual void pick_nworst_records(record ** rin_, record ** rout_, int n_, int ncap_);
+    virtual void pick_nbest_records(record ** rin_, record ** rout_, int n_, int ncap_);
+    virtual void pick_nworst_records(record ** rin_, int n_, int ncap_);
+    virtual void pick_nbest_records(record ** rin_, int n_, int ncap_);
+
     inline void redraw_u_uni(record * rec_pool_, MH_rng * rng_t_)
     {rec_pool_->draw_ranuni(rng_t_,umin,umax);}
     inline void initialize_MHT_run()
     {
       for (int i = 0; i < MHT_it_ilen; i++) MHT_it_ints[i]=0;
       for (int i = 0; i < MHT_dlen; i++) MHT_it_dubs[i]=0.0;
-    }
-    inline int find_worst_record(record ** r_, int ncap_)
-    {
-      int worst_index = 0;
-      for (int i = 1; i < ncap_; i++)
-        if (r_[worst_index]->isbetter(r_[i]))
-          worst_index = i;
-      return worst_index;
-    }
-    inline int find_best_record(record ** r_, int ncap_)
-    {
-      int best_index = 0;
-      for (int i = 1; i < ncap_; i++)
-        if (r_[best_index]->isworse(r_[i]))
-          best_index = i;
-      return best_index;
-    }
-    inline void pick_nworst_records(record ** rin_, record ** rout_, int n_, int ncap_)
-    {
-      for (int i = 0; i < n_; i++) rout_[i]=rin_[i];
-      int i_best_worst = find_best_record(rout_,n_);
-      for (int i = n_; i < ncap_; i++)
-        if (rout_[i_best_worst]->isbetter(rin_[i]))
-        {
-          rout_[i_best_worst] = rin_[i];
-          i_best_worst=find_best_record(rout_,n_);
-        }
-    }
-    inline void pick_nbest_record(record ** rin_, record ** rout_, int n_, int ncap_)
-    {
-      for (int i = 0; i < n_; i++) rout_[i]=rin_[i];
-      int i_worst_best = find_worst_record(rout_,n_);
-      for (int i = n_; i < ncap_; i++)
-        if (rout_[i_worst_best]->isworse(rin_[i]))
-        {
-          rout_[i_worst_best] = rin_[i];
-          i_worst_best=find_worst_record(rout_,n_);
-        }
     }
     inline int take_records(record ** rin_, record ** rout_, int * repl_list_, int ncap_)
     {
@@ -230,10 +199,12 @@ class basic_thread_worker: public thread_worker, public event_detector
 
       basic_thread_worker(swirl_param &sp_, proximity_grid *pg_, wall_list &wl_, thread_worker_struct &tws_, int thread_id_, double alpha_tol_): thread_worker(sp_, pg_, wl_, tws_, thread_id_), event_detector(nbeads, Frames, 2, alpha_tol_),
         basic_tw_ints(&nf_obs), basic_tw_dubs(&net_r2),
-        int_wkspc(new int[nlead]) {}
+        int_wkspc(new int[npool]) {}
       ~basic_thread_worker() {delete [] int_wkspc;}
 
       int * const int_wkspc;
+
+      inline void clear_basic_tw_training_data() {memset(int_wkspc,0,npool*sizeof(int));}
 
     protected:
 
@@ -257,10 +228,14 @@ class basic_MH_trainer: public MH_trainer, public gaussian_likelihood
       basic_MH_trainer(MH_train_struct &mhts_, int ichunk_width_, int dchunk_width_, double t_wheels0_=-1.0): MH_trainer(mhts_, ichunk_width_, dchunk_width_), gaussian_likelihood(sigma, mhts_.sp_min->cl_im),
       apply_training_wheels(t_wheels0_>0.0), t_wheels0(t_wheels0_),
       umin(&(sp_min.Kn)), umax(&(sp_max.Kn)),
-      ndup_leaders(new int[nlead]), irepl_leaders(new int[nlead]),
+      ndup_leaders(new int[nlead]), irepl_leaders(new int[nlead]), isuccess_pool(new int[npool]),
       w_leaders(new double[nlead]) {}
 
-      ~basic_MH_trainer() {delete [] ndup_leaders; delete [] irepl_leaders; delete [] w_leaders;}
+      ~basic_MH_trainer()
+      {
+        delete [] ndup_leaders; delete [] irepl_leaders; delete [] isuccess_pool;
+        delete [] w_leaders;
+      }
 
     protected:
 
@@ -271,7 +246,8 @@ class basic_MH_trainer: public MH_trainer, public gaussian_likelihood
       double t_wheels; // current drift fraction
 
       int * const ndup_leaders,
-          * const irepl_leaders;
+          * const irepl_leaders,
+          * const isuccess_pool;
 
       double  * const umin,
               * const umax,
@@ -279,24 +255,16 @@ class basic_MH_trainer: public MH_trainer, public gaussian_likelihood
 
       virtual double compute_weights(double r2_min_, basic_record ** recs_, int n_);
       virtual void respawn_pool(double w_sum_, basic_thread_worker **tws_, basic_record ** pool_, basic_record ** leaders_);
-      virtual void
-
-
+      virtual void duplicate_u((basic_record *rec_child_, basic_record *rec_parent_, MH_rng *rng_t_);
 
       virtual void redraw_u(basic_record * rec_pool_, MH_rng * rng_t_)
       {redraw_u_uni(rec_pool_, rng_t_); rec_pool_->init_basic_record(gen_count);}
-      inline void basic_duplicate_u(double *umin_,double *umax_,double *u_parent_,double *u_child_,MH_rng *rng_t_)
-      {
-        for (int i = 0; i < ulen; i++)
-        {
-          double z = rng_t_->rand_gau();
-          u_child[i]=u_parent[i] + z*sigma_fac*((z>0.0)?():());
-        }
-
-      }
+      inline void clear_basic_train_training_data() {memset(isuccess_pool,0,npool*sizeof(int));nsuccess=0;}
+      inline void initialize_basic_trainer_run() {initialize_MHT_run(); t_wheels=t_wheels0;}
       inline int basic_train_it_ilen_full() {return MHT_it_ilen;}
       inline int basic_train_it_dlen_full() {return MHT_it_dlen;}
-      inline void initialize_basic_trainer_run() {MH_trainer::initialize_MHT_run(); t_wheels=t_wheels0;}
+      inline void write_basic_train_it_ints(FILE * file_) {write_MHT_it_ints(file_);}
+      inline void write_basic_train_it_dubs(FILE * file_) {write_MHT_it_dubs(file_);}
 };
 
 #endif

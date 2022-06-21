@@ -72,6 +72,85 @@ void MH_genetic::run(bool verbose_)
   close_diagnostics();
 }
 
+void MH_genetic::find_events()
+{
+  bool first2finish=true;
+  int ncheck;
+  event_record ** rec_check;
+  if (gen_count==0)
+  {
+    rec_check=pool;
+    ncheck=npool;
+  }
+  else
+  {
+    rec_check=leaders;
+    ncheck=leader_count;
+  }
+  clear_genetic_event_data();
+  #pragma omp parallel
+  {
+    MH_examiner *ex_t = examiners[thread_num()];
+    ex_t->clear_examiner_event_data();
+    #pragma omp for nowait
+    for (int i = 0; i < ncheck; i++)
+    {
+      ex_t->detect_events(rec_check[i], r2_pool_Framebead[i], alpha_pool_Framebead[i]);
+    }
+    ex_t->consolidate_examiner_event_data();
+    #pragma omp critical
+    {
+      first2finish=ex_t->report_examiner_event_data(first2finish,stev_earliest,stev_latest,stev_comp_,nev_state_comp, nobs_state_comp, mur2_state_comp, mualpha_state_comp);
+    }
+  }
+  consolidate_genetic_event_data(); // sort event states chronologically, given stev_comp is already set
+  event_block::define_event_block(sigma_scaled); // compute expected residuals using presumed noise level
+  synchronise_genetic_event_data(); // set event data of thread workers to the consolidated values
+  report_genetic_event_data(rec_check, ncheck); // finish event stats and write out results
+  set_genetic_stable_objective(); // set the expected residual to be that expected from the stable data
+  if (gen_count==0) post_event_resampling(rec_check, ncheck); // restore records, sort by performance, and redraw generation
+}
+
+void MH_genetic::train_stable()
+{
+  int nit_train_stable=0;
+  do
+  {
+    bool first2finish=true;
+    nit_train_stable++;
+    clear_genetic_training_data();
+    int nsuccess_local=0;
+    #pragma omp parallel
+    {
+      MH_examiner * ex_t=examiners[thread_num()];
+      ex_t->clear_examiner_training_data();
+      #pragma omp for reduction(+:nsuccess_local) nowait
+      for (int i = 0; i < npool; i++)
+      {
+        if (ex_t->examine_u(pool[i],i,wr2)) nsuccess_local++;
+      }
+      ex_t->consolidate_examiner_training_data();
+      #pragma omp critical
+      {
+        first2finish=ex_t->report_examiner_training_data(first2finish,isuccess_pool,nsuccess);
+      }
+    }
+    consolidate_genetic_training_data();
+    report_genetic_training_data();
+    if (check_stable_convergence()) break;
+    else respawn_pool();
+  } while (true)
+}
+
+void MH_genetic::train_unstable()
+{
+
+}
+
+void MH_genetic::check_convergence()
+{
+
+}
 
 // MH_doctor
 
