@@ -187,7 +187,7 @@ void MH_genetic::report_genetic_training_data()
   FILE * gen_file = fopen(obuf, "wb");
   write_genetic_it_ints(gen_file);
   write_genetic_it_dubs(gen_file);
-  
+  basic_MH_trainer::write_ustats(gen_file);
   fclose(gen_file);
   gen_count++;
 }
@@ -201,7 +201,7 @@ void MH_genetic::close_diagnostics()
   fwrite(header_ints, sizeof(int), header_len+1, endspecs_file);
   write_genetic_it_ints(endspecs_file);
   write_genetic_it_dubs(endspecs_file);
-  records[0]->write_event_record_header(endspecs_file, nlead+npool);
+  records[0]->write_event_rec_full_header(endspecs_file, nlead+npool);
   for (int i = 0; i < nlead+npool; i++) records[i]->write_record_data(endspecs_file);
   fclose(endspecs_file);
 }

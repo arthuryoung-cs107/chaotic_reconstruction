@@ -198,11 +198,12 @@ class basic_thread_worker: public thread_worker, public event_detector
     public:
 
       basic_thread_worker(swirl_param &sp_, proximity_grid *pg_, wall_list &wl_, thread_worker_struct &tws_, int thread_id_, double alpha_tol_): thread_worker(sp_, pg_, wl_, tws_, thread_id_), event_detector(nbeads, Frames, 2, alpha_tol_),
-        basic_tw_ints(&nf_obs), basic_tw_dubs(&net_r2),
-        int_wkspc(new int[npool]) {}
-      ~basic_thread_worker() {delete [] int_wkspc;}
+      basic_tw_ints(&nf_obs), basic_tw_dubs(&net_r2),
+      int_wkspc(new int[npool]), dub_wkspc(new double[ulen]) {}
+      ~basic_thread_worker() {delete [] int_wkspc; delete [] dub_wkspc;}
 
       int * const int_wkspc;
+      double * const dub_wkspc;
 
       inline void clear_basic_tw_training_data() {memset(int_wkspc,0,npool*sizeof(int));}
 
@@ -229,12 +230,16 @@ class basic_MH_trainer: public MH_trainer, public gaussian_likelihood
       apply_training_wheels(t_wheels0_>0.0), t_wheels0(t_wheels0_),
       umin(&(sp_min.Kn)), umax(&(sp_max.Kn)),
       ndup_leaders(new int[nlead]), irepl_leaders(new int[nlead]), isuccess_pool(new int[npool]),
-      w_leaders(new double[nlead]) {}
+      w_leaders(new double[nlead]),
+      u_mean(new double[ulen]), u_var(new double[ulen]),
+      u_wmean(new double[ulen]), u_wvar(new double[ulen]) {}
 
       ~basic_MH_trainer()
       {
         delete [] ndup_leaders; delete [] irepl_leaders; delete [] isuccess_pool;
         delete [] w_leaders;
+        delete [] u_mean; delete [] u_var;
+        delete [] u_wmean; delete [] u_wvar;
       }
 
     protected:
@@ -251,7 +256,11 @@ class basic_MH_trainer: public MH_trainer, public gaussian_likelihood
 
       double  * const umin,
               * const umax,
-              * const w_leaders;
+              * const w_leaders,
+              * const u_mean,
+              * const u_var,
+              * const u_wmean,
+              * const u_wvar;
 
       virtual double compute_weights(double r2_min_, basic_record ** recs_, int n_);
       virtual void respawn_pool(double w_sum_, basic_thread_worker **tws_, basic_record ** pool_, basic_record ** leaders_);
@@ -265,6 +274,13 @@ class basic_MH_trainer: public MH_trainer, public gaussian_likelihood
       inline int basic_train_it_dlen_full() {return MHT_it_dlen;}
       inline void write_basic_train_it_ints(FILE * file_) {write_MHT_it_ints(file_);}
       inline void write_basic_train_it_dubs(FILE * file_) {write_MHT_it_dubs(file_);}
+      inline void write_ustats(FILE *file_)
+      {
+        fwrite(u_mean,sizeof(double),ulen,file_);
+        fwrite(u_wmean,sizeof(double),ulen,file_);
+        fwrite(u_var,sizeof(double),ulen,file_);
+        fwrite(u_wvar,sizeof(double),ulen,file_);
+      }
 };
 
 #endif

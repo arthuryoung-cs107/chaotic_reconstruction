@@ -38,6 +38,8 @@ struct event_record : public basic_record
           * alpha_bead;
 
   int take_record(event_record *r_);
+  void write_event_rec_full_header(FILE * file_, int len_=0);
+  void write_event_rec_training_header(FILE * file_, int len_=0);
   void write_event_rec_training_data(FILE * file_);
 
   int isworse(event_record * r_) {return r2compare>r_->r2compare;}
@@ -57,16 +59,6 @@ struct event_record : public basic_record
   {
     r2=double_data_[0]; r2stable=double_data_[1]; r2unstable=double_data_[2];
     success=success_;
-  }
-  inline void write_event_record_full_header(FILE * file_, int len_=0)
-  {
-    int hlen = 5; int header[] = {hlen, len_, event_rec_ilen_full(), event_rec_dlen_full(), ichunk_len, dchunk_len};
-    fwrite(header, sizeof(int), hlen+1, file_);
-  }
-  inline void write_event_rec_training_header(FILE * file_, int len_=0)
-  {
-    int hlen = 5; int header[] = {hlen, len_, event_rec_ilen_train(), event_rec_dlen_train(), event_rec_it_ichunk_len, event_rec_it_dchink_len};
-    fwrite(header, sizeof(int), hlen+1, file_);
   }
   inline void write_event_rec_ints(FILE * file_)
   {

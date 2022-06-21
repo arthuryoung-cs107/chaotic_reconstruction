@@ -16,6 +16,20 @@ int event_record::take_record(event_record *r_)
   else return 0;
 }
 
+void event_record::write_event_rec_full_header(FILE * file_, int len_)
+{
+  int hlen = 5;
+  int header[] = {hlen, len_, event_rec_ilen_full(), event_rec_dlen_full(), ichunk_len, dchunk_len};
+  fwrite(header, sizeof(int), hlen+1, file_);
+}
+
+void event_record::write_event_rec_training_header(FILE * file_, int len_)
+{
+  int hlen = 5;
+  int header[] = {hlen, len_, event_rec_ilen_train(), event_rec_dlen_train(), event_rec_it_ichunk_len, event_rec_it_dchunk_len};
+  fwrite(header, sizeof(int), hlen+1, file_);
+}
+
 void event_record::write_event_rec_training_data(FILE *file_)
 {
   write_basic_rec_ints(file_); fwrite(event_rec_ints,sizeof(int),event_rec_it_ilen,file_);

@@ -289,7 +289,7 @@ void MH_medic::write_utest_results(event_record *rec_, int i_)
   fwrite(TEST_r2,sizeof(double),nbeads*Frames_test,data_file);
   fwrite(TEST_alpha,sizeof(double),nbeads*Frames_test,data_file);
   fwrite(TEST_INTr2,sizeof(double),nbeads*Frames_test,data_file);
-  rec_->write_event_record_full_header(data_file);
+  rec_->write_event_rec_full_header(data_file);
   rec_->write_record_data(data_file);
   fclose(data_file);
 }
