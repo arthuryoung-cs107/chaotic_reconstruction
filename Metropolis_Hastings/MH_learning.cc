@@ -139,11 +139,19 @@ double basic_MH_trainer::compute_weights(double r2_min_, basic_record ** recs_, 
 }
 
 
-void basic_MH_trainer::respawn_pool(double w_sum_, basic_thread_worker ** tws_, basic_record ** pool_, basic_record ** leaders_)
+void basic_MH_trainer::respawn_pool(double w_sum_, basic_thread_worker ** tws_, basic_record ** pool_, basic_record ** leaders_, int n_)
 {
   memset(ndup_leaders,0,nlead*sizeof(int));
   for (int i = 0; i < ulen; i++) u_var[i]=u_mean[i]=0.0;
   ndup=nredraw=ndup_unique=0;
+
+  if (n_!=npool)
+  {
+    for (int i = 0; i < (); i++)
+    {
+
+    }
+  }
 
   #pragma omp_parallel
   {

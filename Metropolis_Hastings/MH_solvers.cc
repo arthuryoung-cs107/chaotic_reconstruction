@@ -75,27 +75,16 @@ void MH_genetic::run(bool verbose_)
 void MH_genetic::find_events()
 {
   bool first2finish=true;
-  int ncheck;
-  event_record ** rec_check;
-  if (gen_count==0)
-  {
-    rec_check=pool;
-    ncheck=npool;
-  }
-  else
-  {
-    rec_check=leaders;
-    ncheck=leader_count;
-  }
+
   clear_genetic_event_data();
   #pragma omp parallel
   {
     MH_examiner *ex_t = examiners[thread_num()];
     ex_t->clear_examiner_event_data();
     #pragma omp for nowait
-    for (int i = 0; i < ncheck; i++)
+    for (int i = 0; i < npool; i++)
     {
-      ex_t->detect_events(rec_check[i], r2_pool_Framebead[i], alpha_pool_Framebead[i]);
+      ex_t->detect_events(pool[i], r2_pool_Framebead[i], alpha_pool_Framebead[i]);
     }
     ex_t->consolidate_examiner_event_data();
     #pragma omp critical
@@ -104,11 +93,16 @@ void MH_genetic::find_events()
     }
   }
   consolidate_genetic_event_data(); // sort event states chronologically, given stev_comp is already set
-  event_block::define_event_block(sigma_scaled); // compute expected residuals using presumed noise level
-  synchronise_genetic_event_data(); // set event data of thread workers to the consolidated values
-  report_genetic_event_data(rec_check, ncheck); // finish event stats and write out results
+  // compute expected residuals using presumed noise level
+  event_block::define_event_block(sigma_scaled);
+
+   // set event data of thread workers to the consolidated values
+  if (gen_count==0) synchronise_genetic_event_data(); // using conservative estimates
+  else synchronise_genetic_event_data(bleader_rid); // using our best guess
+
+  report_genetic_event_data(pool, npool); // finish event stats and write out results
   set_genetic_stable_objective(); // set the expected residual to be that expected from the stable data
-  if (gen_count==0) post_event_resampling(rec_check, ncheck); // restore records, sort by performance, and redraw generation
+  post_event_resampling(pool, npool); // restore records, sort by performance, and redraw generation
 }
 
 void MH_genetic::train_stable()
