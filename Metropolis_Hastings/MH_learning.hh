@@ -47,6 +47,7 @@ class thread_worker: public swirl, public thread_worker_struct
       thread_worker(swirl_param &sp_, proximity_grid * pg_, wall_list &wl_, thread_worker_struct &tws_, int thread_id_): swirl(sp_, pg_, wl_, tws_.nbeads), thread_worker_struct(tws_),
       thread_id(thread_id_),
       u(&Kn), psim(new double[2*nbeads*Frames]) {}
+
       ~thread_worker() {delete psim;}
 
     protected:
@@ -77,6 +78,9 @@ class MH_trainer : public MH_params
 
   protected:
 
+    swirl_param sp_min, // lower boundary of parameter space U
+                sp_max; // upper boundary of parameter space U
+
     const int nt, // number of worker threads
               ichunk_width,
               dchunk_width;
@@ -99,16 +103,16 @@ class MH_trainer : public MH_params
     int * const MHT_it_ints,
         ** const ichunk; // space for records to store integer parameters
 
-    double * const  ts, // wall time of observed data
-           * const  xs, // 2D observed position data
-           * const  d_ang, // observed angular position of dish
-           * const  comega_s, // observed average rotational speed of dish
-           * const  MHT_it_dubs,
-           ** const uchunk, // space for parameters
-           ** const dchunk; // space for records to store double parameters
+    double  * const umin,
+            * const umax,
+            * const ts, // wall time of observed data
+            * const xs, // 2D observed position data
+            * const d_ang, // observed angular position of dish
+            * const comega_s, // observed average rotational speed of dish
+            * const MHT_it_dubs,
+            ** const uchunk, // space for parameters
+            ** const dchunk; // space for records to store double parameters
 
-    swirl_param sp_min, // lower boundary of parameter space U
-                sp_max; // upper boundary of parameter space U
     wall_list &wl; // a reference to the list of walls for the swirling simulation.
     proximity_grid ** const pg; // array of proximity grids.
     MH_rng ** rng; // random number generators
@@ -125,18 +129,18 @@ class MH_trainer : public MH_params
     inline void initialize_MHT_run()
     {
       for (int i = 0; i < MHT_it_ilen; i++) MHT_it_ints[i]=0;
-      for (int i = 0; i < MHT_dlen; i++) MHT_it_dubs[i]=0.0;
+      for (int i = 0; i < MHT_it_dlen; i++) MHT_it_dubs[i]=0.0;
     }
     inline void take_records(record ** rin_, record ** rout_, int ncap_)
     {for (int i = 0; i < ncap_; i++) rout_[i]->take_record(rin_[i]);}
     inline int take_records(record ** rin_, record ** rout_, int * repl_list_, int ncap_)
     {
       int nrepl=0;
-      for (int i = 0; i < ncap_; i++) if (rout_[i]->take_record(rin_[i])) repl_list[nrepl++]=i;
+      for (int i = 0; i < ncap_; i++) if (rout_[i]->take_record(rin_[i])) repl_list_[nrepl++]=i;
       return nrepl;
     }
     inline void write_MHT_it_ints(FILE * file_) {fwrite(MHT_it_ints, sizeof(int), MHT_it_ilen, file_);}
-    inline void write_MHT_it_dubs(FILE * file_) {fwrite(MHT_it_dubs, sizeof(double), MHT_dlen, file_);}
+    inline void write_MHT_it_dubs(FILE * file_) {fwrite(MHT_it_dubs, sizeof(double), MHT_it_dlen, file_);}
     inline double max(double a_,double b_ ) {return (a_>b_)?a_:b_;}
     inline double min(double a_,double b_ ) {return (a_<b_)?a_:b_;}
 };
@@ -145,7 +149,7 @@ const int basic_rec_ilen=7;
 const int basic_rec_dlen=3;
 struct basic_record: public record
 {
-  basic_record(record_struct &rs_, int rid_, int * ichunk_, double * dchunk_, double * u_): record(rs_, rid_, ichunk_, dchunk_, u_), basic_rec_ints(&gen), basic_rec_dubs(&rcompare) {init_basic_record();}
+  basic_record(record_struct &rs_, int rid_, int * ichunk_, double * dchunk_, double * u_): record(rs_, rid_, ichunk_, dchunk_, u_), basic_rec_ints(&gen), basic_rec_dubs(&r2compare) {init_basic_record();}
   basic_record(record_struct &rs_, int rid_, int * ichunk_, double * dchunk_, double * u_, MH_rng * ran_, double * umin_, double * umax_): basic_record(rs_, rid_, ichunk_, dchunk_, u_) {draw_ranuni(ran_,umin_,umax_);}
   ~basic_record() {}
 
@@ -173,7 +177,7 @@ struct basic_record: public record
   inline void init_basic_record(int gen_=0,int Class_=-1,int dup_count_=0,int parent_count_=0,int parent_rid_=-1,int parent_gen_=-1,int parent_Class_=-1,double r2_=0.0,double w_=0.0)
   {
     gen=gen_; Class=Class_; dup_count=dup_count_;
-    parent_count=parent_count_; parent_rid=parent_rid_
+    parent_count=parent_count_; parent_rid=parent_rid_;
     parent_gen=parent_gen_; parent_Class=parent_Class_;
     r2=r2_; w=w_;
   }
@@ -232,7 +236,6 @@ class basic_MH_trainer: public MH_trainer, public gaussian_likelihood
 
       basic_MH_trainer(MH_train_struct &mhts_, int ichunk_width_, int dchunk_width_, double t_wheels0_=-1.0): MH_trainer(mhts_, ichunk_width_, dchunk_width_), gaussian_likelihood(sigma, mhts_.sp_min->cl_im),
       apply_training_wheels(t_wheels0_>0.0), t_wheels0(t_wheels0_),
-      umin(&(sp_min.Kn)), umax(&(sp_max.Kn)),
       ndup_leaders(new int[nlead]), irepl_leaders(new int[nlead]), isuccess_pool(new int[npool]),
       w_leaders(new double[nlead]),
       u_mean(new double[ulen]), u_var(new double[ulen]),
@@ -258,9 +261,7 @@ class basic_MH_trainer: public MH_trainer, public gaussian_likelihood
           * const irepl_leaders,
           * const isuccess_pool;
 
-      double  * const umin,
-              * const umax,
-              * const w_leaders,
+      double  * const w_leaders,
               * const u_mean,
               * const u_var,
               * const u_wmean,
@@ -268,7 +269,7 @@ class basic_MH_trainer: public MH_trainer, public gaussian_likelihood
 
       virtual double compute_weights(double r2_min_, basic_record ** recs_, int n_);
       virtual void respawn_pool(double w_sum_, basic_thread_worker **tws_, basic_record ** pool_, basic_record ** leaders_);
-      virtual void duplicate_u((basic_record *rec_child_, basic_record *rec_parent_, MH_rng *rng_t_);
+      virtual void duplicate_u(basic_record *rec_child_, basic_record *rec_parent_, MH_rng *rng_t_);
 
       virtual void redraw_u(basic_record * rec_pool_, MH_rng * rng_t_)
       {redraw_u_uni(rec_pool_, rng_t_); rec_pool_->init_basic_record(gen_count);}

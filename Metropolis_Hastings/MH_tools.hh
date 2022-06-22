@@ -40,7 +40,7 @@ struct system_struct
   system_struct(int ncomp_, int nstates_): ncomp(ncomp_), nstates(nstates_) {}
   ~system_struct() {}
 
-  const int ncomp, // nbeads
+  const int ncomp, // ncomp
             nstates; // Frames
 };
 
@@ -59,7 +59,7 @@ struct event_detector: public virtual system_struct
             ndof; // dof per state
         int stev_early,
             stev_late,
-            iregime_active; 
+            iregime_active;
 
   const double alpha_tol;
 
@@ -111,7 +111,7 @@ struct event_block: public virtual system_struct
 
 
   virtual void synchronise_event_data(int stev_earliest_, int stev_latest_, int *stev_c_, int *stev_o_, int *comps_o_,double *rho2s_c_, double *drho2_r_);
-  virtual void consolidate_event_data(int ntest_);
+  virtual void consolidate_event_data();
   virtual void clear_event_data();
   virtual void define_event_block(double sigma_scaled_,int ndof_=2);
 
@@ -136,18 +136,18 @@ struct event_block: public virtual system_struct
   inline int earliest(int *frames_ordered_, int &early_index_, int index_start_)
   {
     int out = frames_ordered_[index_start_]; early_index_= index_start_;
-    for (int i = index_start_+1; i < nbeads; i++)
-      if (frames_ordered_[i])<out) out=frames_ordered_[early_index_=i];
+    for (int i = index_start_+1; i < ncomp; i++)
+      if (frames_ordered_[i]<out) out=frames_ordered_[early_index_=i];
     return out;
   }
-  inline void earliest_recursive(int *frames_ordered_, int *beads_ordered_ int i_next)
+  inline void earliest_recursive(int *frames_ordered_, int *beads_ordered_, int i_next)
   {
     int early_index, early_frame, index_temp, frame_temp;
     early_frame = earliest(frames_ordered_,early_index,i_next);
     index_temp=i_next; frame_temp=frames_ordered_[index_temp];
     beads_ordered_[index_temp]=early_index; frames_ordered_[index_temp]=early_frame;
     beads_ordered_[early_index]=index_temp; frames_ordered_[early_index]=frame_temp;
-    if (i_next<nbeads-1) earliest_recursive(frames_ordered_,beads_ordered_,i_next+1)
+    if (i_next<ncomp-1) earliest_recursive(frames_ordered_,beads_ordered_,i_next+1);
   }
 };
 
@@ -178,7 +178,5 @@ struct gaussian_likelihood
     const double root2pi=sqrt(2.0*M_PI);
 
 };
-
-double
 
 #endif

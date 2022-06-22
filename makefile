@@ -11,7 +11,7 @@ WALK:= walk particle_walk pedestrian particle_walk_io
 
 RELAY:= relay particle_relay relay_runner particle_relay_io relay_sampler relay_trainer doctor
 
-MH:= MH_tools MH_auxiliary MH_learning MH_records MH_workers MH_solvers MH_genetic_aux
+MH:= MH_tools MH_auxiliary MH_learning MH_records MH_workers MH_solvers MH_genetic_aux MH_doctor_aux MH_examiner_aux
 
 include config_directory/includes.mak
 

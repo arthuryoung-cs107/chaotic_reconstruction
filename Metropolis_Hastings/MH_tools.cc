@@ -27,7 +27,7 @@ void event_block::synchronise_event_data(int stev_earliest_, int stev_latest_, i
     stev_comp[i]=stev_c_[i];
     stev_ordered[i]=stev_o_[i];
     comps_ordered[i]=comps_o_[i];
-    rho2stable_regime[i]=rho2s_c_[i];
+    rho2stable_comp[i]=rho2s_c_[i];
     delrho2_regime[i]=drho2_r_[i];
   }
 }

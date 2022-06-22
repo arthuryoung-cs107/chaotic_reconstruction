@@ -37,11 +37,11 @@ MH_io::~MH_io()
 
 void MH_io::read_fisml(char *ibuf_)
 {
-  int int_buf[3];
+  int int_buf[3], return_check;
   strcpy(ibuf_, ".fisml"); FILE * ref_sml = fopen(ibuf, "r");
-  fscanf(ref_sml,"%d %d %d\n",int_buf,int_buf+1,int_buf+2);
-  fscanf(ref_sml,"%d %d %d\n",int_buf,int_buf+1,int_buf+2); Frames=int_buf[2];
-  fscanf(ref_sml,"%d %d %d\n",int_buf,int_buf+1,int_buf+2); nbeads=int_buf[1];
+  return_check=fscanf(ref_sml,"%d %d %d\n",int_buf,int_buf+1,int_buf+2);
+  return_check=fscanf(ref_sml,"%d %d %d\n",int_buf,int_buf+1,int_buf+2); Frames=int_buf[2];
+  return_check=fscanf(ref_sml,"%d %d %d\n",int_buf,int_buf+1,int_buf+2); nbeads=int_buf[1];
   fclose(ref_sml);
 }
 

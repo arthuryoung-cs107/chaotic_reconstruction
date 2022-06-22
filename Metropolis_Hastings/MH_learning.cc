@@ -27,8 +27,9 @@ nt(get_nt()), ichunk_width(ichunk_width_), dchunk_width(dchunk_width_),
 ichunk(Tmatrix<int>(nlead+npool, ichunk_width)),
 ts(new double[Frames]), xs(new double[2*nbeads*Frames]), d_ang(new double[Frames]), comega_s(new double[Frames]),
 dchunk(Tmatrix<double>(nlead+npool, dchunk_width)), uchunk(Tmatrix<double>(nlead+npool, ulen)),
-sp_min(sp_min_), sp_max(sp_max_), wl(wl_),
-pg(new proximity_grid*[nt]), rng(new MH_rng*[nt])
+sp_min(sp_min_), sp_max(sp_max_),
+umin(&sp_min.Kn), umax(&sp_max.Kn),
+wl(wl_), pg(new proximity_grid*[nt]), rng(new MH_rng*[nt])
 {
   io->load_reference(ts, xs, d_ang, comega_s, t_phys);
 
@@ -139,19 +140,11 @@ double basic_MH_trainer::compute_weights(double r2_min_, basic_record ** recs_, 
 }
 
 
-void basic_MH_trainer::respawn_pool(double w_sum_, basic_thread_worker ** tws_, basic_record ** pool_, basic_record ** leaders_, int n_)
+void basic_MH_trainer::respawn_pool(double w_sum_, basic_thread_worker ** tws_, basic_record ** pool_, basic_record ** leaders_)
 {
   memset(ndup_leaders,0,nlead*sizeof(int));
   for (int i = 0; i < ulen; i++) u_var[i]=u_mean[i]=0.0;
   ndup=nredraw=ndup_unique=0;
-
-  if (n_!=npool)
-  {
-    for (int i = 0; i < (); i++)
-    {
-
-    }
-  }
 
   #pragma omp_parallel
   {
@@ -169,7 +162,7 @@ void basic_MH_trainer::respawn_pool(double w_sum_, basic_thread_worker ** tws_, 
     for (int i = 0; i < npool; i++)
     {
       int j=0;
-      double uni = (w_sum_/rs_full_factor)*rng_t->rand_uni();
+      double uni = w_sum_*rng_t->rand_uni();
       while ((j<leader_count)&&(uni>0.0)) uni-=w_leaders[j++];
       if (j>0)
       {
@@ -195,7 +188,7 @@ void basic_MH_trainer::respawn_pool(double w_sum_, basic_thread_worker ** tws_, 
     #pragma omp for nowait
     for (int i = 0; i < npool; i++)
     {
-      double *ui = u_chunk[i];
+      double *ui = uchunk[i];
       for (int j = 0; j < ulen; j++)
       {
         double diff_j=ui[j]-u_mean[j];
@@ -210,12 +203,12 @@ void basic_MH_trainer::respawn_pool(double w_sum_, basic_thread_worker ** tws_, 
   }
 
   for (int i = 0; i < leader_count; i++) if (ndup_leaders[i])
-  {leaders[i]->dup_count+=ndup_leaders[i]; ndup_unique++;}
+  {leaders_[i]->dup_count+=ndup_leaders[i]; ndup_unique++;}
 }
 
 void basic_MH_trainer::duplicate_u(basic_record *rec_child_, basic_record *rec_parent_, MH_rng *rng_t_)
 {
-  double  r_ = sqrt(rec_pool_->r2compare),
+  double  r_ = sqrt(rec_parent_->r2compare),
           r_rat = r_/sqrt(rho2),
           sigma_fac = max(0.25*(1.0-exp(0.5*(1.0-r_rat)*(1.0+r_rat))), 0.0),
           *u_child=rec_child_->u,
