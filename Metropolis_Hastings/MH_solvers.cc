@@ -74,6 +74,7 @@ void MH_genetic::run(bool verbose_)
 void MH_genetic::find_events(bool verbose_)
 {
   bool first2finish=true;
+  if (gen_count>0) reload_leaders(bleader_rid);
 
   clear_genetic_event_data();
   #pragma omp parallel
@@ -94,14 +95,14 @@ void MH_genetic::find_events(bool verbose_)
 
   // sort event states chronologically, given stev_comp is already set
   if (gen_count>0) consolidate_genetic_event_data(bleader_rid); // using our best guess
-  consolidate_genetic_event_data(); // using conservative estimates
+  else consolidate_genetic_event_data(); // using conservative estimates
 
   // compute expected residuals using presumed noise level
   event_block::define_event_block(sigma_scaled);
   synchronise_genetic_event_data(); // set event data of thread workers to the consolidated values
-  report_genetic_event_data(pool, npool); // finish event stats and write out results
+  report_genetic_event_data(); // finish event stats and write out results
   set_genetic_stable_objective(); // set the expected residual to be that expected from the stable data
-  post_event_resampling(pool, npool); // restore records, sort by performance, and redraw generation
+  post_event_resampling(); // restore records, sort by performance, and redraw generation
 }
 
 void MH_genetic::train_event_block(bool verbose_)
@@ -189,8 +190,10 @@ leaders(records), pool(records+nlead)
     MH_rng * ran_t = rng[tid];
     MH_medic * med_t = medics[tid] = new MH_medic(sp_min,pg[tid],wl,tws,tid,alpha_tol,Frames_test,test_buffer);
     #pragma omp for
+    {
       for (int i = 0; i < nlead+npool; i++)
         records[i] = new event_record(rs, i, ichunk[i], dchunk[i], uchunk[i]);
+    }
   }
 }
 
@@ -217,10 +220,10 @@ void MH_doctor::run(bool verbose_)
     MH_medic *med_t = medics[tid];
     med_t->clear_event_data();
     #pragma omp for nowait
-      for (int i = 0; i < npool; i++)
-      {
-        med_t->test_u(pool[i],i, verbose_);
-      }
+    for (int i = 0; i < npool; i++)
+    {
+      med_t->test_u(pool[i],i, verbose_);
+    }
     #pragma omp critical
     {
       first2finish=med_t->report_event_data(first2finish,stev_earliest,stev_latest,nev_state_comp, nobs_state_comp, mur2_state_comp, mualpha_state_comp);

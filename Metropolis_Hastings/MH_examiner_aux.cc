@@ -70,6 +70,31 @@ void MH_examiner::start_detecting_events(event_record * rec_, double * t_history
   return f_local;
 }
 
+void MH_examiner::update_event_data(int final_frame_, int *f_event, double *r2i_, double *alphai_)
+{
+  ntest++;
+  stev_early=stev_late=f_event[0];
+  nf_stable=0;
+  for (int i=0, k=0; i < nbeads; i++)
+  {
+    int fevent_it = f_event[i];
+    nf_stable+=fevent_it;
+    nev_state_comp[fevent_it][i]++;
+    if (fevent_it<stev_early) stev_early = fevent_it;
+    if (fevent_it>stev_late) stev_late = fevent_it;
+    for (int j = 0; j < final_frame_; j++,k++)
+    {
+      mur2_state_comp[0][k]+=r2i_[k]=r2_state_comp[0][k];
+      mualpha_state_comp[0][k]+=alphai_[k]=alpha_state_comp[0][k];
+      nobs_state_comp[0][k]++;
+    }
+  }
+  nf_obs=stev_late*nbeads;
+  nf_unstable=nf_obs-nf_stable;
+  if (stev_early<stev_earliest) stev_earliest=stev_early;
+  if (stev_late>stev_latest) stev_latest=stev_late;
+}
+
 void MH_examiner::consolidate_examiner_event_data()
 {
   int s_it=0;
@@ -141,3 +166,14 @@ void MH_examiner::restore_event_record(event_record *rec_, double *r2_Fb_, doubl
   net_r2_regime_local=net_r2_stable;
   rec_->record_event_data(&nf_obs,&net_r2_local);
 }
+
+
+bool MH_examiner::update_training_data(int i_, double r2success_threshold_)
+{
+  ntest++;
+  bool success_local=(net_r2_regime)<r2success_threshold_;
+  if (success_local) int_wkspc[nsuccess_test++] = i_;
+  return success_local;
+}
+
+void

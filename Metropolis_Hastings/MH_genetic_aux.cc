@@ -58,7 +58,7 @@ void MH_genetic::synchronise_genetic_event_data()
   }
 }
 
-void MH_genetic::report_genetic_event_data(event_record **recs_, int n_)
+void MH_genetic::report_genetic_event_data()
 {
   // begin by finishing computation of event detection statistics
   #pragma omp parallel
@@ -74,7 +74,7 @@ void MH_genetic::report_genetic_event_data(event_record **recs_, int n_)
               var_r2=0.0,
               var_alpha=0.0;
 
-      for (int j = 0; j < n_; j++) if ((recs_[j]->nf_obs/nbeads)>=(i/nbeads))
+      for (int j = 0; j < npool; j++) if ((pool[j]->nf_obs/nbeads)>=(i/nbeads))
       {
         double  diffr2 = r2_pool_Framebead[j][i]-mur2_i,
                 diffalpha = alpha_pool_Framebead[j][i]-mualpha_i;
@@ -102,13 +102,13 @@ void MH_genetic::report_genetic_event_data(event_record **recs_, int n_)
   fwrite(stdr2_state_comp, sizeof(double), nbeads*stev_latest, data_file);
   fwrite(mualpha_state_comp, sizeof(double), nbeads*stev_latest, data_file);
   fwrite(stdalpha_state_comp, sizeof(double), nbeads*stev_latest, data_file);
-  recs_[0]->write_event_record_full_header(data_file,n_);
-  for (int i = 0; i < n_; i++) recs_[i]->write_record_data(data_file);
+  pool[0]->write_event_record_full_header(data_file,npool);
+  for (int i = 0; i < npool; i++) pool[i]->write_record_data(data_file);
   fclose(data_file);
   event_block_count++;
 }
 
-void MH_genetic::post_event_resampling(event_record ** recs_, int n_)
+void MH_genetic::post_event_resampling()
 {
   // start by using the r2_pool_Framebead data to adjust the records back to the correct event data
   double r2_min=DBL_MAX;
@@ -116,15 +116,14 @@ void MH_genetic::post_event_resampling(event_record ** recs_, int n_)
   {
     MH_examiner *ex_t = examiners[thread_num()];
     #pragma omp for reduction(min:r2_min)
-    for (int i = 0; i < n_; i++)
+    for (int i = 0; i < npool; i++)
     {
-      ex_t->restore_event_record(recs_[i],r2_pool_Framebead[i]);
-      double r2_it = recs_[i]->set_stable_objective();
+      ex_t->restore_event_record(pool[i],r2_pool_Framebead[i]);
+      double r2_it = pool[i]->set_stable_objective();
       if (r2_it<r2_min) r2_min=r2_it;
-      leader_board[i]=recs_[i];
+      leader_board[i]=pool[i];
     }
   }
-  if (n_!=npool) printf("(MH_genetic::post_event_resampling) Warning: n_!=npool\n");
 
   // collect leaders
   MH_trainer::pick_nbest_records(leader_board,nlead,n_);
@@ -135,6 +134,7 @@ void MH_genetic::post_event_resampling(event_record ** recs_, int n_)
   // resample pool
   double w_sum = basic_MH_trainer::compute_weights(r2_min,rho2,leaders,nlead);
   basic_MH_trainer::respawn_pool(w_sum,examiners,pool,leaders);
+  write_generation_diagnostics();
   gen_count++;
 }
 
@@ -172,25 +172,26 @@ void MH_genetic::consolidate_genetic_training_data()
   prob_worst=gaussian_likelihood::compute_prob(sqrt(wr2),sqrt(rho2));
 }
 
-void MH_genetic::report_genetic_training_data()
+void MH_genetic::write_Class_diagnostics(int &Class_count_)
 {
-  if (nreplace)
-  {
-    int hlen_Class=2;
-    int header_Class[] = {hlen_Class, genetic_it_ilen_full(), genetic_it_dlen_full()};
-    sprintf(obuf+obuf_end, "Class%d.mhdat",Class_count);
-    FILE * Class_file = fopen(obuf, "wb");
-    fwrite(header_Class,sizeof(int),hlen_Class+1,Class_file);
-    write_genetic_it_ints(Class_file);
-    write_genetic_it_dubs(Class_file);
-    leaders[0]->write_event_rec_training_header(Class_file,nlead);
-    for (int i = 0; i < nlead; i++) leaders[i]->write_event_rec_training_data(Class_file);
-    fclose(Class_file);
-    Class_count++;
-  }
+  int hlen_Class=2;
+  int header_Class[] = {hlen_Class, genetic_it_ilen_full(), genetic_it_dlen_full()};
+  sprintf(obuf+obuf_end, "Class%d.mhdat",Class_count_);
+  FILE * Class_file = fopen(obuf, "wb");
+  fwrite(header_Class,sizeof(int),hlen_Class+1,Class_file);
+  write_genetic_it_ints(Class_file);
+  write_genetic_it_dubs(Class_file);
+  leaders[0]->write_event_rec_training_header(Class_file,nlead);
+  for (int i = 0; i < nlead; i++) leaders[i]->write_event_rec_training_data(Class_file);
+  fclose(Class_file);
+  Class_count_++;
+}
+
+void MH_genetic::write_generation_diagnostics(int &gen_count_)
+{
   int hlen_gen=2;
   int header_gen[] = {hlen_gen, genetic_it_ilen_full(), genetic_it_dlen_full()};
-  sprintf(obuf+obuf_end, "gen%d.mhdat",gen_count);
+  sprintf(obuf+obuf_end, "gen%d.mhdat",gen_count_);
   FILE * gen_file = fopen(obuf, "wb");
   write_genetic_it_ints(gen_file);
   write_genetic_it_dubs(gen_file);

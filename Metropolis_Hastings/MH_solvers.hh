@@ -47,40 +47,45 @@ class MH_genetic : public basic_MH_trainer, public event_block
     void consolidate_genetic_event_data(int bleader_index_);
     void synchronise_genetic_event_data();
     void report_genetic_event_data(event_record **recs_, int n_);
-    void post_event_resampling(event_record ** recs_, int n_);
 
     // training
     void train_event_block();
-    void set_regime_objective(int iregime_);
+    inline void set_regime_objective(int iregime_)
+    {
+      #pragma omp parallel
+      {
+        examiners[thread_num()]->iregime_active=iregime_;
+      }
+    }
     inline void clear_genetic_training_data() {clear_basic_train_training_data();}
     bool check_regime_convergence(int iregime_count_);
     void consolidate_genetic_training_data();
-    void report_genetic_training_data();
+    inline void report_genetic_training_data()
+    {
+      if (nreplace) write_Class_diagnostics(Class_count);
+      write_generation_diagnostics(gen_count);
+    }
     void set_leader_records();
 
     // sampling
-    void respawn_pool();
+    void reload_leaders(int bleader_index_);
+    void post_event_resampling(event_record ** recs_, int n_);
 
     // io
     void stage_diagnostics();
     void close_diagnostics();
+    void write_Class_diagnostics(int &Class_count_);
+    void write_generation_diagnostics(int &gen_count_);
     inline void write_genetic_it_ints(FILE * file_)
-    {write_basic_train_it_ints(file_);fwrite(genetic_train_it_ints, sizeof(int), genetic_train_it_ilen, file_);}
+    {write_basic_train_it_ints(file_);fwrite(genetic_train_it_ints,sizeof(int),genetic_train_it_ilen,file_);}
     inline void write_genetic_it_dubs(FILE * file_)
-    {write_basic_train_it_dubs(file_);fwrite(genetic_train_it_dubs, sizeof(double), genetic_train_it_dlen, file_);}
+    {write_basic_train_it_dubs(file_);fwrite(genetic_train_it_dubs,sizeof(double),genetic_train_it_dlen,file_);}
+    inline void write_ustats(FILE * file_)
+    {
+      
+    }
     inline int genetic_it_ilen_full() {return basic_train_it_ilen_full() + genetic_train_it_ilen;}
     inline int genetic_it_dlen_full() {return basic_train_it_dlen_full() + genetic_train_it_dlen;}
-
-    // deprecated
-
-    inline void set_genetic_stable_objective()
-    {
-      rho2=gaussian_likelihood::expected_r2(stev_comp,nbeads);
-      #pragma omp parallel
-      {
-        examiners[thread_num()]->set_examiner_stable_objective();
-      }
-    }
 
   private:
 

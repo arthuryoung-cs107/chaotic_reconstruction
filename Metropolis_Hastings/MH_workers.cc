@@ -7,7 +7,7 @@ void MH_examiner::detect_events(event_record *rec_, double *r2i_, double *alphai
   double t_history[3], net_r2_local;
   int f_local = start_detecting_events(rec_, t_history, net_r2_local),
       poffset=ndof*f_local,
-      foffset=nbeads*f_local,      
+      foffset=nbeads*f_local,
       *f_event=rec_->evframe_bead;
 
   double  *pref=xs+poffset,
@@ -76,32 +76,6 @@ void MH_examiner::detect_events(event_record *rec_, double *r2i_, double *alphai
   // set record data
   rec_->record_event_data(&nf_obs,&net_r2);
 }
-
-void MH_examiner::update_event_data(int final_frame_, int *f_event, double *r2i_, double *alphai_)
-{
-  ntest++;
-  stev_early=stev_late=f_event[0];
-  nf_stable=0;
-  for (int i=0, k=0; i < nbeads; i++)
-  {
-    int fevent_it = f_event[i];
-    nf_stable+=fevent_it;
-    nev_state_comp[fevent_it][i]++;
-    if (fevent_it<stev_early) stev_early = fevent_it;
-    if (fevent_it>stev_late) stev_late = fevent_it;
-    for (int j = 0; j < final_frame_; j++,k++)
-    {
-      mur2_state_comp[0][k]+=r2i_[k]=r2_state_comp[0][k];
-      mualpha_state_comp[0][k]+=alphai_[k]=alpha_state_comp[0][k];
-      nobs_state_comp[0][k]++;
-    }
-  }
-  nf_obs=stev_late*nbeads;
-  nf_unstable=nf_obs-nf_stable;
-  if (stev_early<stev_earliest) stev_earliest=stev_early;
-  if (stev_late>stev_latest) stev_latest=stev_late;
-}
-
 
 bool MH_examiner::examine_u(event_record *rec_, int i_, double r2success_threshold_)
 {
@@ -173,15 +147,6 @@ bool MH_examiner::examine_u(event_record *rec_, int i_, double r2success_thresho
   rec_->record_training_data(&net_r2,success_local);
   return success_local;
 }
-
-bool MH_examiner::update_training_data(int i_, double r2success_threshold_)
-{
-  ntest++;
-  bool success_local=(net_r2_regime)<r2success_threshold_;
-  if (success_local) int_wkspc[nsuccess_test++] = i_;
-  return success_local;
-}
-
 
 // MH_medic
 

@@ -31,7 +31,8 @@ class MH_examiner: public basic_thread_worker, public event_block
 
   protected:
 
-    int ntest, nsuccess_test;
+    int ntest,
+        nsuccess_test;
 
     // event
     void start_detecting_events(event_record * rec_, double * t_history_ double &net_r2_local_);
