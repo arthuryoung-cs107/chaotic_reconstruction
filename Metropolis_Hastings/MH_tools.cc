@@ -18,7 +18,7 @@ void fread_SAFE(void *ptr,size_t size,size_t count,FILE *fp)
   }
 }
 
-void event_block::synchronise_event_data(int stev_earliest_, int stev_latest_, int *stev_c_, int *stev_o_, int *comps_o_, double *rho2_r_)
+void event_block::synchronise_event_data(int stev_earliest_, int stev_latest_, int *stev_c_, int *stev_o_, int *comps_o_,double *rho2s_c_, double *drho2_r_)
 {
   stev_earliest=stev_earliest_;
   stev_latest=stev_latest_;
@@ -27,15 +27,18 @@ void event_block::synchronise_event_data(int stev_earliest_, int stev_latest_, i
     stev_comp[i]=stev_c_[i];
     stev_ordered[i]=stev_o_[i];
     comps_ordered[i]=comps_o_[i];
-    rho2_regime[i]=rho2_r_[i];
+    rho2stable_regime[i]=rho2s_c_[i];
+    delrho2_regime[i]=drho2_r_[i];
   }
 }
 
-void event_block::define_event_block(double sigma_scaled_)
+void event_block::define_event_block(double sigma_scaled_,int ndof_)
 {
-  // compute expected residuals for each regime component
-  for (int i = 0; i < ncomp; i++)
-    rho2_regime[i]=(sigma_scaled_*sigma_scaled_)*((double)(2*stev_comp[i]));
+  double  sigma2_=sigma_scaled_*sigma_scaled_,
+          dims_dub= (double)(ndof_*ncomp);
+  for (int i = 0; i < ncomp; i++) rho2stable_comp[i]=sigma2_*dims_dub*((double)stev_comp[i]);
+  delrho2_regime[0]=0.0; // for stable regime, no additional unstable residual added onto stable residual
+  for (int i = 1; i < ncomp; i++) delrho2_regime[i]=sigma2_*dims_dub*((double)(stev_ordered[i]-stev_ordered[i-1]));
 }
 
 void event_block::clear_event_data()

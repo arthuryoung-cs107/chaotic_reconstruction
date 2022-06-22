@@ -114,11 +114,13 @@ void MH_examiner::restore_event_record(event_record *rec_, double *r2_Fb_, doubl
   int frame_last=stev_ordered[nbeads-1];
   double  net_r2_local=0.0,
           net_r2_stable_local=0.0,
+          net_r2_regime_local=0.0,
           net_r2_unstable_local=0.0,
           *r2_stable=rec_->r2stable_bead,
+          *net_r2_regime=rec_->netr2_regime,
           *r2_unstable=rec_->r2unstable_bead;
 
-  for (int i = 0; i < nbeads; i++) r2_stable[i]=r2_unstable[i]=0.0;
+  for (int i = 0; i < nbeads; i++) r2_stable[i]=net_r2_regime[i]=r2_unstable[i]=0.0;
 
   for (int i_frame=0,k=0; i_frame <= frame_last; i_frame++)
     for (int i_bead = 0; i_bead < nbeads; i_bead++,k++)
@@ -128,7 +130,7 @@ void MH_examiner::restore_event_record(event_record *rec_, double *r2_Fb_, doubl
       if (i_frame<=stev_comp[i_bead])
       {
         net_r2_stable_local+=r2_it; r2_stable[i_bead]+=r2_it;
-        if (i_frame==stev_comp[i])
+        if (i_frame==stev_comp[i_bead])
         {
           rec_->evframe_bead[i_bead]=i_frame;
           rec_->alpha_bead[i_bead]=alpha_Fb_[k];
@@ -136,5 +138,6 @@ void MH_examiner::restore_event_record(event_record *rec_, double *r2_Fb_, doubl
       }
       else {net_r2_unstable_local+=r2_it; r2_unstable[i_bead]+=r2_it;}
     }
+  net_r2_regime_local=net_r2_stable;
   rec_->record_event_data(&nf_obs,&net_r2_local);
 }

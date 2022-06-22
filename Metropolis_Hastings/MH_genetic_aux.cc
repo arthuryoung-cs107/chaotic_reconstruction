@@ -41,6 +41,12 @@ void MH_genetic::consolidate_genetic_event_data()
   event_block::consolidate_event_data();
 }
 
+void MH_genetic::consolidate_genetic_event_data(int bleader_index_)
+{
+  pool[bleader_index_]->determine_event_block(stev_earliest,stev_latest,stev_comp,stev_ordered,comps_ordered);
+  event_block::consolidate_event_data();
+}
+
 void MH_genetic::synchronise_genetic_event_data()
 {
   int nf_obs, nf_stable, nf_unstable;
@@ -48,7 +54,7 @@ void MH_genetic::synchronise_genetic_event_data()
   #pragma omp parallel
   {
     MH_examiner *ex_t=examiners[thread_num()];
-    ex_t->synchronise_examiner_event_data(&nf_obs,stev_earliest,stev_latest,stev_comp,stev_ordered,comps_ordered,rho2_regime);
+    ex_t->synchronise_examiner_event_data(&nf_obs,stev_earliest,stev_latest,stev_comp,stev_ordered,comps_ordered,rho2stable_comp,delrho2_regime);
   }
 }
 
@@ -90,7 +96,8 @@ void MH_genetic::report_genetic_event_data(event_record **recs_, int n_)
   fwrite(comps_ordered, sizeof(int), nbeads, data_file);
   fwrite(nev_state_comp, sizeof(int), nbeads*stev_latest, data_file);
   fwrite(nobs_state_comp, sizeof(int), nbeads*stev_latest, data_file);
-  fwrite(rho2_regime, sizeof(double), nbeads, data_file);
+  fwrite(rho2stable_comp, sizeof(double), nbeads, data_file);
+  fwrite(delrho2_regime, sizeof(double), nbeads, data_file);
   fwrite(mur2_state_comp, sizeof(double), nbeads*stev_latest, data_file);
   fwrite(stdr2_state_comp, sizeof(double), nbeads*stev_latest, data_file);
   fwrite(mualpha_state_comp, sizeof(double), nbeads*stev_latest, data_file);

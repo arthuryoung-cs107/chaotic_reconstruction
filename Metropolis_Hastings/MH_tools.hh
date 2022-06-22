@@ -58,7 +58,8 @@ struct event_detector: public virtual system_struct
   const int dof, // x,y
             ndof; // dof per state
         int stev_early,
-            stev_late;
+            stev_late,
+            iregime_active; 
 
   const double alpha_tol;
 
@@ -78,38 +79,41 @@ struct event_block: public virtual system_struct
   event_block(int ncomp_, int nstates_): system_struct(ncomp_, nstates_),
   stev_comp(new int[ncomp]), stev_ordered(new int[ncomp]), comps_ordered(new int[ncomp]),
   nev_state_comp(Tmatrix<int>(nstates,ncomp)), nobs_state_comp(Tmatrix<int>(nstates,ncomp)),
-  rho2_regime(new double[ncomp]),
+  rho2stable_comp(new double[ncomp]), delrho2_regime(new double[ncomp]),
   mur2_state_comp(Tmatrix<double>(nstates,ncomp)), stdr2_state_comp(Tmatrix<double>(nstates,ncomp)),
   mualpha_state_comp(Tmatrix<double>(nstates,ncomp)), stdalpha_state_comp(Tmatrix<double>(nstates,ncomp)) {}
   ~event_block()
   {
     delete [] stev_comp; delete [] stev_ordered; delete [] comps_ordered;
     free_Tmatrix<int>(nev_state_comp); free_Tmatrix<int>(nobs_state_comp);
-    delete [] rho2_regime;
+    delete[] rho2stable_comp; delete [] delrho2_regime;
     free_Tmatrix<double>(mur2_state_comp); free_Tmatrix<double>(stdr2_state_comp);
     free_Tmatrix<double>(mualpha_state_comp); free_Tmatrix<double>(stdalpha_state_comp);
   }
 
-  int stev_earliest,
-      stev_latest;
+  int stev_earliest, // state index of earliest detected event (pertains to one system component)
+      stev_latest; // state index of latest detected event (pertains to one system component)
 
-  int * const stev_comp,
-      * const stev_ordered,
-      * const comps_ordered,
-      ** const nev_state_comp,
-      ** const nobs_state_comp;
+  int * const stev_comp, // state index of events for each component in the system
+      * const stev_ordered, // state indices of events arranged chronologically
+      * const comps_ordered, // system component indices arranged in order of their experienced events
+      ** const nev_state_comp, // counts of events experienced at each sequence state for many trials
+      ** const nobs_state_comp; // number of observations of system state for many trials of event detection
 
-  double  * const rho2_regime,
-          ** const mur2_state_comp,
-          ** const stdr2_state_comp,
-          ** const mualpha_state_comp,
-          ** const stdalpha_state_comp;
+  double  rho2stable, // net expected STABLE residual across all system components
+          rho2regime, // net expected
+          * const rho2stable_comp, // expected STABLE residual for each system component in the event block
+          * const delrho2_regime, // expected UNSTABLE residual addition for each training regime
+          ** const mur2_state_comp, // workspaces for collecting statistics on state sequence
+          ** const stdr2_state_comp, // ...
+          ** const mualpha_state_comp, // ...
+          ** const stdalpha_state_comp; // ...
 
 
-  virtual void synchronise_event_data(int stev_earliest_, int stev_latest_, int *stev_c_, int *stev_o_, int *comps_o_, double *rho2_r_);
+  virtual void synchronise_event_data(int stev_earliest_, int stev_latest_, int *stev_c_, int *stev_o_, int *comps_o_,double *rho2s_c_, double *drho2_r_);
   virtual void consolidate_event_data(int ntest_);
   virtual void clear_event_data();
-  virtual void define_event_block(double sigma_scaled_);
+  virtual void define_event_block(double sigma_scaled_,int ndof_=2);
 
   inline void report_event_data(int ** nev_s_c_, int ** nobs_s_c_, double ** r2_s_c_, double **alpha_s_c_)
   {
@@ -162,7 +166,7 @@ struct gaussian_likelihood
     return exp(0.5*((r_min_-r_)/rho_)*((r_min_+r_)/rho_));
   }
   inline double compute_prob(double r_, double rho_)
-  {return (1.0/(rho_*sqrt(root2pi)))*exp(-0.5*(r_/rho_)*(r_/rho_));}  
+  {return (1.0/(rho_*sqrt(root2pi)))*exp(-0.5*(r_/rho_)*(r_/rho_));}
   inline double expected_r2(int * obs_states_, int ncomp_, int ndof_=2)
   {
     int net_obs=0;

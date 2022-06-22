@@ -7,14 +7,16 @@ void MH_examiner::detect_events(event_record *rec_, double *r2i_, double *alphai
   double t_history[3], net_r2_local;
   int f_local = start_detecting_events(rec_, t_history, net_r2_local),
       poffset=ndof*f_local,
-      foffset=nbeads*f_local,
+      foffset=nbeads*f_local,      
       *f_event=rec_->evframe_bead;
 
   double  *pref=xs+poffset,
           *r2_stable=rec_->r2stable_bead,
+          *r2_regime=rec_->netr2_regime,
           *r2_unstable=rec_->r2unstable_bead,
           *alpha_bead=rec_->alpha_bead,
           net_r2_stable_local=net_r2_local,
+          net_r2_regime_local=net_r2_local,
           net_r2_unstable_local=0.0;
   do
   {
@@ -112,39 +114,59 @@ bool MH_examiner::examine_u(event_record *rec_, int i_, double r2success_thresho
     advance((ts[i_f]-ts[i_f-1])/t_phys, d_ang[i_f-1], comega_s[i_f], dt_sim);
     for (int i = 0, j = poffset; i < nbeads; i++,j+=2) {psim[j]=q[i].x; psim[j+1]=q[i].y;}
   }
+
   // process the event block
   double  net_r2_local=0.0,
           net_r2_stable_local=0.0,
+          net_r2_regime_local=0.0,
           net_r2_unstable_local=0.0,
           *pref=xs,
           *r2_stable_comp=rec_->r2stable_bead,
+          *netr2_regime=rec_->netr2_regime,
           *r2_unstable_comp=rec_->r2unstable_bead;
   poffset=0;
-  clear_examiner_residuals(r2_stable_comp,r2_unstable_comp);
-  for (int i_f = 1; i_f <= stev_latest; i_f++)
+  clear_examiner_residuals(r2_stable_comp, netr2_regime, r2_unstable_comp);
+
+  // purely stable residuals
+  for (int i_f = 1; i_f <= stev_earliest; i_f++)
   {
-    poffset+=ndof; pref+=ndof;
-    for (int i = 0, j = poffset, k = 0; i < nbeads; i++,j+=2,k+=2)
+    pref+=ndof;
+    for (int i_c = 0; i_c < nbeads; i_c++)
     {
       double  x_sim=psim[j], y_sim=psim[j+1],
               x_now=(x_sim-cx)*cl_im+cx_im, y_now=(y_sim-cy)*cl_im+cy_im,
               x_ref=pref[j], y_ref=pref[j+1],
-              xerr=x_now-x_ref, yerr=y_now-y_ref, rsq=xerr*xerr+yerr*yerr;
-      net_r2_local+=r2_state_comp[i_f][k]=rsq;
-      if (i<stev_comp[i]) // stable regime
+              xerr=x_now-x_ref, yerr=y_now-y_ref, net_r2_local+=rsq=xerr*xerr+yerr*yerr;
+      net_r2_stable_local+=rsq; r2_stable_comp[i_c]+=rsq;
+    }
+  }
+  netr2_regime[0]=net_r2_local;
+  if (iregime_active==0) net_r2_regime_local=net_r2_local;
+  // regime region
+  for (int i_regime = 1; i_regime < nbeads; i_regime++)
+  {
+    double r2_regime_it=0.0;
+    for (int i_f = stev_ordered[i_regime-1]+1; i_f <= stev_ordered[i_regime]; i_f++)
+    {
+      pref+=ndof;
+      for (int i_c = 0, j = 0; i_c < nbeads; i_c++,j+=2)
       {
-        net_r2_stable_local+=rsq;
-        r2_stable_comp[i]+=rsq;
-      }
-      else // unstable regime
-      {
-        net_r2_unstable_local+=rsq;
-        r2_unstable_comp[i]+=rsq;
+        double  x_sim=psim[j], y_sim=psim[j+1],
+                x_now=(x_sim-cx)*cl_im+cx_im, y_now=(y_sim-cy)*cl_im+cy_im,
+                x_ref=pref[j], y_ref=pref[j+1],
+                xerr=x_now-x_ref, yerr=y_now-y_ref, net_r2_local+=rsq=xerr*xerr+yerr*yerr;
+        if (i_f<=stev_comp[i_c]) // still stable
+        {net_r2_stable_local+=rsq; r2_stable_comp[i_c]+=rsq;}
+        else // unstable
+        {r2_regime_it+=rsq; net_r2_unstable_local+=rsq; r2_unstable_comp[i_c]+=rsq;}
       }
     }
+    netr2_regime[i_regime]=r2_regime_it;
+    if (i_regime<=iregime_active) net_r2_regime_local+=r2_regime_it;
   }
   net_r2=net_r2_local;
   net_r2_stable=net_r2_stable_local;
+  net_r2_regime=net_r2_regime_local;
   net_r2_unstable=net_r2_unstable_local;
 
   bool success_local = update_training_data(i_,r2success_threshold_);
@@ -155,7 +177,7 @@ bool MH_examiner::examine_u(event_record *rec_, int i_, double r2success_thresho
 bool MH_examiner::update_training_data(int i_, double r2success_threshold_)
 {
   ntest++;
-  bool success_local=((stable_training_flag)?net_r2_stable:net_r2_unstable)<r2success_threshold_;
+  bool success_local=(net_r2_regime)<r2success_threshold_;
   if (success_local) int_wkspc[nsuccess_test++] = i_;
   return success_local;
 }

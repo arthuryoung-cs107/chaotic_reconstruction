@@ -127,6 +127,8 @@ class MH_trainer : public MH_params
       for (int i = 0; i < MHT_it_ilen; i++) MHT_it_ints[i]=0;
       for (int i = 0; i < MHT_dlen; i++) MHT_it_dubs[i]=0.0;
     }
+    inline void take_records(record ** rin_, record ** rout_, int ncap_)
+    {for (int i = 0; i < ncap_; i++) rout_[i]->take_record(rin_[i]);}
     inline int take_records(record ** rin_, record ** rout_, int * repl_list_, int ncap_)
     {
       int nrepl=0;
@@ -191,8 +193,8 @@ struct basic_record: public record
   inline void write_basic_rec_dubs(FILE * file_) {fwrite(basic_rec_dubs, sizeof(double), basic_rec_dlen, file_);}
 };
 
-const int basic_tw_ilen=3;
-const int basic_tw_dlen=3;
+const int basic_tw_ilen=4;
+const int basic_tw_dlen=4;
 class basic_thread_worker: public thread_worker, public event_detector
 {
     public:
@@ -211,10 +213,12 @@ class basic_thread_worker: public thread_worker, public event_detector
 
       int nf_obs,
           nf_stable,
+          nf_regime,
           nf_unstable;
 
       double  net_r2,
               net_r2_stable,
+              net_r2_regime,
               net_r2_unstable;
 
       int * const basic_tw_ints;

@@ -11,7 +11,7 @@ int set_special_u(int id_, double *vec_)
   return id_out;
 }
 
-int set_special_u(const char *id_, double*vec_)
+int set_special_u(const char *id_, double *vec_)
 {
   if (strcmp(id_, "true")==0) return set_special_u(0, vec_);
   else if (strcmp(id_, "min")==0) return set_special_u(1, vec_);

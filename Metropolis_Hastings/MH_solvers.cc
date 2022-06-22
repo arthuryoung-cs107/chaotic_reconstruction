@@ -64,15 +64,14 @@ void MH_genetic::run(bool verbose_)
   find_events();
   do
   {
-    train_stable();
-    train_unstable();
+    train_event_block(verbose_);
     if (check_convergence()) break;
-    else find_events();
+    else find_events(verbose_);
   } while(true);
   close_diagnostics();
 }
 
-void MH_genetic::find_events()
+void MH_genetic::find_events(bool verbose_)
 {
   bool first2finish=true;
 
@@ -92,51 +91,57 @@ void MH_genetic::find_events()
       first2finish=ex_t->report_examiner_event_data(first2finish,stev_earliest,stev_latest,stev_comp_,nev_state_comp, nobs_state_comp, mur2_state_comp, mualpha_state_comp);
     }
   }
-  consolidate_genetic_event_data(); // sort event states chronologically, given stev_comp is already set
+
+  // sort event states chronologically, given stev_comp is already set
+  if (gen_count>0) consolidate_genetic_event_data(bleader_rid); // using our best guess
+  consolidate_genetic_event_data(); // using conservative estimates
+
   // compute expected residuals using presumed noise level
   event_block::define_event_block(sigma_scaled);
-
-   // set event data of thread workers to the consolidated values
-  if (gen_count==0) synchronise_genetic_event_data(); // using conservative estimates
-  else synchronise_genetic_event_data(bleader_rid); // using our best guess
-
+  synchronise_genetic_event_data(); // set event data of thread workers to the consolidated values
   report_genetic_event_data(pool, npool); // finish event stats and write out results
   set_genetic_stable_objective(); // set the expected residual to be that expected from the stable data
   post_event_resampling(pool, npool); // restore records, sort by performance, and redraw generation
 }
 
-void MH_genetic::train_stable()
+void MH_genetic::train_event_block(bool verbose_)
 {
-  int nit_train_stable=0;
-  do
+  int nit_train=0;
+
+  for (int i_regime = 0; i_regime < nbeads; i_regime++) // walking through event block
   {
-    bool first2finish=true;
-    nit_train_stable++;
-    clear_genetic_training_data();
-    int nsuccess_local=0;
-    #pragma omp parallel
+    set_regime_objective(i_regime);
+    int nit_regime=0;
+    do
     {
-      MH_examiner * ex_t=examiners[thread_num()];
-      ex_t->clear_examiner_training_data();
-      #pragma omp for reduction(+:nsuccess_local) nowait
-      for (int i = 0; i < npool; i++)
+      nit_train++;
+      bool first2finish=true;
+      int nsuccess_local=0;
+      clear_genetic_training_data();
+      #pragma omp parallel
       {
-        if (ex_t->examine_u(pool[i],i,wr2)) nsuccess_local++;
+        MH_examiner * ex_t=examiners[thread_num()];
+        ex_t->clear_examiner_training_data();
+        #pragma omp for reduction(+:nsuccess_local) nowait
+        for (int i = 0; i < npool; i++)
+        {
+          if (ex_t->examine_u(pool[i],i,wr2)) nsuccess_local++;
+        }
+        ex_t->consolidate_examiner_training_data();
+        #pragma omp critical
+        {
+          first2finish=ex_t->report_examiner_training_data(first2finish,isuccess_pool,nsuccess);
+        }
       }
-      ex_t->consolidate_examiner_training_data();
-      #pragma omp critical
-      {
-        first2finish=ex_t->report_examiner_training_data(first2finish,isuccess_pool,nsuccess);
-      }
-    }
-    consolidate_genetic_training_data();
-    report_genetic_training_data();
-    if (check_stable_convergence()) break;
-    else respawn_pool();
-  } while (true)
+      consolidate_genetic_training_data();
+      report_genetic_training_data();
+      if (check_regime_convergence(++nit_train_stable)) break;
+      else respawn_pool();
+    } while (true)
+  }
 }
 
-void MH_genetic::train_unstable()
+void MH_genetic::check_event_block_convergence()
 {
 
 }
