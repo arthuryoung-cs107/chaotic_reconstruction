@@ -6,7 +6,7 @@
 
 struct record: public record_struct
 {
-  record(record_struct &rs_, int rid_, int * ichunk_, double * dchunk_, double * u_): record_struct(rs_), rid(rid_), ichunk(ichunk_), dchunk(dchunk_), u(u_) {}
+  record(record_struct &rs_, int rid_, int * ichunk_, double * dchunk_, double * u_);
   ~record() {}
 
   const int rid;
@@ -149,8 +149,8 @@ const int basic_rec_ilen=7;
 const int basic_rec_dlen=3;
 struct basic_record: public record
 {
-  basic_record(record_struct &rs_, int rid_, int * ichunk_, double * dchunk_, double * u_): record(rs_, rid_, ichunk_, dchunk_, u_), basic_rec_ints(&gen), basic_rec_dubs(&r2compare) {init_basic_record();}
-  basic_record(record_struct &rs_, int rid_, int * ichunk_, double * dchunk_, double * u_, MH_rng * ran_, double * umin_, double * umax_): basic_record(rs_, rid_, ichunk_, dchunk_, u_) {draw_ranuni(ran_,umin_,umax_);}
+  basic_record(record_struct &rs_, int rid_, int * ichunk_, double * dchunk_, double * u_);
+  basic_record(record_struct &rs_, int rid_, int * ichunk_, double * dchunk_, double * u_, MH_rng * ran_, double * umin_, double * umax_);
   ~basic_record() {}
 
   bool success;
@@ -203,9 +203,7 @@ class basic_thread_worker: public thread_worker, public event_detector
 {
     public:
 
-      basic_thread_worker(swirl_param &sp_, proximity_grid *pg_, wall_list &wl_, thread_worker_struct &tws_, int thread_id_, double alpha_tol_): thread_worker(sp_, pg_, wl_, tws_, thread_id_), event_detector(nbeads, Frames, 2, alpha_tol_),
-      basic_tw_ints(&nf_obs), basic_tw_dubs(&net_r2),
-      int_wkspc(new int[npool]), dub_wkspc(new double[ulen]) {}
+      basic_thread_worker(swirl_param &sp_, proximity_grid *pg_, wall_list &wl_, thread_worker_struct &tws_, int thread_id_, double alpha_tol_);
       ~basic_thread_worker() {delete [] int_wkspc; delete [] dub_wkspc;}
 
       int * const int_wkspc;
@@ -234,12 +232,7 @@ class basic_MH_trainer: public MH_trainer, public gaussian_likelihood
 {
     public:
 
-      basic_MH_trainer(MH_train_struct &mhts_, int ichunk_width_, int dchunk_width_, double t_wheels0_=-1.0): MH_trainer(mhts_, ichunk_width_, dchunk_width_), gaussian_likelihood(sigma, mhts_.sp_min->cl_im),
-      apply_training_wheels(t_wheels0_>0.0), t_wheels0(t_wheels0_),
-      ndup_leaders(new int[nlead]), irepl_leaders(new int[nlead]), isuccess_pool(new int[npool]),
-      w_leaders(new double[nlead]),
-      u_mean(new double[ulen]), u_var(new double[ulen]),
-      u_wmean(new double[ulen]), u_wvar(new double[ulen]) {}
+      basic_MH_trainer(MH_train_struct &mhts_, int ichunk_width_, int dchunk_width_, double t_wheels0_=-1.0);
 
       ~basic_MH_trainer()
       {

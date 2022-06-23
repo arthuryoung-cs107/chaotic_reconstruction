@@ -21,6 +21,8 @@ int set_special_u(const char *id_, double *vec_)
   else return set_special_u(-1, vec_);
 }
 
+// MH_io
+
 MH_io::MH_io(char * proc_loc_, char * test_dir_, char * data_name_, int id_, bool noise_data_, double noise_sigma_): fullbuf_len(strlen(proc_loc_)+strlen(test_dir_)+strlen(data_name_)),
 proc_loc(proc_loc_), test_dir(test_dir_), data_name(data_name_),
 id(id_),
@@ -69,3 +71,26 @@ void MH_io::load_reference(double *ts_, double *xs_, double *d_ang_, double * co
     comega_s_[i] = t_phys_*comega/(ts_[i]-ts_[i-1]);
   }
 }
+
+// swirl_system_struct
+
+swirl_system_struct::swirl_system_struct(int ulen_, int nbeads_, int Frames_): ulen(ulen_), nbeads(nbeads_), Frames(Frames_) {}
+
+// record_struct
+
+record_struct::record_struct(int ulen_, int nbeads_, int Frames_, int ichunk_len_, int dchunk_len_) : swirl_system_struct(ulen_, nbeads_, Frames_), ichunk_len(ichunk_len_), dchunk_len(dchunk_len_) {}
+
+// thread_worker_struct
+
+thread_worker_struct::thread_worker_struct(int ulen_, int nbeads_, int Frames_, int nlead_, int npool_, double dt_sim_, double t_phys_, double *ts_, double *xs_, double *d_ang_, double *comega_s_): swirl_system_struct(ulen_, nbeads_, Frames_),
+nlead(nlead_), npool(npool_), dt_sim(dt_sim_), t_phys(t_phys_), ts(ts_), xs(xs_), d_ang(d_ang_), comega_s(comega_s_) {}
+
+// MH_params
+
+MH_params::MH_params(MH_io *io_, int ulen_, int nlead_, int npool_, double dt_sim_, double t_phys_, double sigma_): swirl_system_struct(ulen_, io_->nbeads, io_->Frames),
+io(io_),
+nlead(nlead_), npool(npool_), dt_sim(dt_sim_), t_phys(t_phys_), sigma(sigma_) {}
+
+// MH_train_struct
+
+MH_train_struct::MH_train_struct(MH_params *par_, swirl_param *sp_min_, swirl_param *sp_max_, wall_list *wl_): par(par_), sp_min(sp_min_), sp_max(sp_max_), wl(wl_) {}

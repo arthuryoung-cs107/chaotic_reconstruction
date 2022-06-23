@@ -25,8 +25,7 @@ int set_special_u(const char *id_, double*vec_);
 const int swirl_system_struct_const_ilen=3;
 struct swirl_system_struct
 {
-  swirl_system_struct(int ulen_, int nbeads_, int Frames_): ulen(ulen_), nbeads(nbeads_), Frames(Frames_) {}
-  swirl_system_struct(swirl_system_struct &sss_): swirl_system_struct(sss_.ulen, sss_.nbeads, sss_.Frames) {}
+  swirl_system_struct(int ulen_, int nbeads_, int Frames_);
   ~swirl_system_struct() {}
 
   const int ulen, // length of parameter vector
@@ -65,7 +64,7 @@ struct MH_io
 
 struct record_struct: public virtual swirl_system_struct
 {
-  record_struct(int ulen_, int nbeads_, int Frames_, int ichunk_len_, int dchunk_len_): swirl_system_struct(ulen_, nbeads_, Frames_), ichunk_len(ichunk_len_), dchunk_len(dchunk_len_) {}
+  record_struct(int ulen_, int nbeads_, int Frames_, int ichunk_len_, int dchunk_len_);
 
   record_struct(record_struct &rs_): record_struct(rs_.ulen, rs_.nbeads, rs_.Frames, rs_.ichunk_len, rs_.dchunk_len) {}
 
@@ -77,11 +76,7 @@ struct record_struct: public virtual swirl_system_struct
 
 struct thread_worker_struct: public virtual swirl_system_struct
 {
-  thread_worker_struct(int ulen_, int nbeads_, int Frames_, int nlead_, int npool_, double dt_sim_, double t_phys_, double *ts_, double *xs_, double *d_ang_, double *comega_s_): swirl_system_struct(ulen_, nbeads_, Frames_),
-  nlead(nlead_), npool(npool_), dt_sim(dt_sim_), t_phys(t_phys_), ts(ts_), xs(xs_), d_ang(d_ang_), comega_s(comega_s_) {}
-
-  // thread_worker_struct(thread_worker_struct &tws_): swirl_system_struct(tws_.ulen, tws_.nbeads, tws_.Frames),
-  // nlead(tws_.nlead), npool(tws_.npool), dt_sim(tws_.dt_sim), t_phys(tws_.t_phys), ts(tws_.ts), xs(tws_.xs), d_ang(tws_.d_ang), comega_s(tws_.comega_s) {}
+  thread_worker_struct(int ulen_, int nbeads_, int Frames_, int nlead_, int npool_, double dt_sim_, double t_phys_, double *ts_, double *xs_, double *d_ang_, double *comega_s_);
 
   thread_worker_struct(thread_worker_struct &tws_): thread_worker_struct(tws_.ulen, tws_.nbeads, tws_.Frames, tws_.nlead, tws_.npool, tws_.dt_sim, tws_.t_phys, tws_.ts, tws_.xs, tws_.d_ang, tws_.comega_s) {}
 
@@ -101,9 +96,7 @@ struct thread_worker_struct: public virtual swirl_system_struct
 
 struct MH_params: public virtual swirl_system_struct
 {
-  MH_params(MH_io *io_, int ulen_, int nlead_, int npool_, double dt_sim_, double t_phys_, double sigma_): swirl_system_struct(ulen_, io_->nbeads, io_->Frames),
-  io(io_),
-  nlead(nlead_), npool(npool_), dt_sim(dt_sim_), t_phys(t_phys_), sigma(sigma_) {}
+  MH_params(MH_io *io_, int ulen_, int nlead_, int npool_, double dt_sim_, double t_phys_, double sigma_);
 
   MH_params(MH_params &par_): MH_params(par_.io,par_.ulen,par_.nlead,par_.npool,par_.dt_sim,par_.t_phys,par_.sigma) {}
 
@@ -142,7 +135,7 @@ struct MH_params: public virtual swirl_system_struct
 
 struct MH_train_struct
 {
-  MH_train_struct(MH_params *par_, swirl_param *sp_min_, swirl_param *sp_max_, wall_list *wl_): par(par_), sp_min(sp_min_), sp_max(sp_max_), wl(wl_) {}
+  MH_train_struct(MH_params *par_, swirl_param *sp_min_, swirl_param *sp_max_, wall_list *wl_);
   MH_train_struct(MH_train_struct &mhts_): MH_train_struct(mhts_.par, mhts_.sp_min, mhts_.sp_max, mhts_.wl) {}
   ~MH_train_struct() {}
 

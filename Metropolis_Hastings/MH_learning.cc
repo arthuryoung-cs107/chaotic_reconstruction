@@ -1,6 +1,14 @@
 #include "MH_learning.hh"
 
+// record
+
+record::record(record_struct &rs_, int rid_, int * ichunk_, double * dchunk_, double * u_): record_struct(rs_), rid(rid_), ichunk(ichunk_), dchunk(dchunk_), u(u_) {}
+
 // thread_worker
+
+thread_worker::thread_worker(swirl_param &sp_, proximity_grid * pg_, wall_list &wl_, thread_worker_struct &tws_, int thread_id_): swirl(sp_, pg_, wl_, tws_.nbeads), thread_worker_struct(tws_),
+thread_id(thread_id_),
+u(&Kn), psim(new double[2*nbeads*Frames]) {}
 
 void thread_worker::reset_sim(double *utest_, double t0_, double ctheta0_, double comega0_, double *p0_)
 {
@@ -17,7 +25,6 @@ void thread_worker::reset_sim(double *utest_, double t0_, double ctheta0_, doubl
     q[i].zero_rest();
   }
 }
-
 
 // MH_trainer
 
@@ -124,6 +131,31 @@ void MH_trainer::pick_nbest_records(record ** rin_, int n_, int ncap_)
       i_worst_best=find_worst_record(rin_,n_);
     }
 }
+
+// basic_record
+
+basic_record::basic_record(record_struct &rs_, int rid_, int * ichunk_, double * dchunk_, double * u_): record(rs_, rid_, ichunk_, dchunk_, u_),
+basic_rec_ints(&gen), basic_rec_dubs(&r2compare) {init_basic_record();}
+
+basic_record::basic_record(record_struct &rs_, int rid_, int * ichunk_, double * dchunk_, double * u_, MH_rng * ran_, double * umin_, double * umax_): basic_record(rs_, rid_, ichunk_, dchunk_, u_)
+{draw_ranuni(ran_,umin_,umax_);}
+
+// basic_thread_worker
+
+basic_thread_worker::basic_thread_worker(swirl_param &sp_, proximity_grid *pg_, wall_list &wl_, thread_worker_struct &tws_, int thread_id_, double alpha_tol_): thread_worker(sp_, pg_, wl_, tws_, thread_id_), event_detector(nbeads, Frames, 2, alpha_tol_),
+basic_tw_ints(&nf_obs), basic_tw_dubs(&net_r2),
+int_wkspc(new int[npool]), dub_wkspc(new double[ulen]) {}
+
+
+// basic_MH_trainer
+
+basic_MH_trainer::basic_MH_trainer(MH_train_struct &mhts_, int ichunk_width_, int dchunk_width_, double t_wheels0_): MH_trainer(mhts_, ichunk_width_, dchunk_width_), gaussian_likelihood(sigma, mhts_.sp_min->cl_im),
+apply_training_wheels(t_wheels0_>0.0), t_wheels0(t_wheels0_),
+ndup_leaders(new int[nlead]), irepl_leaders(new int[nlead]), isuccess_pool(new int[npool]),
+w_leaders(new double[nlead]),
+u_mean(new double[ulen]), u_var(new double[ulen]),
+u_wmean(new double[ulen]), u_wvar(new double[ulen]) {}
+
 
 double basic_MH_trainer::compute_weights(double r2_min_, basic_record ** recs_, int n_)
 {
