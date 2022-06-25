@@ -68,74 +68,10 @@ MH_trainer::~MH_trainer()
   delete [] rng;
 }
 
-int MH_trainer::find_worst_record(record ** r_, int ncap_)
-{
-  int worst_index = 0;
-  for (int i = 1; i < ncap_; i++)
-    if (r_[worst_index]->isbetter(r_[i]))
-      worst_index = i;
-  return worst_index;
-}
-
-int MH_trainer::find_best_record(record ** r_, int ncap_)
-{
-  int best_index = 0;
-  for (int i = 1; i < ncap_; i++)
-    if (r_[best_index]->isworse(r_[i]))
-      best_index = i;
-  return best_index;
-}
-
-void MH_trainer::pick_nworst_records(record ** rin_, record ** rout_, int n_, int ncap_)
-{
-  for (int i = 0; i < n_; i++) rout_[i]=rin_[i];
-  int i_best_worst = find_best_record(rout_,n_);
-  for (int i = n_; i < ncap_; i++)
-    if (rout_[i_best_worst]->isbetter(rin_[i]))
-    {
-      rout_[i_best_worst] = rin_[i];
-      i_best_worst=find_best_record(rout_,n_);
-    }
-}
-
-void MH_trainer::pick_nbest_records(record ** rin_, record ** rout_, int n_, int ncap_)
-{
-  for (int i = 0; i < n_; i++) rout_[i]=rin_[i];
-  int i_worst_best = find_worst_record(rout_,n_);
-  for (int i = n_; i < ncap_; i++)
-    if (rout_[i_worst_best]->isworse(rin_[i]))
-    {
-      rout_[i_worst_best] = rin_[i];
-      i_worst_best=find_worst_record(rout_,n_);
-    }
-}
-
-void MH_trainer::pick_nworst_records(record ** rin_, int n_, int ncap_)
-{
-  int i_best_worst = find_best_record(rin_,n_);
-  for (int i = n_; i < ncap_; i++)
-    if (rin_[i_best_worst]->isbetter(rin_[i]))
-    {
-      rin_[i_best_worst] = rin_[i];
-      i_best_worst=find_best_record(rin_,n_);
-    }
-}
-
-void MH_trainer::pick_nbest_records(record ** rin_, int n_, int ncap_)
-{
-  int i_worst_best = find_worst_record(rin_,n_);
-  for (int i = n_; i < ncap_; i++)
-    if (rin_[i_worst_best]->isworse(rin_[i]))
-    {
-      rin_[i_worst_best] = rin_[i];
-      i_worst_best=find_worst_record(rin_,n_);
-    }
-}
-
 // basic_record
 
 basic_record::basic_record(record_struct &rs_, int rid_, int * ichunk_, double * dchunk_, double * u_): record(rs_, rid_, ichunk_, dchunk_, u_),
-basic_rec_ints(&gen), basic_rec_dubs(&r2compare) {init_basic_record();}
+basic_rec_ints(&gen), basic_rec_dubs(&r2) {init_basic_record();}
 
 basic_record::basic_record(record_struct &rs_, int rid_, int * ichunk_, double * dchunk_, double * u_, MH_rng * ran_, double * umin_, double * umax_): basic_record(rs_, rid_, ichunk_, dchunk_, u_)
 {draw_ranuni(ran_,umin_,umax_);}
@@ -157,90 +93,9 @@ u_mean(new double[ulen]), u_var(new double[ulen]),
 u_wmean(new double[ulen]), u_wvar(new double[ulen]) {}
 
 
-double basic_MH_trainer::compute_weights(double r2_min_, basic_record ** recs_, int n_)
-{
-  double  wsum=0.0,
-          r_min_=sqrt(r2_min_),
-          rho_=sqrt(rho2);
-
-  #pragma omp parallel for reduction(+:wsum)
-  for (int i = 0; i < n_; i++)
-  {
-    wsum+=w_leaders[i]=recs_[i]->w=gaussian_likelihood::compute_weight(sqrt(recs_[i]->r2compare),r_min_,rho_);
-  }
-  return wsum;
-}
-
-
-void basic_MH_trainer::respawn_pool(double w_sum_, basic_thread_worker ** tws_, basic_record ** pool_, basic_record ** leaders_)
-{
-  memset(ndup_leaders,0,nlead*sizeof(int));
-  for (int i = 0; i < ulen; i++) u_var[i]=u_mean[i]=0.0;
-  ndup=nredraw=ndup_unique=0;
-
-  #pragma omp_parallel
-  {
-    int tid = thread_num(),
-        *dup_t = tws_[tid]->int_wkspc;
-    double  *u_stat_t = tws_[tid]->dub_wkspc,
-            inv_npool = 1.0/((double)npool),
-            inv_npoolm1 = 1.0/((double)(npool-1));
-    MH_rng * rng_t = rng[tid];
-
-    memset(dup_t,0,nlead*sizeof(int));
-    for (int i = 0; i < ulen; i++) u_stat_t[i]=0.0;
-
-    #pragma omp for reduction(+:ndup) reduction(+:nredraw) nowait
-    for (int i = 0; i < npool; i++)
-    {
-      int j=0;
-      double uni = w_sum_*rng_t->rand_uni();
-      while ((j<leader_count)&&(uni>0.0)) uni-=w_leaders[j++];
-      if (j>0)
-      {
-        if (uni<0.0)
-        {ndup++; dup_t[--j]++; duplicate_u(pool_[i],leaders_[j],rng_t);}
-        else
-        {nredraw++; redraw_u(pool_[i],rng_t);}
-      }
-      else
-      {nredraw++; redraw_u(pool_[i],rng_t);}
-
-      for (int i_u = 0; i_u < ulen; i_u++) u_stat_t[i_u]+=inv_npool*pool_[i]->u[i_u];
-    }
-    #pragma omp critical
-    {
-      for (int i = 0; i < leader_count; i++) ndup_leaders[i]+=dup_t[i];
-      for (int i = 0; i < ulen; i++) u_mean[i]+=u_stat_t[i];
-    }
-    for (int i = 0; i < ulen; i++) u_stat_t[i]=0.0;
-
-    #pragma omp barrier
-
-    #pragma omp for nowait
-    for (int i = 0; i < npool; i++)
-    {
-      double *ui = uchunk[i];
-      for (int j = 0; j < ulen; j++)
-      {
-        double diff_j=ui[j]-u_mean[j];
-        u_stat_t[i]+=(inv_npoolm1)*diff_j*diff_j;
-      }
-    }
-
-    #pragma omp critical
-    {
-      for (int i = 0; i < ulen; i++) u_var[i]+=u_stat_t[i];
-    }
-  }
-
-  for (int i = 0; i < leader_count; i++) if (ndup_leaders[i])
-  {leaders_[i]->dup_count+=ndup_leaders[i]; ndup_unique++;}
-}
-
 void basic_MH_trainer::duplicate_u(basic_record *rec_child_, basic_record *rec_parent_, MH_rng *rng_t_)
 {
-  double  r_ = sqrt(rec_parent_->r2compare),
+  double  r_ = sqrt(rec_parent_->r2),
           r_rat = r_/sqrt(rho2),
           sigma_fac = max(0.25*(1.0-exp(0.5*(1.0-r_rat)*(1.0+r_rat))), 0.0),
           *u_child=rec_child_->u,

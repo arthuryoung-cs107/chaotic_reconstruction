@@ -35,66 +35,17 @@ struct MH_rng
   inline double rand_gau(double mu_=0.0, double sigma_=1.0) {return mu_+gsl_ran_gaussian(gsl_gen,sigma_);}
 };
 
-struct system_struct
+struct event_block
 {
-  system_struct(int ncomp_, int nstates_): ncomp(ncomp_), nstates(nstates_) {}
-  ~system_struct() {}
+  event_block(int ncomp_, int nstates_);
+  ~event_block();
 
-  const int ncomp, // ncomp
-            nstates; // Frames
-};
-
-struct event_detector: public virtual system_struct
-{
-  event_detector(int ncomp_, int nstates_, int dof_, double alpha_tol_): system_struct(ncomp_,nstates_), dof(dof_), ndof(ncomp*dof), alpha_tol(alpha_tol_),
-  r2_state_comp(Tmatrix<double>(nstates,ncomp)), alpha_state_comp(Tmatrix<double>(nstates,ncomp)),
-  INTr2_comp_history(Tmatrix<double>(ncomp,3)), r2_regime_comp(Tmatrix<double>(ncomp,ncomp)) {}
-  ~event_detector()
-  {
-    free_Tmatrix<double>(r2_state_comp); free_Tmatrix<double>(alpha_state_comp);
-    free_Tmatrix<double>(INTr2_comp_history); free_Tmatrix<double>(r2_regime_comp);
-  }
-
-  const int dof, // x,y
-            ndof; // dof per state
-        int stev_early,
-            stev_late,
-            iregime_active;
-
-  const double alpha_tol;
-
-  double  ** const r2_state_comp,
-          ** const alpha_state_comp,
-          ** const INTr2_comp_history,
-          ** const r2_regime_comp;
-
-  inline double alpha_comp(double *a_, double t_p1, double t_m1)
-  {return log(a_[0]/a_[2])/log(t_p1/t_m1);}
-  inline double alpha_comp(double a_p1, double a_m1, double t_p1, double t_m1)
-  {return log(a_p1/a_m1)/log(t_p1/t_m1);}
-};
-
-struct event_block: public virtual system_struct
-{
-  event_block(int ncomp_, int nstates_): system_struct(ncomp_, nstates_),
-  stev_comp(new int[ncomp]), stev_ordered(new int[ncomp]), comps_ordered(new int[ncomp]),
-  nev_state_comp(Tmatrix<int>(nstates,ncomp)), nobs_state_comp(Tmatrix<int>(nstates,ncomp)),
-  rho2stable_comp(new double[ncomp]), delrho2_regime(new double[ncomp]),
-  mur2_state_comp(Tmatrix<double>(nstates,ncomp)), stdr2_state_comp(Tmatrix<double>(nstates,ncomp)),
-  mualpha_state_comp(Tmatrix<double>(nstates,ncomp)), stdalpha_state_comp(Tmatrix<double>(nstates,ncomp)) {}
-  ~event_block()
-  {
-    delete [] stev_comp; delete [] stev_ordered; delete [] comps_ordered;
-    free_Tmatrix<int>(nev_state_comp); free_Tmatrix<int>(nobs_state_comp);
-    delete[] rho2stable_comp; delete [] delrho2_regime;
-    free_Tmatrix<double>(mur2_state_comp); free_Tmatrix<double>(stdr2_state_comp);
-    free_Tmatrix<double>(mualpha_state_comp); free_Tmatrix<double>(stdalpha_state_comp);
-  }
+  const int ncomp, // nbeads, in a general sense
+            nstates; // Frames, in a general sense
 
   int stev_earliest, // state index of earliest detected event (pertains to one system component)
-      stev_latest; // state index of latest detected event (pertains to one system component)
-
-  int * const stev_comp, // state index of events for each component in the system
+      stev_latest, // state index of latest detected event (pertains to one system component)
+      * const stev_comp, // state index of events for each component in the system
       * const stev_ordered, // state indices of events arranged chronologically
       * const comps_ordered, // system component indices arranged in order of their experienced events
       ** const nev_state_comp, // counts of events experienced at each sequence state for many trials
@@ -149,6 +100,30 @@ struct event_block: public virtual system_struct
     beads_ordered_[early_index]=index_temp; frames_ordered_[early_index]=frame_temp;
     if (i_next<ncomp-1) earliest_recursive(frames_ordered_,beads_ordered_,i_next+1);
   }
+};
+
+struct event_detector: public event_block
+{
+  event_detector(int ncomp_, int nstates_, int dof_, double alpha_tol_);
+  ~event_detector();
+
+  const int dof, // x,y
+            ndof; // dof per state
+        int stev_early,
+            stev_late,
+            iregime_active;
+
+  const double alpha_tol;
+
+  double  ** const r2_state_comp,
+          ** const alpha_state_comp,
+          ** const INTr2_comp_history,
+          ** const r2_regime_comp;
+
+  inline double alpha_comp(double *a_, double t_p1, double t_m1)
+  {return log(a_[0]/a_[2])/log(t_p1/t_m1);}
+  inline double alpha_comp(double a_p1, double a_m1, double t_p1, double t_m1)
+  {return log(a_p1/a_m1)/log(t_p1/t_m1);}
 };
 
 struct gaussian_likelihood

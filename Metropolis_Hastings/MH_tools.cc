@@ -18,6 +18,25 @@ void fread_SAFE(void *ptr,size_t size,size_t count,FILE *fp)
   }
 }
 
+// event_block
+
+event_block::event_block(int ncomp_, int nstates_): ncomp(ncomp_), nstates(nstates_),
+stev_comp(new int[ncomp]), stev_ordered(new int[ncomp]), comps_ordered(new int[ncomp]),
+nev_state_comp(Tmatrix<int>(nstates,ncomp)), nobs_state_comp(Tmatrix<int>(nstates,ncomp)),
+rho2stable_comp(new double[ncomp]), delrho2_regime(new double[ncomp]),
+mur2_state_comp(Tmatrix<double>(nstates,ncomp)), stdr2_state_comp(Tmatrix<double>(nstates,ncomp)),
+mualpha_state_comp(Tmatrix<double>(nstates,ncomp)), stdalpha_state_comp(Tmatrix<double>(nstates,ncomp)) {}
+
+event_block::~event_block()
+{
+  delete [] stev_comp; delete [] stev_ordered; delete [] comps_ordered;
+  free_Tmatrix<int>(nev_state_comp); free_Tmatrix<int>(nobs_state_comp);
+  delete[] rho2stable_comp; delete [] delrho2_regime;
+  free_Tmatrix<double>(mur2_state_comp); free_Tmatrix<double>(stdr2_state_comp);
+  free_Tmatrix<double>(mualpha_state_comp); free_Tmatrix<double>(stdalpha_state_comp);
+}
+
+
 void event_block::synchronise_event_data(int stev_earliest_, int stev_latest_, int *stev_c_, int *stev_o_, int *comps_o_,double *rho2s_c_, double *drho2_r_)
 {
   stev_earliest=stev_earliest_;
@@ -67,4 +86,18 @@ void event_block::consolidate_event_data()
   comps_ordered[index_temp]=early_index; stev_ordered[index_temp]=early_frame;
   comps_ordered[early_index]=index_temp; stev_ordered[early_index]=frame_temp;
   if (ncomp>1) earliest_recursive(stev_ordered,comps_ordered,1);
+}
+
+
+// event_detector
+
+event_detector::event_detector(int ncomp_, int nstates_, int dof_, double alpha_tol_): event_block(ncomp_,nstates_),
+dof(dof_), ndof(ncomp*dof), alpha_tol(alpha_tol_),
+r2_state_comp(Tmatrix<double>(nstates,ncomp)), alpha_state_comp(Tmatrix<double>(nstates,ncomp)),
+INTr2_comp_history(Tmatrix<double>(ncomp,3)), r2_regime_comp(Tmatrix<double>(ncomp,ncomp)) {}
+
+event_detector::~event_detector()
+{
+  free_Tmatrix<double>(r2_state_comp); free_Tmatrix<double>(alpha_state_comp);
+  free_Tmatrix<double>(INTr2_comp_history); free_Tmatrix<double>(r2_regime_comp);
 }

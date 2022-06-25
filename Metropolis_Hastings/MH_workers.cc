@@ -102,15 +102,16 @@ bool MH_examiner::examine_u(event_record *rec_, int i_, double r2success_thresho
   clear_examiner_residuals(r2_stable_comp, netr2_regime, r2_unstable_comp);
 
   // purely stable residuals
-  for (int i_f = 1; i_f <= stev_earliest; i_f++)
+  for (int i_f = 1, j=dof; i_f <= stev_earliest; i_f++)
   {
     pref+=ndof;
-    for (int i_c = 0; i_c < nbeads; i_c++)
+    for (int i_c = 0; i_c < nbeads; i_c++, j+=dof)
     {
       double  x_sim=psim[j], y_sim=psim[j+1],
               x_now=(x_sim-cx)*cl_im+cx_im, y_now=(y_sim-cy)*cl_im+cy_im,
               x_ref=pref[j], y_ref=pref[j+1],
-              xerr=x_now-x_ref, yerr=y_now-y_ref, net_r2_local+=rsq=xerr*xerr+yerr*yerr;
+              xerr=x_now-x_ref, yerr=y_now-y_ref, rsq=xerr*xerr+yerr*yerr;
+      net_r2_local+=rsq;
       net_r2_stable_local+=rsq; r2_stable_comp[i_c]+=rsq;
     }
   }
@@ -120,15 +121,16 @@ bool MH_examiner::examine_u(event_record *rec_, int i_, double r2success_thresho
   for (int i_regime = 1; i_regime < nbeads; i_regime++)
   {
     double r2_regime_it=0.0;
-    for (int i_f = stev_ordered[i_regime-1]+1; i_f <= stev_ordered[i_regime]; i_f++)
+    for (int i_f = stev_ordered[i_regime-1]+1, j=dof*i_f; i_f <= stev_ordered[i_regime]; i_f++)
     {
       pref+=ndof;
-      for (int i_c = 0, j = 0; i_c < nbeads; i_c++,j+=2)
+      for (int i_c = 0, j = 0; i_c < nbeads; i_c++,j+=dof)
       {
         double  x_sim=psim[j], y_sim=psim[j+1],
                 x_now=(x_sim-cx)*cl_im+cx_im, y_now=(y_sim-cy)*cl_im+cy_im,
                 x_ref=pref[j], y_ref=pref[j+1],
-                xerr=x_now-x_ref, yerr=y_now-y_ref, net_r2_local+=rsq=xerr*xerr+yerr*yerr;
+                xerr=x_now-x_ref, yerr=y_now-y_ref, rsq=xerr*xerr+yerr*yerr;
+        net_r2_local+=rsq;
         if (i_f<=stev_comp[i_c]) // still stable
         {net_r2_stable_local+=rsq; r2_stable_comp[i_c]+=rsq;}
         else // unstable
@@ -150,7 +152,7 @@ bool MH_examiner::examine_u(event_record *rec_, int i_, double r2success_thresho
 
 // MH_medic
 
-MH_medic::MH_medic(swirl_param  &sp_, proximity_grid *pg_, wall_list &wl_, thread_worker_struct &tws_, int thread_id_, double alpha_tol_, int Frames_test_, char * test_buffer_): basic_thread_worker(sp_, pg_, wl_, tws_, thread_id_, alpha_tol_), event_block(nbeads,Frames),
+MH_medic::MH_medic(swirl_param  &sp_, proximity_grid *pg_, wall_list &wl_, thread_worker_struct &tws_, int thread_id_, double alpha_tol_, int Frames_test_, char * test_buffer_): MH_examiner(sp_,pg_,wl_,tws_,thread_id_, alpha_tol_),
 Frames_test(Frames_test_),
 buf_end(strlen(test_buffer_)), mtest_buffer(new char[buf_end+50]),
 TEST_p(new double[ndof*Frames_test]), TEST_r2(new double[nbeads*Frames_test]), TEST_alpha(new double[nbeads*Frames_test]), TEST_INTr2(new double[nbeads*Frames_test])
@@ -265,10 +267,12 @@ void MH_medic::test_u(event_record * rec_, int i_, bool verbose_)
 void MH_medic::write_utest_results(event_record *rec_, int i_)
 {
   int header_len = 2;
-  int header[] = {header_len, int_len, double_len};
+  int header[] = {header_len, basic_tw_ilen, basic_tw_dlen};
   sprintf(mtest_buffer+buf_end, "par%d.redat", i_);
   FILE * data_file = fopen(mtest_buffer, "wb");
   fwrite(header,sizeof(int),header_len+1,data_file);
+  fwrite(basic_tw_ints, sizeof(int), header[1],data_file);
+  fwrite(basic_tw_dubs, sizeof(double), header[2],data_file);  
   fwrite(psim,sizeof(double),ndof*Frames,data_file);
   fwrite(r2_state_comp[0],sizeof(double),nbeads*Frames,data_file);
   fwrite(alpha_state_comp[0],sizeof(double),nbeads*Frames,data_file);

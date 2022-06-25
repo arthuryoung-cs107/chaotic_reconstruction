@@ -62,7 +62,7 @@ struct MH_io
     void read_fisml(char * ibuf_);
 };
 
-struct record_struct: public virtual swirl_system_struct
+struct record_struct: public swirl_system_struct
 {
   record_struct(int ulen_, int nbeads_, int Frames_, int ichunk_len_, int dchunk_len_);
 
@@ -74,7 +74,7 @@ struct record_struct: public virtual swirl_system_struct
             dchunk_len;
 };
 
-struct thread_worker_struct: public virtual swirl_system_struct
+struct thread_worker_struct: public swirl_system_struct
 {
   thread_worker_struct(int ulen_, int nbeads_, int Frames_, int nlead_, int npool_, double dt_sim_, double t_phys_, double *ts_, double *xs_, double *d_ang_, double *comega_s_);
 
@@ -94,7 +94,7 @@ struct thread_worker_struct: public virtual swirl_system_struct
           * const comega_s;
 };
 
-struct MH_params: public virtual swirl_system_struct
+struct MH_params: public swirl_system_struct
 {
   MH_params(MH_io *io_, int ulen_, int nlead_, int npool_, double dt_sim_, double t_phys_, double sigma_);
 

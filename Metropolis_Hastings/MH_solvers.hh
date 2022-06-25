@@ -41,22 +41,17 @@ class MH_genetic : public basic_MH_trainer, public event_block
     }
 
     // event
-    void find_events();
+    void find_events(bool verbose_=true);
     void clear_genetic_event_data();
     void consolidate_genetic_event_data();
     void consolidate_genetic_event_data(int bleader_index_);
     void synchronise_genetic_event_data();
-    void report_genetic_event_data(event_record **recs_, int n_);
+    void report_genetic_event_data();
+    void stage_event_search();
 
     // training
-    void train_event_block();
-    inline void set_regime_objective(int iregime_)
-    {
-      #pragma omp parallel
-      {
-        examiners[thread_num()]->iregime_active=iregime_;
-      }
-    }
+    void train_event_block(bool verbose_=true);
+    void set_regime_objective(int iregime_);
     inline void clear_genetic_training_data() {clear_basic_train_training_data();}
     bool check_regime_convergence(int iregime_count_);
     void consolidate_genetic_training_data();
@@ -69,7 +64,25 @@ class MH_genetic : public basic_MH_trainer, public event_block
 
     // sampling
     void reload_leaders(int bleader_index_);
-    void post_event_resampling(event_record ** recs_, int n_);
+    void post_event_resampling();
+    void respawn_pool(double wsum_, int offset_=0);
+
+    // inelegant, but I kind of screwed myself over by not planning around this polymorphism issue
+    virtual int find_worst_record(event_record ** r_, int ncap_);
+    virtual int find_best_record(event_record **r_, int ncap_);
+    virtual void pick_nworst_records(event_record ** rin_, event_record ** rout_, int n_, int ncap_);
+    virtual void pick_nbest_records(event_record ** rin_, event_record ** rout_, int n_, int ncap_);
+    virtual void pick_nworst_records(event_record ** rin_, int n_, int ncap_);
+    virtual void pick_nbest_records(event_record ** rin_, int n_, int ncap_);
+    virtual double compute_weights(double r2_min_, event_record ** recs_, int n_);
+    inline void take_records(event_record ** rin_, event_record ** rout_, int ncap_)
+    {for (int i = 0; i < ncap_; i++) rout_[i]->take_record(rin_[i]);}
+    inline int take_records(event_record ** rin_, event_record ** rout_, int *repl_list_, int ncap_)
+    {
+      int nrepl=0;
+      for (int i = 0; i < ncap_; i++) if (rout_[i]->take_record(rin_[i])) repl_list_[nrepl++]=i;
+      return nrepl;
+    }
 
     // io
     void stage_diagnostics();
@@ -82,7 +95,7 @@ class MH_genetic : public basic_MH_trainer, public event_block
     {write_basic_train_it_dubs(file_);fwrite(genetic_train_it_dubs,sizeof(double),genetic_train_it_dlen,file_);}
     inline void write_ustats(FILE * file_)
     {
-      
+
     }
     inline int genetic_it_ilen_full() {return basic_train_it_ilen_full() + genetic_train_it_ilen;}
     inline int genetic_it_dlen_full() {return basic_train_it_dlen_full() + genetic_train_it_dlen;}
@@ -110,7 +123,7 @@ class MH_genetic : public basic_MH_trainer, public event_block
                   ** const candidates;
 };
 
-class MH_doctor : public basic_MH_trainer, public event_block
+class MH_doctor : public MH_genetic
 {
   public:
 
@@ -118,8 +131,10 @@ class MH_doctor : public basic_MH_trainer, public event_block
     ~MH_doctor();
 
     void run(bool verbose_=true);
-    void stage_diagnostics();
-    void close_diagnostics();
+    void stage_doctor_diagnostics();
+    void close_doctor_diagnostics();
+
+    inline void initialize_doctor_run() {initialize_genetic_run();}
 
   private:
 

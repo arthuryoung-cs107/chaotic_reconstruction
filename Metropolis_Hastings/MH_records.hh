@@ -31,30 +31,34 @@ struct event_record : public basic_record
           * r2unstable_bead,
           * alpha_bead;
 
-  int take_record(event_record *r_);
-  void determine_event_block(int &stev_earliest_,int &stev_latest_,int *stev_comp_,int *stev_ordered_,int *comps_ordered_);
-  void write_event_rec_full_header(FILE * file_, int len_=0);
-  void write_event_rec_training_header(FILE * file_, int len_=0);
-  void write_event_rec_training_data(FILE * file_);
+  // event
 
-  int isworse(event_record * r_) {return r2compare>r_->r2compare;}
-  int isbetter(event_record * r_) {return r2compare<r_->r2compare;}
-  void write_ints(FILE * file_) {write_event_rec_ints(file_);}
-  void write_dubs(FILE * file_) {write_event_rec_dubs(file_);}
-
-  inline double set_net_objective() {return r2compare=r2;}
-  inline double set_stable_objective() {return r2compare=r2_stable;}
-  inline double set_unstable_objective() {return r2compare=r2_unstable;}
   inline void record_event_data(int *int_data_, double * double_data_)
   {
     nfobs=int_data_[0]; nfstable=int_data_[1]; nfunstable=int_data_[2];
     r2=double_data_[0]; r2stable=double_data_[1]; r2regime=double_data_[2]; r2unstable=double_data_[3];
   }
+
+  void determine_event_block(int &stev_earliest_,int &stev_latest_,int *stev_comp_,int *stev_ordered_,int *comps_ordered_);
+
+
+  // training
+
+  double set_record_regime(int iregime_);
   inline void record_training_data(double *double_data_, bool success_)
   {
     r2=double_data_[0]; r2stable=double_data_[1]; r2unstable=double_data_[2];
     success=success_;
   }
+
+  // sampling
+  int take_record(event_record *r_);
+
+  // io
+  void write_event_rec_full_header(FILE * file_, int len_=0);
+  void write_event_rec_training_header(FILE * file_, int len_=0);
+  void write_event_rec_training_data(FILE * file_);
+
   inline void write_event_rec_ints(FILE * file_)
   {
     write_basic_rec_ints(file_);
@@ -65,6 +69,9 @@ struct event_record : public basic_record
     write_basic_rec_dubs(file_);
     fwrite(event_rec_dubs,sizeof(double),event_rec_dlen,file_);
   }
+
+  void write_ints(FILE * file_) {write_event_rec_ints(file_);}
+  void write_dubs(FILE * file_) {write_event_rec_dubs(file_);}
   inline int event_rec_ilen_full() {return basic_rec_ilen_full() + event_rec_ilen;}
   inline int event_rec_dlen_full() {return basic_rec_dlen_full() + event_rec_dlen;}
   inline int event_rec_ilen_train() {return basic_rec_ilen_full() + event_rec_it_ilen;}

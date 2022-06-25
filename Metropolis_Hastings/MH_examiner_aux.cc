@@ -2,7 +2,7 @@
 
 //MH_examiner
 
-void MH_examiner::start_detecting_events(event_record * rec_, double * t_history_ double &net_r2_local_)
+int MH_examiner::start_detecting_events(event_record * rec_, double * t_history_, double &net_r2_local_)
 {
   thread_worker::reset_sim(rec_->u, ts[0]/t_phys, d_ang[0], comega_s[0], xs);
 
@@ -70,14 +70,14 @@ void MH_examiner::start_detecting_events(event_record * rec_, double * t_history
   return f_local;
 }
 
-void MH_examiner::update_event_data(int final_frame_, int *f_event, double *r2i_, double *alphai_)
+void MH_examiner::update_event_data(int final_frame_, int *f_event_, double *r2i_, double *alphai_)
 {
   ntest++;
-  stev_early=stev_late=f_event[0];
+  stev_early=stev_late=f_event_[0];
   nf_stable=0;
   for (int i=0, k=0; i < nbeads; i++)
   {
-    int fevent_it = f_event[i];
+    int fevent_it = f_event_[i];
     nf_stable+=fevent_it;
     nev_state_comp[fevent_it][i]++;
     if (fevent_it<stev_early) stev_early = fevent_it;
