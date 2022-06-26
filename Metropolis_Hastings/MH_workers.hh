@@ -48,12 +48,13 @@ class MH_examiner: public basic_thread_worker
 
 };
 
-class MH_medic: public MH_examiner
+class MH_medic
 {
   public:
-
-    MH_medic(swirl_param &sp_, proximity_grid *pg_, wall_list &wl_, thread_worker_struct &tws_, int thread_id_, double alpha_tol_, int Frames_test_, char * test_directory_);
+    MH_medic(MH_examiner *ex_, int Frames_test_, char * test_buffer_);
     ~MH_medic();
+
+    MH_examiner * const ex;
 
     void test_u(event_record *rec_, int i_, bool verbose_);
     bool report_results(bool first2finish_, int ** nev_state_comp_);

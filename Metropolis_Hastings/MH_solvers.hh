@@ -18,17 +18,35 @@ class MH_genetic : public basic_MH_trainer, public event_block
 
   protected:
 
+    size_t  obuf_end;
+
+    char * const obuf;
+
     const int Class_max,
-              gen_max;
+              gen_max,
+              * const genetic_train_const_ints = &Class_max;
 
           int Class_count,
-              event_block_count;
+              event_block_count,
+              * const genetic_train_it_ints = &Class_count;
 
     const double  alpha_tol,
-                  rs_full_factor;
+                  rs_full_factor,
+                  * const genetic_train_const_dubs = &alpha_tol;
 
           double  prob_best,
-                  prob_worst;
+                  prob_worst,
+                  * const genetic_train_it_dubs = &prob_best,
+                  ** const r2_pool_Framebead,
+                  ** const alpha_pool_Framebead;
+
+    MH_examiner ** const examiners;
+
+    event_record  ** const records,
+                  ** const leaders,
+                  ** const pool,
+                  ** const leader_board,
+                  ** const candidates;
 
     // run
     bool check_convergence();
@@ -99,28 +117,6 @@ class MH_genetic : public basic_MH_trainer, public event_block
     }
     inline int genetic_it_ilen_full() {return basic_train_it_ilen_full() + genetic_train_it_ilen;}
     inline int genetic_it_dlen_full() {return basic_train_it_dlen_full() + genetic_train_it_dlen;}
-
-  private:
-
-    size_t  obuf_end;
-
-    char * const obuf;
-
-    const int * const genetic_train_const_ints;
-          int * const genetic_train_it_ints;
-
-    const double  * const genetic_train_const_dubs;
-          double  * const genetic_train_it_dubs,
-                  ** const r2_pool_Framebead,
-                  ** const alpha_pool_Framebead;
-
-    MH_examiner ** const examiners;
-
-    event_record  ** const records,
-                  ** const leaders,
-                  ** const pool,
-                  ** const leader_board,
-                  ** const candidates;
 };
 
 class MH_doctor : public MH_genetic
@@ -144,15 +140,10 @@ class MH_doctor : public MH_genetic
               test_relay_id,
               Frames_test;
 
-    const double alpha_tol;
-
     char * const test_buffer;
     double  * const TEST_refp;
 
     MH_medic ** const medics;
-    event_record  ** const records,
-                  ** const leaders,
-                  ** const pool;
 };
 
 #endif

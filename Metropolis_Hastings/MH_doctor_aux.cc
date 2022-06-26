@@ -1,91 +1,72 @@
 #include "MH_solvers.hh"
 
-int MH_medic::start_test_u(event_record * rec_, double * t_history_, double &net_r2_local_)
+// MH_doctor
+
+MH_doctor::MH_doctor(MH_train_struct &mhts_, int test_id_, int test_relay_id_, int Frames_test_, double alpha_tol_): MH_genetic(mhts_,0,0,0.0,alpha_tol_,1.0),
+test_id(test_id_), test_relay_id(test_relay_id_), Frames_test(Frames_test_),
+test_buffer(new char[io->obuf_len+100]),
+TEST_refp(new double[2*Frames_test*nbeads]),
+medics(new MH_medic*[nt])
 {
-  for (int i = 0; i < nbeads*Frames; i++) r2_state_comp[0][i] = alpha_state_comp[0][i] = 0.0;
+  // write the name of the input data file
+  sprintf(test_buffer, "%s%s.re%d_test%d.redat", io->obuf,io->data_name,test_relay_id,test_id);
+  FILE * test_file = fopen(test_buffer, "r");
+  printf("reading matlab test file: %s\n", test_buffer);
 
-  reset_sim(rec_->u, ts[0]/t_phys, d_ang[0], comega_s[0], xs);
+  // read the input parameters
+  int header[2];
+  fread_SAFE(header, sizeof(int), 2, test_file);
+  assert((header[0]==ulen)&&(header[1]==npool));
+  fread_SAFE(uchunk[nlead], sizeof(double), header[0]*header[1], test_file);
+  fclose(test_file);
 
-  int f_local=0,
-      poffset=0,
-      foffset=0;
-  double net_r2_local=0.0, *pref = xs;
+  // make the output directory
+  sprintf(test_buffer, "%s%s.re%d_test%d_results/", io->obuf, io->data_name, test_relay_id, test_id);
+  test_buf_end = strlen(test_buffer);
 
-  int * f_event=rec_->evframe_bead;
-  double  *r2_stable=rec_->r2stable_bead,
-          *r2_unstable=rec_->r2unstable_bead;
-
-  // initialize t=tstart data
-  t_history_[0]=t_history_[1]=ts[0];
-  for (int i = 0, j = 0; i < nbeads; i++,j+=2)
+  #pragma omp parallel
   {
-    f_event[i]=0;
-    r2_stable[i]=r2_unstable[i]=r2_state_comp[0][i]=
-    INTr2_comp_history[i][0]=INTr2_comp_history[i][1]=INTr2_comp_history[i][2]=0.0;
-    alpha_state_comp[0][i]=NAN;
-
-    double  x_sim=q[i].x, y_sim=q[i].y,
-            x_now=(x_sim-cx)*cl_im+cx_im, y_now=(y_sim-cy)*cl_im+cy_im;
-    psim[j]=x_sim; psim[j+1]=y_sim;
-
-    // set medic data
-    TEST_p[j]=x_now; TEST_p[j+1]=y_now;
-    TEST_r2[i]=r2_state_comp[0][i];
-    TEST_INTr2[i]=INTr2_comp_history[i][0];
-    TEST_alpha[i]=alpha_state_comp[0][i];
+    medics[tid] = new MH_medic(examiners[thread_num()], Frames_test, test_buffer, test_buf_end);
   }
-  // step to frame 1, begin computing divergence from data
-  f_local++; poffset+=ndof; foffset+=nbeads; pref+=ndof;
-  advance((ts[f_local]-ts[f_local-1])/t_phys, d_ang[f_local-1], comega_s[f_local], dt_sim);
-  t_history_[2]=t_history_[1]; t_history_[1]=t_history_[0]; t_history_[0]=ts[f_local];
-  for (int i = 0, j = 0; i < nbeads; i++,j+=2)
+}
+
+MH_doctor::~MH_doctor()
+{
+  for (int i = 0; i < nt; i++) delete medics[i];
+  delete [] medics;
+
+  delete [] test_buffer;
+  delete [] TEST_refp;
+}
+
+void MH_doctor::run(bool verbose_)
+{
+  bool first2finish=true;
+  initialize_doctor_run();
+  stage_diagnostics();
+  #pragma omp parallel
   {
-    double  x_sim=q[i].x, y_sim=q[i].y,
-            x_now=(x_sim-cx)*cl_im+cx_im, y_now=(y_sim-cy)*cl_im+cy_im,
-            x_ref=pref[j], y_ref=pref[j+1],
-            xerr=x_now-x_ref, yerr=y_now-y_ref, rsq=xerr*xerr+yerr*yerr;
-    psim[j+poffset]=x_sim; psim[j+1+poffset]=y_sim;
-
-    net_r2_local+=r2_state_comp[f_local][i]=rsq;
-    r2_stable[i]+=rsq;
-
-    INTr2_comp_history[i][2]=INTr2_comp_history[i][1]; INTr2_comp_history[i][1]=INTr2_comp_history[i][0];
-    INTr2_comp_history[i][0]+=0.5*(rsq+r2_state_comp[f_local-1][i])*(t_history_[0]-t_history_[1]);
-    alpha_state_comp[f_local][i]=NAN;
-
-    // set medic data
-    TEST_p[j+poffset]=x_now;TEST_p[j+1+poffset]=y_now;
-    TEST_r2[i+foffset]=r2_state_comp[f_local][i];TEST_INTr2[i+foffset]=INTr2_comp_history[i][0];
-    TEST_alpha[i+foffset]=alpha_state_comp[f_local][i];
+    int tid=thread_num();
+    MH_medic *med_t = medics[tid];
+    med_t->clear_event_data();
+    #pragma omp for nowait
+    for (int i = 0; i < npool; i++)
+    {
+      med_t->test_u(pool[i],i, verbose_);
+    }
+    #pragma omp critical
+    {
+      first2finish=med_t->report_results(first2finish,nev_state_comp);
+    }
   }
-
-  // step to frame 2, compute divergence from data as we will in the body of the detection
-  f_local++; poffset+=ndof; foffset+=nbeads; pref+=ndof;
-  advance((ts[f_local]-ts[f_local-1])/t_phys, d_ang[f_local-1], comega_s[f_local], dt_sim);
-  t_history_[2]=t_history_[1]; t_history_[1]=t_history_[0]; t_history_[0]=ts[f_local];
-  for (int i = 0, j = 0; i < nbeads; i++,j+=2)
-  {
-    double  x_sim=q[i].x, y_sim=q[i].y,
-            x_now=(x_sim-cx)*cl_im+cx_im, y_now=(y_sim-cy)*cl_im+cy_im,
-            x_ref=pref[j], y_ref=pref[j+1],
-            xerr=x_now-x_ref, yerr=y_now-y_ref, rsq=xerr*xerr+yerr*yerr;
-    psim[j+poffset]=x_sim; psim[j+1+poffset]=y_sim;
-
-    net_r2_local+=r2_state_comp[f_local][i]=rsq;
-    r2_stable[i]+=rsq;
-    INTr2_comp_history[i][2]=INTr2_comp_history[i][1]; INTr2_comp_history[i][1]=INTr2_comp_history[i][0];
-    INTr2_comp_history[i][0]+=0.5*(rsq+r2_state_comp[f_local-1][i])*(t_history_[0]-t_history_[1]);
-
-    // set medic data
-    TEST_p[j+poffset]=x_now;TEST_p[j+1+poffset]=y_now;
-    TEST_r2[i+foffset]=r2_state_comp[f_local][i];TEST_INTr2[i+foffset]=INTr2_comp_history[i][0];
-  }
-  net_r2_local_=net_r2_local;
-  return f_local;
+  close_diagnostics();
 }
 
 void MH_doctor::stage_diagnostics()
 {
+  mkdir(test_buffer, S_IRWXU);
+  printf("Made test directory: %s\n", test_buffer);
+
   for (int frame_i = 0; frame_i < Frames_test; frame_i++)
   {
     int foffset = 2*nbeads*frame_i;

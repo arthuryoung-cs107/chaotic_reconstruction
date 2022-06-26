@@ -82,11 +82,14 @@ double MH_genetic::compute_weights(double r2_min_, event_record ** recs_, int n_
   return wsum;
 }
 
-
-
 void MH_genetic::stage_diagnostics()
-
 {
+  // prepare output information
+  sprintf(obuf, "%s%s.MH%d_results/", io->obuf,io->data_name,io->id);
+  obuf_end = strlen(obuf);
+  mkdir(obuf, S_IRWXU);
+  printf("Made test directory: %s\n", obuf);
+
   int header_len = 2;
   int header[] = {header_len, genetic_train_const_ilen, genetic_train_const_dlen};
   sprintf(obuf+obuf_end, "startspecs.mhdat");

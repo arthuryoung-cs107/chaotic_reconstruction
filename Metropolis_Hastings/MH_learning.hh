@@ -59,13 +59,25 @@ class thread_worker: public swirl, public thread_worker_struct
       ~thread_worker() {delete psim;}
 
     protected:
-
-      void reset_sim(double *utest_, double t0_, double ctheta0_, double comega0_, double *p0_);
-
       const int thread_id;
 
       double  * const u,
               * const psim;
+
+      void reset_sim(double *utest_, double t0_, double ctheta0_, double comega0_, double *p0_);
+      
+      inline double * advance_sim(int f_local_,double *t_history_)
+      {
+        advance((ts[f_local_]-ts[f_local_-1])/t_phys,d_ang[f_local_-1], comega_s[f_local_],dt_sim);
+        t_history_[2]=t_history_[1]; t_history_[1]=t_history_[0]; t_history_[0]=ts[f_local_];
+        return xs+(f_local_*ndof);
+      }
+      inline double compute_residual(double xs_, double ys_, double xr_, double yr_)
+      {
+        double  x_now=(xs_-cx)*cl_im+cx_im, y_now=(ys_-cy)*cl_im+cy_im,
+                xerr=x_now-xr_, yerr=y_now-yr_;
+        return xerr*xerr+yerr*yerr;
+      }
 };
 
 
