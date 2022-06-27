@@ -57,7 +57,7 @@ void MH_examiner::update_event_data(int final_frame_, int *f_event_, double *r2i
     }
   }
   nf_obs=stev_late*nbeads;
-  nf_regime=nf_stable; 
+  nf_regime=nf_stable;
   nf_unstable=nf_obs-nf_stable;
   if (stev_early<stev_earliest) stev_earliest=stev_early;
   if (stev_late>stev_latest) stev_latest=stev_late;

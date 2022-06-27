@@ -32,6 +32,8 @@ class MH_examiner: public basic_thread_worker
     void set_regime_objective(int iregime_);
     void set_record_regime(event_record *rec_);
 
+    // for io
+
   protected:
 
     int ntest,
@@ -54,10 +56,34 @@ class MH_medic
     MH_medic(MH_examiner *ex_, int Frames_test_, char * test_buffer_);
     ~MH_medic();
 
-    MH_examiner * const ex;
+    MH_examiner &ex;
 
     void test_u(event_record *rec_, int i_, bool verbose_);
     bool report_results(bool first2finish_, int ** nev_state_comp_);
+
+  protected:
+
+    // matching parameters found in MH_examiner
+
+    const int nbeads=ex.nbeads,
+              dof=ex.dof,
+              ndof=ex.ndof;
+
+    const double  t_phys=ex.t_phys;
+
+    int ** const nev_state_comp=ex.nev_state_comp,
+        ** const nobs_state_comp=ex.nobs_state_comp;
+
+    double  * const ts=ex.ts,
+            * const d_ang=ex.d_ang,
+            * const comega=ex.comega,
+            * const xs=ex.xs,
+            * const psim=ex.psim,
+            ** const r2_state_comp=ex.r2_state_comp,
+            ** const alpha_state_comp=ex.alpha_state_comp,
+            ** const INTr2_comp_history=ex.INTr2_comp_history;
+
+    particle * const q=ex.q;
 
   private:
 
@@ -67,12 +93,42 @@ class MH_medic
 
     char * const mtest_buffer;
 
-    double  * const TEST_p,
-            * const TEST_r2,
-            * const TEST_alpha,
+    int ntest,
+        stev_early,
+        stev_late,
+        stev_earliest,
+        stev_latest,
+        nf_obs,
+        nf_stable,
+        nf_regime,
+        nf_unstable;
+
+    double  net_r2,
+            net_r2_stable,
+            net_r2_regime,
+            net_r2_unstable,
+            * const TEST_p,
             * const TEST_INTr2;
 
-    int start_test_u(event_record *rec_, double *t_history_, double &net_r2_local_);
+    void start_test_u(int &f_local_,int &iregime_local_,int *f_event_,double &netr2_local_,double &netr2_stable_local_,double &netr2_unstable_local_,double *t_history_,double *r2stable_bead_,double *netr2_regime_,double *r2unstable_bead_,double *alphaev_bead_);
+    void update_event_data(int f_local_, int *f_event_);
     void write_utest_results(event_record *rec_, int i_);
+
+    // wrapper functions
+
+    inline void reset_sim(double *utest_, double t0_, double ctheta0_, double comega0_, double *p0_)
+    {ex.reset_sim(utest_,t0_,ctheta0_,p0_);}
+
+    inline double * advance_sim(int f_local_,double *t_history_)
+    {return ex.advance_sim(f_local_,t_history_);}
+
+    inline double compute_residual(double xs_, double ys_, double &x_now_, double &y_now_, double xr_, double yr_)
+    {return ex.compute_residual(xs_,ys_,x_now_,y_now_,xr_,yr_);}
+
+    inline void update_integral_history(double INT_now_, int ibead_)
+    {ex.update_integral_history(INT_now_,ibead_);}
+
+    inline double alpha_comp(double *a_, double t_p1, double t_m1)
+    {return ex.alpha_comp(a_,t_p1,t_m1);}
 };
 #endif

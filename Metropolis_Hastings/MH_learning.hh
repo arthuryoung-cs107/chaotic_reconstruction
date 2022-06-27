@@ -78,6 +78,12 @@ class thread_worker: public swirl, public thread_worker_struct
                 xerr=x_now-xr_, yerr=y_now-yr_;
         return xerr*xerr+yerr*yerr;
       }
+      inline double compute_residual(double xs_, double ys_, double &x_now_, double &y_now_, double xr_, double yr_)
+      {
+        x_now_=(xs_-cx)*cl_im+cx_im; y_now_=(ys_-cy)*cl_im+cy_im;
+        double xerr=x_now_-xr_, yerr=y_now_-yr_;
+        return xerr*xerr+yerr*yerr;
+      }
 };
 
 

@@ -7,7 +7,7 @@ int comp_event_rec_ichunk_len(int nbeads_);
 int comp_event_rec_dchunk_len(int nbeads_);
 int comp_event_rec_it_ichunk_len(int nbeads_);
 int comp_event_rec_it_dchunk_len(int nbeads_);
-const int event_rec_ilen = 3;
+const int event_rec_ilen = 4;
 const int event_rec_dlen = 3;
 const int event_rec_it_ilen = 0;
 const int event_rec_it_dlen = 3;
@@ -19,6 +19,7 @@ struct event_record : public basic_record
 
   int nfobs,
       nfstable,
+      nfregime,
       nfunstable,
       * const event_rec_ints = &nfobs;
   double  r2stable,
@@ -37,7 +38,7 @@ struct event_record : public basic_record
 
   inline void record_event_data(int *int_data_, double * double_data_)
   {
-    nfobs=int_data_[0]; nfstable=int_data_[1]; nfunstable=int_data_[2];
+    nfobs=int_data_[0]; nfstable=int_data_[1]; nfregime=int_data_[2]; nfunstable=int_data_[3];
     r2=double_data_[0]; r2stable=double_data_[1]; r2regime=double_data_[2]; r2unstable=double_data_[3];
   }
 

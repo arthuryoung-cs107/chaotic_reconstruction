@@ -26,7 +26,7 @@ medics(new MH_medic*[nt])
 
   #pragma omp parallel
   {
-    medics[tid] = new MH_medic(examiners[thread_num()], Frames_test, test_buffer, test_buf_end);
+    medics[tid] = new MH_medic(*(examiners[thread_num()]), Frames_test, test_buffer, test_buf_end);
   }
 }
 

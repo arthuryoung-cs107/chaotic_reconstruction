@@ -26,7 +26,7 @@ void MH_examiner::detect_events(event_record *rec_, double *r2i_, double *alphai
   {
     pref=thread_worker::advance_sim(++f_local,t_history);
     bool all_events_detected=true;
-    for (int i=0,j=0; i < nbeads; i++,j+=2)
+    for (int i=0,j=0; i < nbeads; i++,j+=dof)
     {
       double rsq=thread_worker::compute_residual(q[i].x,q[i].y,pref[j],pref[j+1]);
       net_r2_local+=r2_state_comp[f_local][i]=rsq;
@@ -41,19 +41,19 @@ void MH_examiner::detect_events(event_record *rec_, double *r2i_, double *alphai
         {
           f_event[i]=f_local-1;
           alphaev_bead[i]=alpha_it;
-          net_r2_unstable_local+=r2_unstable[i]=netr2_regime[++iregime_local]=rsq;
+          net_r2_unstable_local+=r2unstable_bead[i]=netr2_regime[++iregime_local]=rsq;
         }
         else
         {
-          r2_stable[i]+=rsq;
           net_r2_stable_local+=rsq;
+          r2stable_bead[i]+=rsq;
           netr2_regime[iregime_local]+=rsq;
         }
       }
       else
       {
-        r2_unstable[i]+=rsq;
         net_r2_unstable_local+=rsq;
+        r2_unstable_bead[i]+=rsq;
         netr2_regime[iregime_local]+=rsq;
       }
     }
@@ -70,6 +70,7 @@ void MH_examiner::detect_events(event_record *rec_, double *r2i_, double *alphai
   } while(true);
   net_r2=net_r2_local;
   net_r2_stable=net_r2_stable_local;
+  net_r2_regime=net_r2_stable_local;
   net_r2_unstable=net_r2_unstable_local;
 
   // set thread worker statistics data
