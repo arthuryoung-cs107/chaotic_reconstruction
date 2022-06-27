@@ -63,7 +63,7 @@ void MH_examiner::detect_events(event_record *rec_, double *r2i_, double *alphai
       for (int i = 0; i < nbeads; i++) if (!(f_event[i]))
       {
         f_event[i] = f_local-1;
-        alphaev_bead[i] = alpha_state_comp[f_local-1][i];        
+        alphaev_bead[i] = alpha_state_comp[f_local-1][i];
       }
       break;
     }
@@ -81,13 +81,11 @@ void MH_examiner::detect_events(event_record *rec_, double *r2i_, double *alphai
 bool MH_examiner::examine_u(event_record *rec_, int i_, double r2success_threshold_)
 {
   thread_worker::reset_sim(rec_->u, ts[0]/t_phys, d_ang[0], comega_s[0], xs);
-  int poffset=0;
   // run the length of the event block, storing bead positions
   for (int i_f = 1; i_f <= stev_latest; i_f++)
   {
-    poffset+=ndof;
     advance((ts[i_f]-ts[i_f-1])/t_phys, d_ang[i_f-1], comega_s[i_f], dt_sim);
-    for (int i = 0, j = poffset; i < nbeads; i++,j+=2) {psim[j]=q[i].x; psim[j+1]=q[i].y;}
+    for (int i=0,j=ndof*i_f; i < nbeads; i++,j+=dof) {psim[j]=q[i].x; psim[j+1]=q[i].y;}
   }
 
   // process the event block
@@ -99,20 +97,15 @@ bool MH_examiner::examine_u(event_record *rec_, int i_, double r2success_thresho
           *r2_stable_comp=rec_->r2stable_bead,
           *netr2_regime=rec_->netr2_regime,
           *r2_unstable_comp=rec_->r2unstable_bead;
-  poffset=0;
   clear_examiner_residuals(r2_stable_comp, netr2_regime, r2_unstable_comp);
 
   // purely stable residuals
   for (int i_f = 1; i_f <= stev_earliest; i_f++)
   {
-    pref+=ndof;
-    for (int i_c = 0; i_c < nbeads; i_c++)
+    for (int i=0,j=ndof*i_f; i < nbeads; i++,j+=dof)
     {
-      double  x_sim=psim[j], y_sim=psim[j+1],
-              x_now=(x_sim-cx)*cl_im+cx_im, y_now=(y_sim-cy)*cl_im+cy_im,
-              x_ref=pref[j], y_ref=pref[j+1],
-              xerr=x_now-x_ref, yerr=y_now-y_ref, net_r2_local+=rsq=xerr*xerr+yerr*yerr;
-      net_r2_stable_local+=rsq; r2_stable_comp[i_c]+=rsq;
+      double rsq=thread_worker::compute_residual(psim[j], psim[j+1], pref[j], pref[j+1]);
+      net_r2_local+=rsq; net_r2_stable_local+=rsq; r2_stable_comp[i]+=rsq;
     }
   }
   netr2_regime[0]=net_r2_local;
@@ -126,10 +119,8 @@ bool MH_examiner::examine_u(event_record *rec_, int i_, double r2success_thresho
       pref+=ndof;
       for (int i_c = 0, j = 0; i_c < nbeads; i_c++,j+=2)
       {
-        double  x_sim=psim[j], y_sim=psim[j+1],
-                x_now=(x_sim-cx)*cl_im+cx_im, y_now=(y_sim-cy)*cl_im+cy_im,
-                x_ref=pref[j], y_ref=pref[j+1],
-                xerr=x_now-x_ref, yerr=y_now-y_ref, net_r2_local+=rsq=xerr*xerr+yerr*yerr;
+        double rsq=thread_worker::compute_residual(psim[j], psim[j+1], pref[j], pref[j+1]);
+        net_r2_local+=rsq;
         if (i_f<=stev_comp[i_c]) // still stable
         {net_r2_stable_local+=rsq; r2_stable_comp[i_c]+=rsq;}
         else // unstable
