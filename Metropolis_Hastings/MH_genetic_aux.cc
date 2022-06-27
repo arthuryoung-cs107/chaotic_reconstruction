@@ -135,12 +135,11 @@ void MH_genetic::consolidate_genetic_event_data(int bleader_index_)
 
 void MH_genetic::synchronise_genetic_event_data()
 {
-  int nf_obs, nf_stable, nf_unstable;
-  event_block::set_state_counts(nf_obs, nf_stable, nf_unstable);
+  int nf_obs, nf_stable, nf_regime, nf_unstable;
+  event_block::set_state_counts(nf_obs, nf_stable, nf_regime, nf_unstable);
   #pragma omp parallel
   {
-    MH_examiner *ex_t=examiners[thread_num()];
-    ex_t->synchronise_examiner_event_data(&nf_obs,stev_earliest,stev_latest,stev_comp,stev_ordered,comps_ordered,rho2stable_comp,delrho2_regime);
+    examiners[thread_num()]->synchronise_examiner_event_data(&nf_obs,stev_earliest,stev_latest,rho2stable,stev_comp,stev_ordered,comps_ordered,rho2stable_comp,delrho2_regime);
   }
 }
 
@@ -171,11 +170,15 @@ void MH_genetic::report_genetic_event_data()
       stdalpha_state_comp[0][i]=sqrt(var_alpha*nobsm1_inv);
     }
   }
+  write_event_diagnostics(event_block_count);
+}
 
+void MH_genetic::write_event_diagnostics(int &event_block_count_)
+{
   // write event data
   int hlen=2;
   int header[] = {hlen, npool, stev_latest};
-  sprintf(obuf+obuf_end, "event_block%d.mhdat",event_block_count);
+  sprintf(obuf+obuf_end, "event_block%d.mhdat",event_block_count_);
   FILE * data_file = fopen(obuf, "wb");
   fwrite(stev_comp, sizeof(int), nbeads, data_file);
   fwrite(stev_ordered, sizeof(int), nbeads, data_file);
@@ -191,9 +194,8 @@ void MH_genetic::report_genetic_event_data()
   pool[0]->write_event_rec_full_header(data_file,npool);
   for (int i = 0; i < npool; i++) pool[i]->write_record_data(data_file);
   fclose(data_file);
-  event_block_count++;
+  event_block_count_++;
 }
-
 
 void MH_genetic::set_regime_objective(int iregime_)
 {

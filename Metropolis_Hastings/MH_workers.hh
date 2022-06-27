@@ -14,9 +14,9 @@ class MH_examiner: public basic_thread_worker
     inline void clear_examiner_event_data() {event_block::clear_event_data(); ntest=0;}
     void detect_events(event_record *rec_, double *r2i_, double *alphai_);
     void consolidate_examiner_event_data();
-    inline void synchronise_examiner_event_data(int *nf_, int stev_earliest_, int stev_latest_, int *stev_c_, int *stev_o_, int *comps_o_,double *rho2s_c_, double *drho2_r_)
-    {event_block::synchronise_event_data(stev_earliest_,stev_latest_,stev_c_,stev_o_,comps_o_,rho2s_c_,drho2_r_); nf_obs=nf_[0]; nf_stable=nf_[1]; nf_unstable=nf_[2];}
     bool report_examiner_event_data(bool first2finish_, int &stev_earliest_, int &stev_latest_, int *stev_c_, int ** nev_s_c_, int ** nobs_s_c_, double ** r2_s_c_, double **alpha_s_c_);
+    inline void synchronise_examiner_event_data(int *nf_, int stev_earliest_, int stev_latest_, double rho2stable_, int *stev_c_, int *stev_o_, int *comps_o_,double *rho2s_c_, double *drho2_r_)
+    {event_block::synchronise_event_data(stev_earliest_,stev_latest_,rho2stable_,stev_c_,stev_o_,comps_o_,rho2s_c_,drho2_r_); nf_obs=nf_[0]; nf_stable=nf_[1]; nf_regime=nf_[2]; nf_unstable=nf_[3];}
     void restore_event_record(event_record *rec_, double *r2_Fb_);
 
     // training
@@ -59,7 +59,11 @@ class MH_medic
     MH_examiner &ex;
 
     void test_u(event_record *rec_, int i_, bool verbose_);
-    bool report_results(bool first2finish_, int ** nev_state_comp_);
+    inline void clear_medic_event_data()
+    {ex.clear_examiner_event_data(); stev_earliest=Frames_test; stev_latest=0; ntest=0;}
+    void consolidate_medic_event_data();
+    bool report_medic_event_data(bool first2finish_, int &stev_earliest_, int &stev_latest_, int *stev_c_, int ** nev_s_c_, int ** nobs_s_c_, double ** r2_s_c_, double **alpha_s_c_);
+    void synchronise_medic_event_data(int *nf_, int stev_earliest_, int stev_latest_, double rho2stable_, int *stev_c_, int *stev_o_, int *comps_o_,double *rho2s_c_, double *drho2_r_);
 
   protected:
 
@@ -71,7 +75,8 @@ class MH_medic
 
     const double  t_phys=ex.t_phys;
 
-    int ** const nev_state_comp=ex.nev_state_comp,
+    int * const stev_comp = ex.stev_comp,
+        ** const nev_state_comp=ex.nev_state_comp,
         ** const nobs_state_comp=ex.nobs_state_comp;
 
     double  * const ts=ex.ts,

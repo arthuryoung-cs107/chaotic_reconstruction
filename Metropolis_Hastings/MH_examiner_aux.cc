@@ -69,7 +69,7 @@ void MH_examiner::consolidate_examiner_event_data()
   do
   {
     bool found_all=true;
-    for ( i = 0; i < ncomp; i++) if (!(stev_comp[i]))
+    for (int i = 0; i < ncomp; i++) if (!(stev_comp[i]))
     {
       found_all=false;
       if (nev_state_comp[s_it][i]) stev_comp[i]=s_it;
@@ -78,7 +78,7 @@ void MH_examiner::consolidate_examiner_event_data()
     else if (s_it++==stev_latest)
     {
       printf("(MH_examiner::consolidate_event_data) this shouldn't happen\n");
-      for ( i = 0; i < ncomp; i++) if (!(order_comp[i])) stev_comp[i]=stev_latest;
+      for ( i = 0; i < ncomp; i++) if (!(stev_comp[i])) stev_comp[i]=stev_latest;
       break;
     }
   } while (true);

@@ -36,30 +36,6 @@ event_block::~event_block()
   free_Tmatrix<double>(mualpha_state_comp); free_Tmatrix<double>(stdalpha_state_comp);
 }
 
-
-void event_block::synchronise_event_data(int stev_earliest_, int stev_latest_, int *stev_c_, int *stev_o_, int *comps_o_,double *rho2s_c_, double *drho2_r_)
-{
-  stev_earliest=stev_earliest_;
-  stev_latest=stev_latest_;
-  for (int i = 0; i < ncomp; i++)
-  {
-    stev_comp[i]=stev_c_[i];
-    stev_ordered[i]=stev_o_[i];
-    comps_ordered[i]=comps_o_[i];
-    rho2stable_comp[i]=rho2s_c_[i];
-    delrho2_regime[i]=drho2_r_[i];
-  }
-}
-
-void event_block::define_event_block(double sigma_scaled_,int ndof_)
-{
-  double  sigma2_=sigma_scaled_*sigma_scaled_,
-          dims_dub= (double)(ndof_*ncomp);
-  for (int i = 0; i < ncomp; i++) rho2stable_comp[i]=sigma2_*dims_dub*((double)stev_comp[i]);
-  delrho2_regime[0]=0.0; // for stable regime, no additional unstable residual added onto stable residual
-  for (int i = 1; i < ncomp; i++) delrho2_regime[i]=sigma2_*dims_dub*((double)(stev_ordered[i]-stev_ordered[i-1]));
-}
-
 void event_block::clear_event_data()
 {
   stev_latest=0;
@@ -88,6 +64,32 @@ void event_block::consolidate_event_data()
   if (ncomp>1) earliest_recursive(stev_ordered,comps_ordered,1);
 }
 
+void event_block::define_event_block(double sigma_scaled_,int dof_)
+{
+  double  sigma2_=sigma_scaled_*sigma_scaled_,
+          dof_dub= (double)dof_;
+  rho2stable=0.0;
+  for (int i = 0; i < ncomp; i++)
+    rho2stable+=rho2stable_comp[i]=sigma2_*dof_dub*((double)stev_comp[i]);
+  delrho2_regime[0]=rho2stable;
+  for (int i = 1; i < ncomp; i++)
+    delrho2_regime[i]=sigma2_*dof_dub*((double)((i)*(stev_ordered[i]-stev_ordered[i-1])));
+}
+
+void event_block::synchronise_event_data(int stev_earliest_, int stev_latest_, double rho2stable_, int *stev_c_, int *stev_o_, int *comps_o_,double *rho2s_c_, double *drho2_r_)
+{
+  stev_earliest=stev_earliest_;
+  stev_latest=stev_latest_;
+  rho2stable=rho2stable_;
+  for (int i = 0; i < ncomp; i++)
+  {
+    stev_comp[i]=stev_c_[i];
+    stev_ordered[i]=stev_o_[i];
+    comps_ordered[i]=comps_o_[i];
+    rho2stable_comp[i]=rho2s_c_[i];
+    delrho2_regime[i]=drho2_r_[i];
+  }
+}
 
 // event_detector
 

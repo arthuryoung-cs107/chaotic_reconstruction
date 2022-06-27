@@ -158,6 +158,26 @@ void MH_medic::update_event_data(int f_local_, int *f_event_)
   if (stev_late>stev_latest) stev_latest=stev_late;
 }
 
+void MH_medic::consolidate_medic_event_data()
+{
+  int s_it=0;
+  do
+  {
+    bool found_all=true;
+    for (int i = 0; i < nbeads; i++) if (!(stev_comp[i]))
+    {
+      found_all=false;
+      if (nev_state_comp[s_it][i]) stev_comp[i]=s_it;
+    }
+    if (found_all) break;
+    else if (s_it++==stev_latest)
+    {
+      for (int i = 0; i < nbeads; i++) if (!(stev_comp[i])) stev_comp[i]=stev_latest;
+      break;
+    }
+  } while (true);
+}
+
 void MH_medic::write_utest_results(event_record *rec_, int i_)
 {
   sprintf(mtest_buffer+buf_end, "par%d.mhdat", i_);
@@ -172,11 +192,46 @@ void MH_medic::write_utest_results(event_record *rec_, int i_)
   fclose(data_file);
 }
 
-bool MH_medic::report_results(bool first2finish_, int ** nev_state_comp_)
+bool MH_medic::report_medic_event_data(bool first2finish_, int &stev_earliest_, int &stev_latest_, int *stev_c_, int ** nev_s_c_, int ** nobs_s_c_, double ** r2_s_c_, double **alpha_s_c_)
 {
+  // event_block::report_event_data
+  for (int i = 0; i < nbeads*stev_latest; i++)
+  {
+    nev_s_c_[0][i] += nev_state_comp[0][i];
+    nobs_s_c_[0][i] += nobs_state_comp[0][i];
+  }
+
+  // MH_examiner:report_examiner_event_data
   if (first2finish_)
-    for (int i = 0; i < nbeads*Frames; i++) nev_state_comp_[0][i] = nev_state_comp[0][i];
+  {
+    stev_earliest_=stev_earliest;
+    stev_latest_=stev_latest;
+    for (int i = 0; i < nbeads; i++) stev_c_[i]=stev_comp[i];
+  }
   else
-    for (int i = 0; i < nbeads*Frames; i++) nev_state_comp_[0][i] += nev_state_comp[0][i];
+  {
+    if (stev_earliest<stev_earliest_) stev_earliest_=stev_earliest;
+    if (stev_latest>stev_latest_) stev_latest_=stev_latest;
+    for (int i = 0; i < nbeads; i++) if (stev_comp[i]<stev_c_[i]) stev_c_[i]=stev_comp[i];
+  }
   return false;
+}
+
+void MH_medic::synchronise_medic_event_data(int *nf_, int stev_earliest_, int stev_latest_, double rho2stable_, int *stev_c_, int *stev_o_, int *comps_o_,double *rho2s_c_, double *drho2_r_)
+{
+  // event_block::synchronise_event_data
+  stev_earliest=stev_earliest_;
+  stev_latest=stev_latest_;
+  rho2stable=rho2stable_; 
+  for (int i = 0; i < ncomp; i++)
+  {
+    stev_comp[i]=stev_c_[i];
+    stev_ordered[i]=stev_o_[i];
+    comps_ordered[i]=comps_o_[i];
+    rho2stable_comp[i]=rho2s_c_[i];
+    delrho2_regime[i]=drho2_r_[i];
+  }
+
+  // MH_examiner::synchronise_examiner_event_data
+  nf_obs=nf_[0]; nf_stable=nf_[1]; nf_regime=nf_[2]; nf_unstable=nf_[3];
 }

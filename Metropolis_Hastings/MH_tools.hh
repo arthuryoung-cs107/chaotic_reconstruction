@@ -60,12 +60,10 @@ struct event_block
           ** const mualpha_state_comp, // ...
           ** const stdalpha_state_comp; // ...
 
-
-  virtual void synchronise_event_data(int stev_earliest_, int stev_latest_, int *stev_c_, int *stev_o_, int *comps_o_,double *rho2s_c_, double *drho2_r_);
-  virtual void consolidate_event_data();
   virtual void clear_event_data();
-  virtual void define_event_block(double sigma_scaled_,int ndof_=2);
-
+  virtual void consolidate_event_data();
+  virtual void define_event_block(double sigma_scaled_,int dof_=2);
+  virtual void synchronise_event_data(int stev_earliest_, int stev_latest_, double rho2stable_, int *stev_c_, int *stev_o_, int *comps_o_,double *rho2s_c_, double *drho2_r_);
   inline void report_event_data(int ** nev_s_c_, int ** nobs_s_c_, double ** r2_s_c_, double **alpha_s_c_)
   {
     for (int i = 0; i < ncomp*stev_latest; i++)
@@ -76,12 +74,13 @@ struct event_block
       alpha_s_c_[0][i] += mualpha_state_comp[0][i];
     }
   }
-  inline void set_state_counts(int &nstate_obs_, int &nstate_stable_, int &nstate_unstable_)
+  inline void set_state_counts(int &nstate_obs_, int &nstate_stable_, int &nstate_regime_, int &nstate_unstable_)
   {
     int nstate_stable_local=0;
     for (int i = 0; i < ncomp; i++) nstate_stable_local+=stev_comp[i];
     nstate_obs_=ncomp*stev_ordered[ncomp-1];
     nstate_stable_=nstate_stable_local;
+    nstate_regime_=nstate_stable_local;
     nstate_unstable_=nstate_obs_-nstate_stable_;
   }
   inline int earliest(int *frames_ordered_, int &early_index_, int index_start_)

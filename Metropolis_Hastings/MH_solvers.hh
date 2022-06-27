@@ -105,6 +105,7 @@ class MH_genetic : public basic_MH_trainer, public event_block
     // io
     void stage_diagnostics();
     void close_diagnostics();
+    void write_event_diagnostics(int &event_block_count_); 
     void write_Class_diagnostics(int &Class_count_);
     void write_generation_diagnostics(int &gen_count_);
     inline void write_genetic_it_ints(FILE * file_)
@@ -127,10 +128,17 @@ class MH_doctor : public MH_genetic
     ~MH_doctor();
 
     void run(bool verbose_=true);
-    void stage_doctor_diagnostics();
-    void close_doctor_diagnostics();
 
-    inline void initialize_doctor_run() {initialize_genetic_run();}
+  protected:
+
+    void initialize_doctor_run();
+    void stage_doctor_diagnostics();
+    inline void clear_doctor_event_data()
+    {clear_genetic_event_data();}
+    inline void consolidate_doctor_event_data()
+    {consolidate_genetic_event_data();}
+    void synchronise_doctor_event_data();
+    void close_doctor_diagnostics();
 
   private:
 
