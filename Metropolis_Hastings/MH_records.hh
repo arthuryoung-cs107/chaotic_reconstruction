@@ -19,10 +19,12 @@ struct event_record : public basic_record
 
   int nfobs,
       nfstable,
-      nfunstable;
+      nfunstable,
+      * const event_rec_ints = &nfobs;
   double  r2stable,
           r2regime,
-          r2unstable;
+          r2unstable,
+          * const event_rec_dubs = &r2stable;
 
   int * evframe_bead;
 
@@ -78,8 +80,6 @@ struct event_record : public basic_record
   inline int event_rec_dlen_train() {return basic_rec_dlen_full() + event_rec_it_dlen;}
 
   private:
-    int * const event_rec_ints;
-    double  * const event_rec_dubs;
     const int event_rec_it_ichunk_len,
               event_rec_it_dchunk_len;
 };

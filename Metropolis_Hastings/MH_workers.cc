@@ -7,6 +7,7 @@ void MH_examiner::detect_events(event_record *rec_, double *r2i_, double *alphai
   thread_worker::reset_sim(rec_->u,ts[0]/t_phys, d_ang[0], comega_s[0], xs);
 
   int f_local,
+      iregime_local,
       *f_event=rec_->evframe_bead;
 
   double  netr2_local,
@@ -17,32 +18,21 @@ void MH_examiner::detect_events(event_record *rec_, double *r2i_, double *alphai
           *netr2_regime=rec_->netr2_regime,
           *r2unstable_bead=rec_->r2unstable_bead,
           *alphaev_bead=rec_->alpha_bead,
-          *pref = start_detecting_events( f_local,
-                                          f_event,
-                                          t_history,
-                                          netr2_local,
-                                          netr2_stable_local,
-                                          netr2_unstable_local,
-                                          r2stable_bead,
-                                          netr2_regime,
-                                          r2unstable_bead,
-                                          alphaev_bead);
+          *pref;
+
+  start_detecting_events(f_local,iregime_local,f_event,t_history,netr2_local,netr2_stable_local,netr2_unstable_local,r2stable_bead,netr2_regime,r2unstable_bead,alphaev_bead);
+
   do
   {
     pref=thread_worker::advance_sim(++f_local,t_history);
-    f_local++; poffset+=ndof; pref+=ndof;
-    advance((ts[f_local]-ts[f_local-1])/t_phys, d_ang[f_local-1], comega_s[f_local], dt_sim);
-    t_history[2]=t_history[1]; t_history[1]=t_history[0]; t_history[0]=ts[f_local];
     bool all_events_detected=true;
-    for (int i = 0, j = 0; i < nbeads; i++,j+=2)
+    for (int i=0,j=0; i < nbeads; i++,j+=2)
     {
-      double  x_sim=q[i].x, y_sim=q[i].y,
-              x_now=(x_sim-cx)*cl_im+cx_im, y_now=(y_sim-cy)*cl_im+cy_im,
-              x_ref=pref[j], y_ref=pref[j+1],
-              xerr=x_now-x_ref, yerr=y_now-y_ref, rsq=xerr*xerr+yerr*yerr;
-      r2_state_comp[f_local][i]=rsq; net_r2_local+=rsq;
-      INTr2_comp_history[i][2]=INTr2_comp_history[i][1]; INTr2_comp_history[i][1]=INTr2_comp_history[i][0];
-      INTr2_comp_history[i][0]+=0.5*(rsq+r2_state_comp[f_local-1][i])*(t_history[0]-t_history[1]);
+      double rsq=thread_worker::compute_residual(q[i].x,q[i].y,pref[j],pref[j+1]);
+      net_r2_local+=r2_state_comp[f_local][i]=rsq;
+
+      basic_thread_worker::update_integral_history(0.5*(rsq+r2_state_comp[f_local-1][i])*(t_history[0]-t_history[1]),i);
+
       double alpha_it = alpha_state_comp[f_local-1][i]=alpha_comp(INTr2_comp_history[i], t_history[0], t_history[2]);
       if (!(f_event[i]))
       {
@@ -50,20 +40,21 @@ void MH_examiner::detect_events(event_record *rec_, double *r2i_, double *alphai
         if (alpha_it>alpha_tol)
         {
           f_event[i]=f_local-1;
-          alpha_bead[i]=alpha_it;
-          r2_unstable[i]=rsq;
-          net_r2_unstable_local+=rsq;
+          alphaev_bead[i]=alpha_it;
+          net_r2_unstable_local+=r2_unstable[i]=netr2_regime[++iregime_local]=rsq;
         }
         else
         {
           r2_stable[i]+=rsq;
           net_r2_stable_local+=rsq;
+          netr2_regime[iregime_local]+=rsq;
         }
       }
       else
       {
         r2_unstable[i]+=rsq;
         net_r2_unstable_local+=rsq;
+        netr2_regime[iregime_local]+=rsq;
       }
     }
     if (all_events_detected) break;
@@ -72,7 +63,7 @@ void MH_examiner::detect_events(event_record *rec_, double *r2i_, double *alphai
       for (int i = 0; i < nbeads; i++) if (!(f_event[i]))
       {
         f_event[i] = f_local-1;
-        alpha_bead[i] = alpha_state_comp[f_local-1][i];
+        alphaev_bead[i] = alpha_state_comp[f_local-1][i];        
       }
       break;
     }

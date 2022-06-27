@@ -6,7 +6,6 @@ int comp_event_rec_it_ichunk_len(int nbeads_) {return 0;}
 int comp_event_rec_it_dchunk_len(int nbeads_) {return 2*nbeads_;}
 
 event_record::event_record(record_struct &rs_, int rid_, int * ichunk_, double * dchunk_, double * u_): basic_record(rs_, rid_, ichunk_, dchunk_, u_),
-event_rec_ints(&nfobs), event_rec_dubs(&r2stable),
 event_rec_it_ichunk_len(comp_event_rec_it_ichunk_len(nbeads)), event_rec_it_dchunk_len(comp_event_rec_it_dchunk_len(nbeads)),
 evframe_bead(ichunk),
 r2stable_bead(dchunk), netr2_regime(dchunk+nbeads), r2unstable_bead(dchunk+2*nbeads), alpha_bead(dchunk+3*nbeads)

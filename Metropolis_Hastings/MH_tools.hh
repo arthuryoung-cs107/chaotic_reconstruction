@@ -52,7 +52,7 @@ struct event_block
       ** const nobs_state_comp; // number of observations of system state for many trials of event detection
 
   double  rho2stable, // net expected STABLE residual across all system components
-          rho2regime, // net expected
+          rho2regime, // net expected residual for current active regime
           * const rho2stable_comp, // expected STABLE residual for each system component in the event block
           * const delrho2_regime, // expected UNSTABLE residual addition for each training regime
           ** const mur2_state_comp, // workspaces for collecting statistics on state sequence

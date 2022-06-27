@@ -61,11 +61,11 @@ class thread_worker: public swirl, public thread_worker_struct
     protected:
       const int thread_id;
 
-      double  * const u,
+      double  * const u = &(Kn),
               * const psim;
 
       void reset_sim(double *utest_, double t0_, double ctheta0_, double comega0_, double *p0_);
-      
+
       inline double * advance_sim(int f_local_,double *t_history_)
       {
         advance((ts[f_local_]-ts[f_local_-1])/t_phys,d_ang[f_local_-1], comega_s[f_local_],dt_sim);
@@ -105,31 +105,29 @@ class MH_trainer : public MH_params
               ichunk_width,
               dchunk_width;
 
-    int leader_count, // current number of leaders
-        gen_count, // how many pools have been drawn
-        nsuccess, // number of parameters better than current worst leader in recent trial
-        ncandidates, // number of candidates to compare to current leaders
-        bleader_rid, // index of current best leader
-        wleader_rid, // index of current worst leader
-        nreplace, // number of leader replacements following evaluation of recent trial
-        ndup, // total number of leader duplication and perturbations from recent resampling
-        ndup_unique, // total number of unique duplications from recent resampling
-        nredraw; // total number of trial particles drawn from proposal distribution in recent resampling
-
-    double  rho2, // current expected residual
-            br2, // current best leader residual
-            wr2; // current worst leader residual
-
-    int * const MHT_it_ints,
+    int leader_count, // 0: current number of leaders
+        gen_count, // 1: how many pools have been drawn
+        nsuccess, // 2: number of parameters better than current worst leader in recent trial
+        ncandidates, // 3: number of candidates to compare to current leaders
+        bleader_rid, // 4: index of current best leader
+        wleader_rid, // 5: index of current worst leader
+        nreplace, // 6: number of leader replacements following evaluation of recent trial
+        ndup, // 7: total number of leader duplication and perturbations from recent resampling
+        ndup_unique, // 8: total number of unique duplications from recent resampling
+        nredraw, // 9: total number of trial particles drawn from proposal distribution in recent resampling
+        * const MHT_it_ints = &leader_count,
         ** const ichunk; // space for records to store integer parameters
 
-    double  * const umin,
-            * const umax,
+    double  rho2, // 0: current expected residual
+            br2, // 1: current best leader residual
+            wr2, // 2: current worst leader residual
+            * const MHT_it_dubs = &rho2,
+            * const umin = &(sp_min.Kn), // lower bound on u parameters
+            * const umax = &(sp_max.Kn), // upper bound on u parameters
             * const ts, // wall time of observed data
             * const xs, // 2D observed position data
             * const d_ang, // observed angular position of dish
             * const comega_s, // observed average rotational speed of dish
-            * const MHT_it_dubs,
             ** const uchunk, // space for parameters
             ** const dchunk; // space for records to store double parameters
 
@@ -167,8 +165,10 @@ const int basic_rec_ilen=7;
 const int basic_rec_dlen=2;
 struct basic_record: public record
 {
-  basic_record(record_struct &rs_, int rid_, int * ichunk_, double * dchunk_, double * u_);
-  basic_record(record_struct &rs_, int rid_, int * ichunk_, double * dchunk_, double * u_, MH_rng * ran_, double * umin_, double * umax_);
+  basic_record(record_struct &rs_, int rid_, int * ichunk_, double * dchunk_, double * u_): record(rs_, rid_, ichunk_, dchunk_, u_) {init_basic_record();}
+
+  basic_record(record_struct &rs_, int rid_, int * ichunk_, double * dchunk_, double * u_, MH_rng * ran_, double * umin_, double * umax_): basic_record(rs_, rid_, ichunk_, dchunk_, u_) {draw_ranuni(ran_,umin_,umax_);}
+
   ~basic_record() {}
 
   bool success;
@@ -179,14 +179,13 @@ struct basic_record: public record
       parent_count, // 3: number of particle ancestors
       parent_rid, // 4: index position of parent particle
       parent_gen, // 5: generation this particle comes from
-      parent_Class; // 6: leader Class this particle comes from
+      parent_Class, // 6: leader Class this particle comes from
+      * const basic_rec_ints = &gen;
 
   double  r2,
-          w;
+          w,
+          * const basic_rec_dubs = &r2;
 
-  int * const basic_rec_ints;
-
-  double * const basic_rec_dubs;
 
   virtual int take_record(basic_record * rec_) {return take_basic_record(rec_);}
 
@@ -219,7 +218,9 @@ class basic_thread_worker: public thread_worker, public event_detector
 {
     public:
 
-      basic_thread_worker(swirl_param &sp_, proximity_grid *pg_, wall_list &wl_, thread_worker_struct &tws_, int thread_id_, double alpha_tol_);
+      basic_thread_worker(swirl_param &sp_, proximity_grid *pg_, wall_list &wl_, thread_worker_struct &tws_, int thread_id_, double alpha_tol_): thread_worker(sp_, pg_, wl_, tws_, thread_id_), event_detector(nbeads, Frames, 2, alpha_tol_),
+      int_wkspc(new int[npool]), dub_wkspc(new double[ulen]) {}
+
       ~basic_thread_worker() {delete [] int_wkspc; delete [] dub_wkspc;}
 
       int * const int_wkspc;
@@ -232,16 +233,21 @@ class basic_thread_worker: public thread_worker, public event_detector
       int nf_obs,
           nf_stable,
           nf_regime,
-          nf_unstable;
+          nf_unstable,
+          * const basic_tw_ints = &nf_obs;
 
       double  net_r2,
               net_r2_stable,
               net_r2_regime,
-              net_r2_unstable;
+              net_r2_unstable,
+              * const basic_tw_dubs = &net_r2;
 
-      int * const basic_tw_ints;
-
-      double  * const basic_tw_dubs;
+      inline void update_integral_history(double INT_now_, int ibead_)
+      {
+        INTr2_comp_history[ibead_][2]=INTr2_comp_history[ibead_][1];
+        INTr2_comp_history[ibead_][1]=INTr2_comp_history[ibead_][0];
+        INTr2_comp_history[ibead_][0]+=INT_now_;
+      }
 };
 
 class basic_MH_trainer: public MH_trainer, public gaussian_likelihood

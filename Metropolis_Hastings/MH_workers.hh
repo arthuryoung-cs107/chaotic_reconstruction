@@ -38,7 +38,7 @@ class MH_examiner: public basic_thread_worker
         nsuccess_test;
 
     // event
-    int start_detecting_events(event_record * rec_, double * t_history_, double &net_r2_local_);
+    void start_detecting_events(int &f_local_,int &iregime_local_,int *f_event_,double &netr2_local_,double &netr2_stable_local_,double &netr2_unstable_local_,double *t_history_,double *r2stable_bead_,double *netr2_regime_,double *r2unstable_bead_,double *alphaev_bead_);
     void update_event_data(int final_frame_, int *f_event_, double *r2i_, double *alphai_);
 
     // training

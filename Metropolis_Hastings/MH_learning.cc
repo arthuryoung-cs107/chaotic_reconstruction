@@ -7,8 +7,7 @@ record::record(record_struct &rs_, int rid_, int * ichunk_, double * dchunk_, do
 // thread_worker
 
 thread_worker::thread_worker(swirl_param &sp_, proximity_grid * pg_, wall_list &wl_, thread_worker_struct &tws_, int thread_id_): swirl(sp_, pg_, wl_, tws_.nbeads), thread_worker_struct(tws_),
-thread_id(thread_id_),
-u(&Kn), psim(new double[2*nbeads*Frames]) {}
+thread_id(thread_id_), psim(new double[2*nbeads*Frames]) {}
 
 void thread_worker::reset_sim(double *utest_, double t0_, double ctheta0_, double comega0_, double *p0_)
 {
@@ -29,13 +28,11 @@ void thread_worker::reset_sim(double *utest_, double t0_, double ctheta0_, doubl
 // MH_trainer
 
 MH_trainer::MH_trainer(MH_params &par_, swirl_param &sp_min_, swirl_param &sp_max_, wall_list &wl_, int ichunk_width_, int dchunk_width_) : MH_params(par_),
-MHT_it_ints(&leader_count), MHT_it_dubs(&rho2),
 nt(get_nt()), ichunk_width(ichunk_width_), dchunk_width(dchunk_width_),
 ichunk(Tmatrix<int>(nlead+npool, ichunk_width)),
 ts(new double[Frames]), xs(new double[2*nbeads*Frames]), d_ang(new double[Frames]), comega_s(new double[Frames]),
 dchunk(Tmatrix<double>(nlead+npool, dchunk_width)), uchunk(Tmatrix<double>(nlead+npool, ulen)),
 sp_min(sp_min_), sp_max(sp_max_),
-umin(&sp_min.Kn), umax(&sp_max.Kn),
 wl(wl_), pg(new proximity_grid*[nt]), rng(new MH_rng*[nt])
 {
   io->load_reference(ts, xs, d_ang, comega_s, t_phys);
@@ -67,21 +64,6 @@ MH_trainer::~MH_trainer()
   delete [] pg;
   delete [] rng;
 }
-
-// basic_record
-
-basic_record::basic_record(record_struct &rs_, int rid_, int * ichunk_, double * dchunk_, double * u_): record(rs_, rid_, ichunk_, dchunk_, u_),
-basic_rec_ints(&gen), basic_rec_dubs(&r2) {init_basic_record();}
-
-basic_record::basic_record(record_struct &rs_, int rid_, int * ichunk_, double * dchunk_, double * u_, MH_rng * ran_, double * umin_, double * umax_): basic_record(rs_, rid_, ichunk_, dchunk_, u_)
-{draw_ranuni(ran_,umin_,umax_);}
-
-// basic_thread_worker
-
-basic_thread_worker::basic_thread_worker(swirl_param &sp_, proximity_grid *pg_, wall_list &wl_, thread_worker_struct &tws_, int thread_id_, double alpha_tol_): thread_worker(sp_, pg_, wl_, tws_, thread_id_), event_detector(nbeads, Frames, 2, alpha_tol_),
-basic_tw_ints(&nf_obs), basic_tw_dubs(&net_r2),
-int_wkspc(new int[npool]), dub_wkspc(new double[ulen]) {}
-
 
 // basic_MH_trainer
 

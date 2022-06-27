@@ -2,60 +2,43 @@
 
 //MH_examiner
 
-int MH_examiner::start_detecting_events(int &f_local_,int *f_event_,double &netr2_local_,double &netr2_stable_local_,double &netr2_unstable_local_,double *t_history_,double *r2stable_bead_,double *netr2_regime_,double *r2unstable_bead_,double *alphaev_bead_)
+void MH_examiner::start_detecting_events(int &f_local_,int &iregime_local_,int *f_event_,double &netr2_local_,double &netr2_stable_local_,double &netr2_unstable_local_,double *t_history_,double *r2stable_bead_,double *netr2_regime_,double *r2unstable_bead_,double *alphaev_bead_)
 {
   // initialize everything
-  f_local_=0;
-
+  f_local_=iregime_local_=0;
   netr2_local_=netr2_stable_local_=netr2_unstable_local_=0.0;
-
-  // initialize t=tstart data
-  t_history_[0]=t_history_[1]=ts[f_local_];
-  for (int i = 0, j = 0; i < nbeads; i++,j+=2)
+  t_history_[0]=t_history_[1]=t_history_[2]=ts[f_local_];
+  for (int i = 0; i < nbeads; i++)
   {
-    r2_state_comp[f_local_][i]=
-    INTr2_comp_history[i][0]=
-    INTr2_comp_history[i][1]=
-    r2stable_bead_[i]=
-    netr2_regime_[i]=
-    r2unstable_bead_[i]=0.0;
-
-    alpha_state_comp[f_local_][i]=NAN;
-
+    r2_state_comp[f_local_][i]=INTr2_comp_history[i][0]=INTr2_comp_history[i][1]=r2stable_bead_[i]=netr2_regime_[i]=r2unstable_bead_[i]=0.0;
+    alpha_state_comp[f_local_][i]=alphaev_bead_[i]=NAN;
     f_event_[i]=0;
   }
-  // step to frame 1, begin computing divergence from data
-  pref=thread_worker::advance_sim(++f_local_,t_history_);
-  for (int i = 0, j = 0; i < nbeads; i++,j+=2)
+
+  // resolve frames 1 and 2
+  double *pref;
+  for (int iframe = 1; iframe <= 2; iframe++)
   {
-    double rsq=thread_worker::compute_residual(q[i].x,q[i].y,pref[j],pref[j+1]);
-    net_r2_local+=r2_state_comp[f_local][i]=rsq;
+    pref=thread_worker::advance_sim(++f_local_,t_history_);
+    for (int i=0,j=0; i < nbeads; i++,j+=dof)
+    {
+      double rsq=thread_worker::compute_residual(q[i].x,q[i].y,pref[j],pref[j+1]);
+      netr2_local_+=r2_state_comp[f_local_][i]=rsq;
 
-    INTr2_comp_history[i][2]=INTr2_comp_history[i][1]; INTr2_comp_history[i][1]=INTr2_comp_history[i][0];
-    INTr2_comp_history[i][0]+=0.5*(rsq+r2_state_comp[f_local-1][i])*(t_history_[0]-t_history_[1]);
-    alpha_state_comp[f_local][i]=NAN;
+      basic_thread_worker::update_integral_history(0.5*(rsq+r2_state_comp[f_local_-1][i])*(t_history_[0]-t_history_[1]),i);
 
-    r2_stable[i]+=rsq;
+      alpha_state_comp[f_local_][i]=NAN;
+
+      r2stable_bead_[i]+=rsq;
+    }
   }
-
-  // step to frame 2, compute divergence from data as we will in the body of the detection
-  p_ref=thread_worker::advance_sim(++f_local,t_history_);
-  for (int i = 0, j = 0; i < nbeads; i++,j+=2)
-  {
-    double rsq=thread_worker::compute_residual(q[i].x,q[i].y,pref[j],pref[j+1]);
-    net_r2_local+=r2_state_comp[f_local][i]=rsq;
-
-    INTr2_comp_history[i][2]=INTr2_comp_history[i][1]; INTr2_comp_history[i][1]=INTr2_comp_history[i][0];
-    INTr2_comp_history[i][0]+=0.5*(rsq+r2_state_comp[f_local-1][i])*(t_history_[0]-t_history_[1]);
-
-    r2_stable[i]+=rsq;
-  }
-  net_r2_local_=net_r2_local;
-  return f_local;
+  // set stable residual, assuming that frames 0,1,2 were all stable
+  netr2_stable_local_=netr2_regime_[0]=netr2_local_;
 }
 
 void MH_examiner::update_event_data(int final_frame_, int *f_event_, double *r2i_, double *alphai_)
 {
+
   ntest++;
   stev_early=stev_late=f_event_[0];
   nf_stable=0;
@@ -74,6 +57,7 @@ void MH_examiner::update_event_data(int final_frame_, int *f_event_, double *r2i
     }
   }
   nf_obs=stev_late*nbeads;
+  nf_regime=nf_stable; 
   nf_unstable=nf_obs-nf_stable;
   if (stev_early<stev_earliest) stev_earliest=stev_early;
   if (stev_late>stev_latest) stev_latest=stev_late;
