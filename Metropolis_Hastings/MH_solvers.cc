@@ -100,7 +100,7 @@ void MH_genetic::train_event_block(bool verbose_)
 
   // perform stable training
   int nit_stable_train=0;
-  set_stable_regime_objective();
+  set_stable_objective();
   do
   {
     nit_train++;
@@ -130,7 +130,7 @@ void MH_genetic::train_event_block(bool verbose_)
 
   // perform unstable training
   int nit_unstable_train=0;
-  set_unstable_regime_objective();
+  set_unstable_objective();
   do
   {
     nit_train++;
@@ -159,7 +159,23 @@ void MH_genetic::train_event_block(bool verbose_)
   } while(true);
 }
 
-void MH_genetic::train_incremental_event_block(bool verbose_)
+bool MH_genetic::check_stable_convergence(int nit_stable_train_)
+{
+
+}
+
+bool MH_genetic::check_unstable_convergence(int nit_unstable_train_)
+{
+
+}
+
+bool MH_genetic::check_convergence()
+{
+
+  return false;
+}
+
+void MH_regime::train_incremental_event_block(bool verbose_)
 {
   int nit_train=0;
 
@@ -196,83 +212,8 @@ void MH_genetic::train_incremental_event_block(bool verbose_)
   }
 }
 
-bool MH_genetic::check_regime_convergence(int nit_train_)
+bool MH_regime::check_regime_convergence(int nit_train_)
 {
 
   return false;
-}
-
-bool MH_genetic::check_convergence()
-{
-
-  return false;
-}
-
-
-void MH_genetic::respawn_pool(double w_sum_, int offset_)
-{
-  memset(ndup_leaders,0,nlead*sizeof(int));
-  for (int i = 0; i < ulen; i++) u_var[i]=u_mean[i]=0.0;
-  ndup=nredraw=ndup_unique=0;
-
-  #pragma omp parallel
-  {
-    int tid = thread_num(),
-        *dup_t = examiners[tid]->int_wkspc;
-    double  *u_stat_t = examiners[tid]->dub_wkspc,
-            inv_npool = 1.0/((double)npool),
-            inv_npoolm1 = 1.0/((double)(npool-1));
-    MH_rng * rng_t = rng[tid];
-
-    memset(dup_t,0,nlead*sizeof(int));
-    for (int i = 0; i < ulen; i++) u_stat_t[i]=0.0;
-
-    #pragma omp for reduction(+:ndup) reduction(+:nredraw) nowait
-    for (int i = 0; i < npool; i++)
-    {
-      if (i<offset_) pool[i]->take_record(leaders[i]); // reloading the leaders
-      else
-      {
-        int j=0;
-        double uni = (w_sum_/rs_full_factor)*rng_t->rand_uni();
-        while ((j<leader_count)&&(uni>0.0)) uni-=w_leaders[j++];
-        if (j>0)
-        {
-          if (uni<0.0)
-          {ndup++; dup_t[--j]++; duplicate_u(pool[i],leaders[j],rng_t);}
-          else
-          {nredraw++; redraw_u(pool[i],rng_t);}
-        }
-        else
-        {nredraw++; redraw_u(pool[i],rng_t);}
-      }
-      for (int i_u = 0; i_u < ulen; i_u++) u_stat_t[i_u]+=inv_npool*pool[i]->u[i_u];
-    }
-    #pragma omp critical
-    {
-      for (int i = 0; i < leader_count; i++) ndup_leaders[i]+=dup_t[i];
-      for (int i = 0; i < ulen; i++) u_mean[i]+=u_stat_t[i];
-    }
-    for (int i = 0; i < ulen; i++) u_stat_t[i]=0.0;
-
-    #pragma omp barrier
-
-    #pragma omp for nowait
-    for (int i = 0; i < npool; i++)
-    {
-      double *ui = pool[i]->u;
-      for (int j = 0; j < ulen; j++)
-      {
-        double diff_j=ui[j]-u_mean[j];
-        u_stat_t[i]+=(inv_npoolm1)*diff_j*diff_j;
-      }
-    }
-    #pragma omp critical
-    {
-      for (int i = 0; i < ulen; i++) u_var[i]+=u_stat_t[i];
-    }
-  }
-
-  for (int i = 0; i < leader_count; i++) if (ndup_leaders[i])
-  {leaders_[i]->dup_count+=ndup_leaders[i]; ndup_unique++;}
 }

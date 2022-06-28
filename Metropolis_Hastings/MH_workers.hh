@@ -15,22 +15,30 @@ class MH_examiner: public basic_thread_worker
     void detect_events(event_record *rec_, double *r2i_, double *alphai_);
     void consolidate_examiner_event_data();
     bool report_examiner_event_data(bool first2finish_, int &stev_earliest_, int &stev_latest_, int *stev_c_, int ** nev_s_c_, int ** nobs_s_c_, double ** r2_s_c_, double **alpha_s_c_);
+
     inline void synchronise_examiner_event_data(int *nf_, int stev_earliest_, int stev_latest_, double rho2stable_, int *stev_c_, int *stev_o_, int *comps_o_,double *rho2s_c_, double *drho2_r_)
-    {event_block::synchronise_event_data(stev_earliest_,stev_latest_,rho2stable_,stev_c_,stev_o_,comps_o_,rho2s_c_,drho2_r_); nf_obs=nf_[0]; nf_stable=nf_[1]; nf_regime=nf_[2]; nf_unstable=nf_[3];}
+    {
+      event_block::synchronise_event_data(stev_earliest_,stev_latest_,rho2stable_,stev_c_,stev_o_,comps_o_,rho2s_c_,drho2_r_);
+      nf_obs=nf_[0]; nf_stable=nf_[1]; nf_regime=nf_[2]; nf_unstable=nf_[3];
+    }
+
     void restore_event_record(event_record *rec_, double *r2_Fb_);
 
     // training
     inline void clear_examiner_training_data() {clear_basic_tw_training_data(); ntest=0; nsuccess_test=0;}
     bool examine_u(event_record *pooli_, int i_, double r2success_threshold_);
     void consolidate_examiner_training_data();
+
     inline bool report_examiner_training_data(bool first2finish_,int *isuccess_pool_,int &nsuccess_)
     {
       for (int i = 0; i < nsuccess_test; i++) isuccess_pool_[i+nsuccess_]=int_wkspc[i];
       nsuccess_+=nsuccess_test;
       return false;
     }
-    void set_regime_objective(int iregime_);
-    void set_record_regime(event_record *rec_);
+
+    // leaving these available in case we return to this
+    void set_regime_objective(int iregime_) {}
+    void set_record_regime(event_record *rec_) {}
 
     // for io
 
@@ -45,9 +53,9 @@ class MH_examiner: public basic_thread_worker
 
     // training
     bool update_training_data(int i_, double r2success_threshold_);
+
     inline void clear_examiner_residuals(double *r2s_c_, double *r2n_r_,double *r2us_c_)
     {for (int i = 0; i < nbeads; i++) r2_state_comp[0][i]=r2s_c_[i]=r2n_r_[i]=r2us_c_[i]=0.0;}
-
 };
 
 class MH_medic
@@ -59,8 +67,10 @@ class MH_medic
     MH_examiner &ex;
 
     void test_u(event_record *rec_, int i_, bool verbose_);
+
     inline void clear_medic_event_data()
     {ex.clear_examiner_event_data(); stev_earliest=Frames_test; stev_latest=0; ntest=0;}
+    
     void consolidate_medic_event_data();
     bool report_medic_event_data(bool first2finish_, int &stev_earliest_, int &stev_latest_, int *stev_c_, int ** nev_s_c_, int ** nobs_s_c_, double ** r2_s_c_, double **alpha_s_c_);
     void synchronise_medic_event_data(int *nf_, int stev_earliest_, int stev_latest_, double rho2stable_, int *stev_c_, int *stev_o_, int *comps_o_,double *rho2s_c_, double *drho2_r_);

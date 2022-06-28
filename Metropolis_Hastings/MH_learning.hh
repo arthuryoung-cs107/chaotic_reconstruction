@@ -192,8 +192,7 @@ struct basic_record: public record
           w,
           * const basic_rec_dubs = &r2;
 
-
-  virtual int take_record(basic_record * rec_) {return take_basic_record(rec_);}
+  inline double get_r2() {return *dub_compare_bad;}
 
   inline void init_basic_record(int gen_=0,int Class_=-1,int dup_count_=0,int parent_count_=0,int parent_rid_=-1,int parent_gen_=-1,int parent_Class_=-1,double r2_=0.0,double w_=0.0)
   {
@@ -202,6 +201,7 @@ struct basic_record: public record
     parent_gen=parent_gen_; parent_Class=parent_Class_;
     r2=r2_; w=w_;
   }
+
   inline int take_basic_record(basic_record * rec_)
   {
     if (take_record_chunks(rec_)) // successful replacement
@@ -212,10 +212,16 @@ struct basic_record: public record
     }
     else return 0;
   }
+
   inline int basic_rec_ilen_full() {return basic_rec_ilen;}
   inline int basic_rec_dlen_full() {return basic_rec_dlen;}
-  inline void write_basic_rec_ints(FILE * file_) {fwrite(basic_rec_ints, sizeof(int), basic_rec_ilen, file_);}
-  inline void write_basic_rec_dubs(FILE * file_) {fwrite(basic_rec_dubs, sizeof(double), basic_rec_dlen, file_);}
+
+  inline void write_basic_rec_ints(FILE * file_)
+  {fwrite(basic_rec_ints, sizeof(int), basic_rec_ilen, file_);}
+
+  inline void write_basic_rec_dubs(FILE * file_)
+  {fwrite(basic_rec_dubs, sizeof(double), basic_rec_dlen, file_);}
+
 };
 
 const int basic_tw_ilen=4;
@@ -292,7 +298,7 @@ class basic_MH_trainer: public MH_trainer, public gaussian_likelihood
 
       virtual void redraw_u(basic_record * rec_pool_, MH_rng * rng_t_)
       {redraw_u_uni(rec_pool_, rng_t_); rec_pool_->init_basic_record(gen_count);}
-      inline void clear_basic_train_training_data() {memset(isuccess_pool,0,npool*sizeof(int));nsuccess=0;}
+      inline void clear_basic_trainer_training_data() {memset(isuccess_pool,0,npool*sizeof(int));nsuccess=0;}
       inline void initialize_basic_trainer_run() {initialize_MHT_run(); t_wheels=t_wheels0;}
       inline int basic_train_it_ilen_full() {return MHT_it_ilen;}
       inline int basic_train_it_dlen_full() {return MHT_it_dlen;}

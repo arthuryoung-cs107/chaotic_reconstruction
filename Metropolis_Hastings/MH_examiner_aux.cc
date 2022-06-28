@@ -135,7 +135,6 @@ void MH_examiner::restore_event_record(event_record *rec_, double *r2_Fb_, doubl
   rec_->record_event_data(&nf_obs,&net_r2_local);
 }
 
-
 bool MH_examiner::update_training_data(int i_, double r2success_threshold_)
 {
   ntest++;

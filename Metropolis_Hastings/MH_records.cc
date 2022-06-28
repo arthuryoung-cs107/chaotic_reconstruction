@@ -20,7 +20,7 @@ r2stable_bead(dchunk), netr2_regime(dchunk+nbeads), r2unstable_bead(dchunk+2*nbe
 
 int event_record::take_record(event_record *r_)
 {
-  if (basic_record::take_record(r_))
+  if (take_basic_record(r_))
   {
     memcpy(event_rec_ints, r_->event_rec_ints, event_rec_ilen*sizeof(int));
     memcpy(event_rec_dubs, r_->event_rec_dubs, event_rec_dlen*sizeof(double));

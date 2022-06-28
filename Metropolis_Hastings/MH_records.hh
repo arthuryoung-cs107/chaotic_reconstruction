@@ -44,13 +44,15 @@ struct event_record : public basic_record
 
   void determine_event_block(int &stev_earliest_,int &stev_latest_,int *stev_comp_,int *stev_ordered_,int *comps_ordered_);
 
-
   // training
 
-  double set_record_regime(int iregime_);
+  inline double set_record_stable() {dub_compare_bad = &r2stable; return r2stable;}
+  inline double set_record_unstable() {dub_compare_bad = &r2unstable; return r2unstable;}
+
   inline void record_training_data(double *double_data_, bool success_)
   {
-    r2=double_data_[0]; r2stable=double_data_[1]; r2unstable=double_data_[2];
+    r2=double_data_[0]; r2stable=double_data_[1];
+    r2regime=double_data[2]; r2unstable=double_data_[3];
     success=success_;
   }
 

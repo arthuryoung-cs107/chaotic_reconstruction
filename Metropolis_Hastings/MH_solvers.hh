@@ -59,7 +59,7 @@ class MH_genetic : public basic_MH_trainer, public event_block
     }
 
     // event
-    void find_events(bool verbose_=true);
+    void find_events(bool verbose_);
     void clear_genetic_event_data();
     void consolidate_genetic_event_data();
     void consolidate_genetic_event_data(int bleader_index_);
@@ -68,25 +68,25 @@ class MH_genetic : public basic_MH_trainer, public event_block
     void stage_event_search();
 
     // training
-    void train_event_block(bool verbose_=true);
-    void set_regime_objective(int iregime_);
-    void set_stable_regime_objective();
-    void set_unstable_regime_objective();
-    inline void clear_genetic_training_data() {clear_basic_train_training_data();}
-    bool check_regime_convergence(int iregime_itcount_);
+    void train_event_block(bool verbose_); // alternate between stable and unstable residuals
+    void train_incremental_event_block(bool verbose_=true); // incrementally consider unstable residuals
+    void set_stable_objective();
+    void set_unstable_objective();
+    void clear_genetic_training_data();
     bool check_stable_convergence(int stable_itcount_);
     bool check_unstable_convergence(int unstable_itcount_);
     void consolidate_genetic_training_data();
+
     inline void report_genetic_training_data()
     {
       if (nreplace) write_Class_diagnostics(Class_count);
       write_generation_diagnostics(gen_count);
     }
+
     void set_leader_records();
 
     // sampling
     void reload_leaders(int bleader_index_);
-    void post_event_resampling();
     void respawn_pool(double wsum_, int offset_=0);
 
     // inelegant, but I kind of screwed myself over by not planning around this polymorphism issue
@@ -97,8 +97,11 @@ class MH_genetic : public basic_MH_trainer, public event_block
     virtual void pick_nworst_records(event_record ** rin_, int n_, int ncap_);
     virtual void pick_nbest_records(event_record ** rin_, int n_, int ncap_);
     virtual double compute_weights(double r2_min_, event_record ** recs_, int n_);
+    virtual double compute_weighted_stats(double wsum_, event_record ** recs_, int n_);
+
     inline void take_records(event_record ** rin_, event_record ** rout_, int ncap_)
-    {for (int i = 0; i < ncap_; i++) rout_[i]->take_record(rin_[i]);}
+    {for (int i = 0; i < ncap_; i++) bool replace_status = rout_[i]->take_record(rin_[i]);}
+
     inline int take_records(event_record ** rin_, event_record ** rout_, int *repl_list_, int ncap_)
     {
       int nrepl=0;
@@ -112,16 +115,44 @@ class MH_genetic : public basic_MH_trainer, public event_block
     void write_event_diagnostics(int &event_block_count_);
     void write_Class_diagnostics(int &Class_count_);
     void write_generation_diagnostics(int &gen_count_);
+
     inline void write_genetic_it_ints(FILE * file_)
     {write_basic_train_it_ints(file_);fwrite(genetic_train_it_ints,sizeof(int),genetic_train_it_ilen,file_);}
+
     inline void write_genetic_it_dubs(FILE * file_)
     {write_basic_train_it_dubs(file_);fwrite(genetic_train_it_dubs,sizeof(double),genetic_train_it_dlen,file_);}
-    inline void write_ustats(FILE * file_)
-    {
 
-    }
+    void write_ustats(FILE * file_);
     inline int genetic_it_ilen_full() {return basic_train_it_ilen_full() + genetic_train_it_ilen;}
     inline int genetic_it_dlen_full() {return basic_train_it_dlen_full() + genetic_train_it_dlen;}
+};
+
+class MH_regime : public MH_genetic
+{
+  public:
+
+    MH_regime(MH_train_struct &mhts_, int Class_max_, int gen_max_, double t_wheels0_, double alpha_tol_, double rs_full_factor_): MH_genetic(mhts_,Class_max_,gen_max_,t_wheels0_,alpha_tol_,rs_full_factor_) {}
+    ~MH_regime() {}
+
+    void set_regime_objective(int iregime_)
+    {
+      if (iregime_==0) post_event_resampling();
+      else
+      {
+        #pragma omp parallel
+        {
+          MH_examiner * ex_t = examiners[thread_num()];
+          ex_t->set_regime_objective(iregime_);
+          #pragma omp for
+          for (int i = 0; i < npool+nlead; i++)
+          {
+            ex_t->set_record_regime(records[i]);
+          }
+        }
+      }
+    }
+    bool check_regime_convergence(int iregime_itcount_);
+
 };
 
 class MH_doctor : public MH_genetic
@@ -137,10 +168,8 @@ class MH_doctor : public MH_genetic
 
     void initialize_doctor_run();
     void stage_doctor_diagnostics();
-    inline void clear_doctor_event_data()
-    {clear_genetic_event_data();}
-    inline void consolidate_doctor_event_data()
-    {consolidate_genetic_event_data();}
+    inline void clear_doctor_event_data() {clear_genetic_event_data();}
+    inline void consolidate_doctor_event_data() {consolidate_genetic_event_data();}
     void synchronise_doctor_event_data();
     void close_doctor_diagnostics();
 

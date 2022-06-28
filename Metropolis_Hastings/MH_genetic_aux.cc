@@ -2,7 +2,6 @@
 
 // MH_genetic
 
-
 int MH_genetic::find_worst_record(event_record ** r_, int ncap_)
 {
   int worst_index = 0;
@@ -65,21 +64,6 @@ void MH_genetic::pick_nbest_records(event_record ** rin_, int n_, int ncap_)
       rin_[i_worst_best] = rin_[i];
       i_worst_best=find_worst_record(rin_,n_);
     }
-}
-
-
-double MH_genetic::compute_weights(double r2_min_, event_record ** recs_, int n_)
-{
-  double  wsum=0.0,
-          r_min_=sqrt(r2_min_),
-          rho_=sqrt(rho2);
-
-  #pragma omp parallel for reduction(+:wsum)
-  for (int i = 0; i < n_; i++)
-  {
-    wsum+=w_leaders[i]=recs_[i]->w=gaussian_likelihood::compute_weight(sqrt(recs_[i]->r2),r_min_,rho_);
-  }
-  return wsum;
 }
 
 void MH_genetic::stage_diagnostics()
@@ -197,25 +181,7 @@ void MH_genetic::write_event_diagnostics(int &event_block_count_)
   event_block_count_++;
 }
 
-void MH_genetic::set_regime_objective(int iregime_)
-{
-  if (iregime_==0) post_event_resampling();
-  else
-  {
-    #pragma omp parallel
-    {
-      MH_examiner * ex_t = examiners[thread_num()];
-      ex_t->set_regime_objective(iregime_);
-      #pragma omp for
-      for (int i = 0; i < npool+nlead; i++)
-      {
-        ex_t->set_record_regime(records[i]);
-      }
-    }
-  }
-}
-
-void MH_genetic::post_event_resampling()
+void MH_genetic::set_stable_objective()
 {
   // start by using the r2_pool_Framebead data to adjust the records back to the correct event data
   double r2_min=DBL_MAX;
@@ -226,11 +192,13 @@ void MH_genetic::post_event_resampling()
     for (int i = 0; i < npool; i++)
     {
       ex_t->restore_event_record(pool[i],r2_pool_Framebead[i]);
-      double r2_it = pool[i]->set_record_regime(0);
+      double r2_it = pool[i]->set_record_stable();
       if (r2_it<r2_min) r2_min=r2_it;
       leader_board[i]=pool[i];
     }
   }
+  double w_sum_full = compute_weights(r2_min,pool,npool);
+  compute_weighted_stats(w_sum_full,pool,npool);
 
   // collect leaders
   pick_nbest_records(leader_board,nlead,npool);
@@ -242,6 +210,31 @@ void MH_genetic::post_event_resampling()
   respawn_pool(w_sum);
   write_generation_diagnostics();
   gen_count++;
+
+}
+
+void MH_genetic::set_unstable_objective()
+{
+
+}
+
+double MH_genetic::compute_weights(double r2_min_, event_record ** recs_, int n_)
+{
+  double  wsum=0.0,
+          r_min_=sqrt(r2_min_),
+          rho_=sqrt(rho2);
+
+  #pragma omp parallel for reduction(+:wsum)
+  for (int i = 0; i < n_; i++)
+  {
+    wsum+=recs_[i]->w=gaussian_likelihood::compute_weight(sqrt(recs_[i]->get_r2()),r_min_,rho_);
+  }
+  return wsum;
+}
+
+void MH_genetic::compute_weighted_stats(double wsum_, event_record ** recs_, int n_)
+{
+  bool first2finish=true; 
 }
 
 void MH_genetic::set_leader_records()
@@ -266,8 +259,17 @@ void MH_genetic::set_leader_records()
   wr2=leaders[wleader_rid]->r2compare;
 }
 
+void MH_genetic::clear_genetic_training_data()
+{
+  clear_basic_trainer_training_data();
+}
+
 void MH_genetic::consolidate_genetic_training_data()
 {
+
+
+
+
   double wsum = compute_weights();
   ncandidates=nsuccess;
   for (int i = 0; i < nsuccess; i++) candidates[i]=pool[isuccess_pool[i]];
@@ -277,7 +279,6 @@ void MH_genetic::consolidate_genetic_training_data()
   set_leader_records();
   prob_best=gaussian_likelihood::compute_prob(sqrt(br2),sqrt(rho2));
   prob_worst=gaussian_likelihood::compute_prob(sqrt(wr2),sqrt(rho2));
-  return
 }
 
 void MH_genetic::write_Class_diagnostics(int &Class_count_)
@@ -306,6 +307,79 @@ void MH_genetic::write_generation_diagnostics(int &gen_count_)
   basic_MH_trainer::write_ustats(gen_file);
   fclose(gen_file);
   gen_count++;
+}
+
+void MH_genetic::write_ustats(FILE * file_)
+{
+
+}
+
+void MH_genetic::respawn_pool(double w_sum_, int offset_)
+{
+  memset(ndup_leaders,0,nlead*sizeof(int));
+  for (int i = 0; i < ulen; i++) u_var[i]=u_mean[i]=0.0;
+  ndup=nredraw=ndup_unique=0;
+
+  #pragma omp parallel
+  {
+    int tid = thread_num(),
+        *dup_t = examiners[tid]->int_wkspc;
+    double  *u_stat_t = examiners[tid]->dub_wkspc,
+            inv_npool = 1.0/((double)npool),
+            inv_npoolm1 = 1.0/((double)(npool-1));
+    MH_rng * rng_t = rng[tid];
+
+    memset(dup_t,0,nlead*sizeof(int));
+    for (int i = 0; i < ulen; i++) u_stat_t[i]=0.0;
+
+    #pragma omp for reduction(+:ndup) reduction(+:nredraw) nowait
+    for (int i = 0; i < npool; i++)
+    {
+      if (i<offset_) pool[i]->take_record(leaders[i]); // reloading the leaders
+      else
+      {
+        int j=0;
+        double uni = (w_sum_/rs_full_factor)*rng_t->rand_uni();
+        while ((j<leader_count)&&(uni>0.0)) uni-=w_leaders[j++];
+        if (j>0)
+        {
+          if (uni<0.0)
+          {ndup++; dup_t[--j]++; duplicate_u(pool[i],leaders[j],rng_t);}
+          else
+          {nredraw++; redraw_u(pool[i],rng_t);}
+        }
+        else
+        {nredraw++; redraw_u(pool[i],rng_t);}
+      }
+      for (int i_u = 0; i_u < ulen; i_u++) u_stat_t[i_u]+=inv_npool*pool[i]->u[i_u];
+    }
+    #pragma omp critical
+    {
+      for (int i = 0; i < leader_count; i++) ndup_leaders[i]+=dup_t[i];
+      for (int i = 0; i < ulen; i++) u_mean[i]+=u_stat_t[i];
+    }
+    for (int i = 0; i < ulen; i++) u_stat_t[i]=0.0;
+
+    #pragma omp barrier
+
+    #pragma omp for nowait
+    for (int i = 0; i < npool; i++)
+    {
+      double *ui = pool[i]->u;
+      for (int j = 0; j < ulen; j++)
+      {
+        double diff_j=ui[j]-u_mean[j];
+        u_stat_t[i]+=(inv_npoolm1)*diff_j*diff_j;
+      }
+    }
+    #pragma omp critical
+    {
+      for (int i = 0; i < ulen; i++) u_var[i]+=u_stat_t[i];
+    }
+  }
+
+  for (int i = 0; i < leader_count; i++) if (ndup_leaders[i])
+  {leaders_[i]->dup_count+=ndup_leaders[i]; ndup_unique++;}
 }
 
 void MH_genetic::close_diagnostics()
