@@ -70,8 +70,12 @@ class MH_genetic : public basic_MH_trainer, public event_block
     // training
     void train_event_block(bool verbose_=true);
     void set_regime_objective(int iregime_);
+    void set_stable_regime_objective();
+    void set_unstable_regime_objective();
     inline void clear_genetic_training_data() {clear_basic_train_training_data();}
-    bool check_regime_convergence(int iregime_count_);
+    bool check_regime_convergence(int iregime_itcount_);
+    bool check_stable_convergence(int stable_itcount_);
+    bool check_unstable_convergence(int unstable_itcount_);
     void consolidate_genetic_training_data();
     inline void report_genetic_training_data()
     {
@@ -105,7 +109,7 @@ class MH_genetic : public basic_MH_trainer, public event_block
     // io
     void stage_diagnostics();
     void close_diagnostics();
-    void write_event_diagnostics(int &event_block_count_); 
+    void write_event_diagnostics(int &event_block_count_);
     void write_Class_diagnostics(int &Class_count_);
     void write_generation_diagnostics(int &gen_count_);
     inline void write_genetic_it_ints(FILE * file_)

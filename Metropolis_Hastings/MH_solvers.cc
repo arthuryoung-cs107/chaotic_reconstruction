@@ -98,10 +98,75 @@ void MH_genetic::train_event_block(bool verbose_)
 {
   int nit_train=0;
 
+  // perform stable training
+  int nit_stable_train=0;
+  set_stable_regime_objective();
+  do
+  {
+    nit_train++;
+    bool first2finish=true;
+    int nsuccess_local=0;
+    clear_genetic_training_data();
+    #pragma omp parallel
+    {
+      MH_examiner *ex_t=examiners[thread_num()];
+      ex_t->clear_examiner_training_data();
+      #pragma omp for reduction(+:nsuccess_local) nowait
+      for (int i = 0; i < npool; i++)
+      {
+        if (ex_t->examine_u(pool[i],i,wr2)) nsuccess_local++;
+      }
+      ex_t->consolidate_examiner_training_data();
+      #pragma omp critical
+      {
+        first2finish=ex_t->report_examiner_training_data(first2finish,isuccess_pool,nsuccess);
+      }
+    }
+    double wsum=consolidate_genetic_training_data();
+    report_genetic_training_data();
+    if (check_stable_convergence(++nit_stable_train)) break;
+    else respawn_pool(wsum);
+  } while (true);
+
+  // perform unstable training
+  int nit_unstable_train=0;
+  set_unstable_regime_objective();
+  do
+  {
+    nit_train++;
+    bool first2finish=true;
+    int nsuccess_local=0;
+    clear_genetic_training_data();
+    #pragma omp parallel
+    {
+      MH_examiner *ex_t=examiners[thread_num()];
+      ex_t->clear_examiner_training_data();
+      #pragma omp for reduction(+:nsuccess_local) nowait
+      for (int i = 0; i < npool; i++)
+      {
+        if (ex_t->examine_u(pool[i],i,wr2)) nsuccess_local++;
+      }
+      ex_t->consolidate_examiner_training_data();
+      #pragma omp critical
+      {
+        first2finish=ex_t->report_examiner_training_data();
+      }
+    }
+    double wsum=consolidate_genetic_training_data();
+    report_genetic_training_data();
+    if (check_unstable_convergence(++nit_unstable_train)) break;
+    else respawn_pool(wsum);
+  } while(true);
+}
+
+void MH_genetic::train_incremental_event_block(bool verbose_)
+{
+  int nit_train=0;
+
   for (int i_regime = 0; i_regime < nbeads; i_regime++) // walking through event block
   {
-    set_regime_objective(i_regime);
     int nit_regime=0;
+    set_regime_objective(i_regime);
     do
     {
       nit_train++;
