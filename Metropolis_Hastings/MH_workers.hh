@@ -29,7 +29,7 @@ class MH_examiner: public basic_thread_worker
     bool examine_u(event_record *pooli_, int i_, double r2success_threshold_);
     void consolidate_examiner_training_data();
 
-    inline bool report_examiner_training_data(bool first2finish_,int *isuccess_pool_,int &nsuccess_)
+    inline void report_examiner_training_data(int *isuccess_pool_,int &nsuccess_)
     {
       for (int i = 0; i < nsuccess_test; i++) isuccess_pool_[i+nsuccess_]=int_wkspc[i];
       nsuccess_+=nsuccess_test;
@@ -70,7 +70,7 @@ class MH_medic
 
     inline void clear_medic_event_data()
     {ex.clear_examiner_event_data(); stev_earliest=Frames_test; stev_latest=0; ntest=0;}
-    
+
     void consolidate_medic_event_data();
     bool report_medic_event_data(bool first2finish_, int &stev_earliest_, int &stev_latest_, int *stev_c_, int ** nev_s_c_, int ** nobs_s_c_, double ** r2_s_c_, double **alpha_s_c_);
     void synchronise_medic_event_data(int *nf_, int stev_earliest_, int stev_latest_, double rho2stable_, int *stev_c_, int *stev_o_, int *comps_o_,double *rho2s_c_, double *drho2_r_);

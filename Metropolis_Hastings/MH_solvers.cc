@@ -51,23 +51,56 @@ MH_genetic::~MH_genetic()
 
 void MH_genetic::run(bool verbose_)
 {
-  initialize_genetic_run();
-  stage_diagnostics();
+  initialize_genetic_run(); // set various counts to zero
+  stage_diagnostics(); // write startup data for post processing
   do
   {
-    find_events(verbose_);
-    train_event_block(verbose_);
-    if (check_convergence()) break;
-    else stage_event_search();
+    find_events(verbose_); // find critical frames for residual blowup
+    train_event_block(verbose_); // train around the critical frames
+    if (check_convergence()) break; // check convergence
+    else stage_event_search(); // prepare for a new round of critical frame detection
   } while(true);
-  close_diagnostics();
+  close_diagnostics(); // write data from end of run
+}
+
+void MH_genetic::initialize_genetic_run()
+{
+  /*
+  set:
+  number of leaders, generation count, succesful particle count, worst and best leader indices, replace count, duplication count, unique duplication count, redraw count,
+  to zero.
+  finally, set the training wheels to their initial value
+  */
+  initialize_basic_trainer_run();
+
+  Class_count=event_block_count=0;
+  prob_best=prob_worst=0.0;
+}
+
+void MH_genetic::stage_diagnostics()
+{
+  // prepare output information
+  sprintf(obuf, "%s%s.MH%d_results/", io->obuf,io->data_name,io->id);
+  obuf_end = strlen(obuf);
+  mkdir(obuf, S_IRWXU);
+  printf("Made test directory: %s\n", obuf);
+
+  int header_len = 2;
+  int header[] = {header_len, genetic_train_const_ilen, genetic_train_const_dlen};
+  sprintf(obuf+obuf_end, "startspecs.mhdat");
+  FILE * startspecs_file = fopen(obuf, "wb");
+  write_MH_params(startspecs_file); // write ulen, # of beads, # of frames, # of leader particles and pool particles
+  fwrite(header, sizeof(int), header_len+1, startspecs_file);
+  fwrite(genetic_train_const_ints, sizeof(int), genetic_train_const_ilen, startspecs_file); // write max gen and Class counts
+  fwrite(genetic_train_const_dubs, sizeof(double), genetic_train_const_dlen, startspecs_file); // write alpha tolerance and the resampling full factor
+  fclose(startspecs_file);
 }
 
 void MH_genetic::find_events(bool verbose_)
 {
   bool first2finish=true;
 
-  clear_genetic_event_data();
+  clear_genetic_event_data(); // clear event block data and clear alpha and residual statistics buffers
   #pragma omp parallel
   {
     MH_examiner *ex_t = examiners[thread_num()];
@@ -104,7 +137,6 @@ void MH_genetic::train_event_block(bool verbose_)
   do
   {
     nit_train++;
-    bool first2finish=true;
     int nsuccess_local=0;
     clear_genetic_training_data();
     #pragma omp parallel
@@ -119,7 +151,7 @@ void MH_genetic::train_event_block(bool verbose_)
       ex_t->consolidate_examiner_training_data();
       #pragma omp critical
       {
-        first2finish=ex_t->report_examiner_training_data(first2finish,isuccess_pool,nsuccess);
+        ex_t->report_examiner_training_data(isuccess_pool,nsuccess);
       }
     }
     double wsum=consolidate_genetic_training_data();
@@ -134,7 +166,6 @@ void MH_genetic::train_event_block(bool verbose_)
   do
   {
     nit_train++;
-    bool first2finish=true;
     int nsuccess_local=0;
     clear_genetic_training_data();
     #pragma omp parallel
@@ -146,10 +177,9 @@ void MH_genetic::train_event_block(bool verbose_)
       {
         if (ex_t->examine_u(pool[i],i,wr2)) nsuccess_local++;
       }
-      ex_t->consolidate_examiner_training_data();
       #pragma omp critical
       {
-        first2finish=ex_t->report_examiner_training_data();
+        ex_t->report_examiner_training_data(isuccess_pool, nsuccess);
       }
     }
     double wsum=consolidate_genetic_training_data();
@@ -161,12 +191,12 @@ void MH_genetic::train_event_block(bool verbose_)
 
 bool MH_genetic::check_stable_convergence(int nit_stable_train_)
 {
-
+ return false;
 }
 
 bool MH_genetic::check_unstable_convergence(int nit_unstable_train_)
 {
-
+  return false;
 }
 
 bool MH_genetic::check_convergence()
@@ -175,45 +205,7 @@ bool MH_genetic::check_convergence()
   return false;
 }
 
-void MH_regime::train_incremental_event_block(bool verbose_)
+void MH_genetic::stage_event_search()
 {
-  int nit_train=0;
-
-  for (int i_regime = 0; i_regime < nbeads; i_regime++) // walking through event block
-  {
-    int nit_regime=0;
-    set_regime_objective(i_regime);
-    do
-    {
-      nit_train++;
-      bool first2finish=true;
-      int nsuccess_local=0;
-      clear_genetic_training_data();
-      #pragma omp parallel
-      {
-        MH_examiner * ex_t=examiners[thread_num()];
-        ex_t->clear_examiner_training_data();
-        #pragma omp for reduction(+:nsuccess_local) nowait
-        for (int i = 0; i < npool; i++)
-        {
-          if (ex_t->examine_u(pool[i],i,wr2)) nsuccess_local++;
-        }
-        ex_t->consolidate_examiner_training_data();
-        #pragma omp critical
-        {
-          first2finish=ex_t->report_examiner_training_data(first2finish,isuccess_pool,nsuccess);
-        }
-      }
-      double wsum = consolidate_genetic_training_data();
-      report_genetic_training_data();
-      if (check_regime_convergence(++nit_train)) break;
-      else respawn_pool(wsum);
-    } while (true);
-  }
-}
-
-bool MH_regime::check_regime_convergence(int nit_train_)
-{
-
-  return false;
+  take_records(leaders,pool,nlead);
 }

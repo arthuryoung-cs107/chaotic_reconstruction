@@ -17,7 +17,6 @@ struct record: public record_struct
           * const dchunk,
           * const u;
 
-  virtual int take_record(record *rec_) {return take_record_chunks(rec_);}
   virtual void write_ints(FILE * file_) {}
   virtual void write_dubs(FILE * file_) {}
 
@@ -140,19 +139,6 @@ class MH_trainer : public MH_params
     wall_list &wl; // a reference to the list of walls for the swirling simulation.
     proximity_grid ** const pg; // array of proximity grids.
     MH_rng ** rng; // random number generators
-
-    virtual int find_worst_record(record ** r_, int ncap_)
-    {printf("(find_worst_record) Warning: using uninitialized record comparison\n"); return 0;}
-    virtual int find_best_record(record **r_, int ncap_)
-    {printf("(find_best_record) Warning: using uninitialized record comparison\n"); return 0;}
-    virtual void pick_nworst_records(record ** rin_, record ** rout_, int n_, int ncap_)
-    {printf("(pick_nworst_records) Warning: using uninitialized record comparison\n"); }
-    virtual void pick_nbest_records(record ** rin_, record ** rout_, int n_, int ncap_)
-    {printf("(pick_nbest_records) Warning: using uninitialized record comparison\n");}
-    virtual void pick_nworst_records(record ** rin_, int n_, int ncap_)
-    {printf("(pick_nworst_records) Warning: using uninitialized record comparison\n");}
-    virtual void pick_nbest_records(record ** rin_, int n_, int ncap_)
-    {printf("(pick_nbest_records) Warning: using uninitialized record comparison\n");}
 
     inline void redraw_u_uni(record * rec_pool_, MH_rng * rng_t_)
     {rec_pool_->draw_ranuni(rng_t_,umin,umax);}

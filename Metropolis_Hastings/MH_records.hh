@@ -22,6 +22,7 @@ struct event_record : public basic_record
       nfregime,
       nfunstable,
       * const event_rec_ints = &nfobs;
+
   double  r2stable,
           r2regime,
           r2unstable,
@@ -86,5 +87,12 @@ struct event_record : public basic_record
     const int event_rec_it_ichunk_len,
               event_rec_it_dchunk_len;
 };
+
+int find_worst_record(event_record ** r_, int ncap_);
+int find_best_record(event_record **r_, int ncap_);
+void pick_nworst_records(event_record ** rin_, event_record ** rout_, int n_, int ncap_);
+void pick_nbest_records(event_record ** rin_, event_record ** rout_, int n_, int ncap_);
+void pick_nworst_records(event_record ** rin_, int n_, int ncap_);
+void pick_nbest_records(event_record ** rin_, int n_, int ncap_);
 
 #endif

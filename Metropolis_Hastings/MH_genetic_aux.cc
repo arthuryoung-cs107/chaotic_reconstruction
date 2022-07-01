@@ -2,89 +2,6 @@
 
 // MH_genetic
 
-int MH_genetic::find_worst_record(event_record ** r_, int ncap_)
-{
-  int worst_index = 0;
-  for (int i = 1; i < ncap_; i++)
-    if (r_[worst_index]->isbetter(r_[i]))
-      worst_index = i;
-  return worst_index;
-}
-
-int MH_genetic::find_best_record(event_record ** r_, int ncap_)
-{
-  int best_index = 0;
-  for (int i = 1; i < ncap_; i++)
-    if (r_[best_index]->isworse(r_[i]))
-      best_index = i;
-  return best_index;
-}
-
-void MH_genetic::pick_nworst_records(event_record ** rin_, event_record ** rout_, int n_, int ncap_)
-{
-  for (int i = 0; i < n_; i++) rout_[i]=rin_[i];
-  int i_best_worst = find_best_record(rout_,n_);
-  for (int i = n_; i < ncap_; i++)
-    if (rout_[i_best_worst]->isbetter(rin_[i]))
-    {
-      rout_[i_best_worst] = rin_[i];
-      i_best_worst=find_best_record(rout_,n_);
-    }
-}
-
-void MH_genetic::pick_nbest_records(event_record ** rin_, event_record ** rout_, int n_, int ncap_)
-{
-  for (int i = 0; i < n_; i++) rout_[i]=rin_[i];
-  int i_worst_best = find_worst_record(rout_,n_);
-  for (int i = n_; i < ncap_; i++)
-    if (rout_[i_worst_best]->isworse(rin_[i]))
-    {
-      rout_[i_worst_best] = rin_[i];
-      i_worst_best=find_worst_record(rout_,n_);
-    }
-}
-
-void MH_genetic::pick_nworst_records(event_record ** rin_, int n_, int ncap_)
-{
-  int i_best_worst = find_best_record(rin_,n_);
-  for (int i = n_; i < ncap_; i++)
-    if (rin_[i_best_worst]->isbetter(rin_[i]))
-    {
-      rin_[i_best_worst] = rin_[i];
-      i_best_worst=find_best_record(rin_,n_);
-    }
-}
-
-void MH_genetic::pick_nbest_records(event_record ** rin_, int n_, int ncap_)
-{
-  int i_worst_best = find_worst_record(rin_,n_);
-  for (int i = n_; i < ncap_; i++)
-    if (rin_[i_worst_best]->isworse(rin_[i]))
-    {
-      rin_[i_worst_best] = rin_[i];
-      i_worst_best=find_worst_record(rin_,n_);
-    }
-}
-
-void MH_genetic::stage_diagnostics()
-{
-  // prepare output information
-  sprintf(obuf, "%s%s.MH%d_results/", io->obuf,io->data_name,io->id);
-  obuf_end = strlen(obuf);
-  mkdir(obuf, S_IRWXU);
-  printf("Made test directory: %s\n", obuf);
-
-  int header_len = 2;
-  int header[] = {header_len, genetic_train_const_ilen, genetic_train_const_dlen};
-  sprintf(obuf+obuf_end, "startspecs.mhdat");
-  FILE * startspecs_file = fopen(obuf, "wb");
-  write_MH_params(startspecs_file);
-  fwrite(header, sizeof(int), header_len+1, startspecs_file);
-  fwrite(genetic_train_const_ints, sizeof(int), genetic_train_const_ilen, startspecs_file);
-  fwrite(genetic_train_const_dubs, sizeof(double), genetic_train_const_dlen, startspecs_file);
-  fclose(startspecs_file);
-}
-
 void MH_genetic::clear_genetic_event_data()
 {
   event_block::clear_event_data();
@@ -183,12 +100,13 @@ void MH_genetic::write_event_diagnostics(int &event_block_count_)
 
 void MH_genetic::set_stable_objective()
 {
+  rho2=rho2stable;
   // start by using the r2_pool_Framebead data to adjust the records back to the correct event data
   double r2_min=DBL_MAX;
   #pragma omp parallel
   {
     MH_examiner *ex_t = examiners[thread_num()];
-    #pragma omp for reduction(min:r2_min)
+    #pragma omp for reduction(min:r2_min) nowait
     for (int i = 0; i < npool; i++)
     {
       ex_t->restore_event_record(pool[i],r2_pool_Framebead[i]);
@@ -196,33 +114,70 @@ void MH_genetic::set_stable_objective()
       if (r2_it<r2_min) r2_min=r2_it;
       leader_board[i]=pool[i];
     }
+    #pragma omp for
+    for (int i = 0; i < nlead; i++)
+    {
+      double r2_work = ex_t->set_record_stable();
+    }
   }
-  double w_sum_full = compute_weights(r2_min,pool,npool);
-  compute_weighted_stats(w_sum_full,pool,npool);
+  double w_sum_full = compute_weights(r2_min,rho2stable,pool,npool);
+  compute_weighted_ustats(w_sum_full,pool,npool);
 
   // collect leaders
   pick_nbest_records(leader_board,nlead,npool);
   set_leader_records();
-  write_Class_diagnostics(Class_count);
+  report_genetic_training_data();
 
   // resample pool
-  double w_sum = compute_weights(r2_min,leaders,nlead);
-  respawn_pool(w_sum);
-  write_generation_diagnostics();
-  gen_count++;
+  double w_sum=0.0; // given that weights have already been computed, just sum up leader terms
 
+  #pragma omp for reduction(+:w_sum)
+  for (int i = 0; i < nlead; i++)
+    w_sum+=leaders[i]->w;
+
+  respawn_pool(w_sum);
 }
 
 void MH_genetic::set_unstable_objective()
 {
+  double  rho2full = ((double)2*stev_latest*ncomp)*(sigma_scaled*sigma_scaled),
+          rho2unstable=rho2=rho2full-rho2stable; // rho2unstable
 
+  double r2_min=DBL_MAX;
+  #pragma omp parallel
+  {
+    MH_examiner *ex_t = examiners[thread_num()];
+    #pragma omp for reduction(min:r2_min) nowait
+    for (int i = 0; i < npool+nlead; i++)
+    {
+      double r2_it = records[i]->set_record_unstable();
+      if (r2_it<r2_min) r2_min=r2_it;
+      leader_board[i]=records[i];
+    }
+  }
+  double w_sum_full = compute_weights(r2_min,rho2unstable,records,npool+nlead);
+  compute_weighted_ustats(w_sum_full,records,npool+nlead);
+
+  // collect leaders
+  pick_nbest_records(leader_board,nlead,npool+nlead);
+  set_leader_records();
+  report_genetic_training_data();
+
+  // resample pool
+  double w_sum=0.0; // given that weights have already been computed, just sum up leader terms
+
+  #pragma omp for reduction(+:w_sum)
+  for (int i = 0; i < nlead; i++)
+    w_sum+=leaders[i]->w;
+
+  respawn_pool(w_sum);
 }
 
-double MH_genetic::compute_weights(double r2_min_, event_record ** recs_, int n_)
+double MH_genetic::compute_weights(double r2_min_, double rho2in_, event_record ** recs_, int n_)
 {
   double  wsum=0.0,
           r_min_=sqrt(r2_min_),
-          rho_=sqrt(rho2);
+          rho_=sqrt(rho2in_);
 
   #pragma omp parallel for reduction(+:wsum)
   for (int i = 0; i < n_; i++)
@@ -232,9 +187,74 @@ double MH_genetic::compute_weights(double r2_min_, event_record ** recs_, int n_
   return wsum;
 }
 
-void MH_genetic::compute_weighted_stats(double wsum_, event_record ** recs_, int n_)
+double MH_genetic::compute_weights(double r2_min_, double rho2in_)
 {
-  bool first2finish=true; 
+  double  wsum=0.0,
+          r_min_=sqrt(r2_min_),
+          rho_=sqrt(rho2in_);
+
+  for (int i = 0; i < nlead; i++)
+    wsum+=leaders[i]->w=gaussian_likelihood::compute_weight(sqrt(leaders[i]->get_r2()),r_min_,rho_);
+
+  return wsum;
+}
+
+void MH_genetic::compute_weighted_ustats(double wsum_, event_record ** recs_, int n_)
+{
+  bool first2finish=true;
+  #pragma omp parallel
+  {
+    int tid = thread_num();
+    double *uwkspc_t = examiners[tid]->dub_wkspc;
+    for (int i = 0; i < ulen; i++) uwkspc_t[i]=0.0;
+
+    // compute the weighted mean
+    #pragma omp for nowait
+    for (int i = 0; i < n_; i++)
+    {
+      double wrati=(recs_[i]->w)/wsum_;
+      for (int j = 0; j < ulen; j++) uwkspc_t[j]+=wrati_*(recs_[i]->u[j]);
+    }
+    #pragma omp critical
+    {
+      if (first2finish)
+      {
+        for (int j = 0; j < ulen; j++) u_wmean[j]=uwkspc_t[j];
+        first2finish=false;
+      }
+      else for (int j = 0; j < ulen; j++) u_wmean[j]+=uwkspc_t[j];
+    }
+
+    for (int i = 0; i < ulen; i++) uwkspc_t[i]=0.0;
+
+    #pragma omp barrier
+
+    #pragma omp single
+    {
+      first2finish=true;
+    }
+
+    // compute the weighted variance (covariance diagonal)
+    #pragma omp for nowait
+    for (int i = 0; i < n_; i++)
+    {
+      double wrati=(recs_[i]->w)/wsum_;
+      for (int j = 0; j < ulen; j++)
+      {
+        double udiff = recs_[i]->u[j]-u_wmean[j];
+        uwkspc_t[j]+=wrati*udiff*udiff;
+      }
+    }
+    #pragma omp critical
+    {
+      if (first2finish)
+      {
+        for (int j = 0; j < ulen; j++) u_wvar[j]=uwkspc_t[j];
+        first2finish=false;
+      }
+      else for (int j = 0; j < ulen; j++) u_wvar[j]+=uwkspc_t[j];
+    }
+  }
 }
 
 void MH_genetic::set_leader_records()
@@ -265,10 +285,7 @@ void MH_genetic::clear_genetic_training_data()
 }
 
 void MH_genetic::consolidate_genetic_training_data()
-{
-
-
-
+{  
 
   double wsum = compute_weights();
   ncandidates=nsuccess;
