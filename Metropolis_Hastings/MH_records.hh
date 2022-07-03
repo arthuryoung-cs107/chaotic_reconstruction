@@ -52,8 +52,7 @@ struct event_record : public basic_record
 
   inline void record_training_data(double *double_data_, bool success_)
   {
-    r2=double_data_[0]; r2stable=double_data_[1];
-    r2regime=double_data[2]; r2unstable=double_data_[3];
+    r2=double_data_[0]; r2stable=double_data_[1]; r2regime=double_data_[2]; r2unstable=double_data_[3];
     success=success_;
   }
 

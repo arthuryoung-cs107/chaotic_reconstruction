@@ -25,37 +25,42 @@ class MH_examiner: public basic_thread_worker
     void restore_event_record(event_record *rec_, double *r2_Fb_);
 
     // training
+    inline void set_stable_objective() {r2_objective=&net_r2_stable;}
+    inline void set_unstable_objective() {r2_objective=&net_r2_unstable;}
     inline void clear_examiner_training_data() {clear_basic_tw_training_data(); ntest=0; nsuccess_test=0;}
     bool examine_u(event_record *pooli_, int i_, double r2success_threshold_);
-    void consolidate_examiner_training_data();
+    void consolidate_examiner_training_data(event_record ** pool_);
 
-    inline void report_examiner_training_data(int *isuccess_pool_,int &nsuccess_)
-    {
-      for (int i = 0; i < nsuccess_test; i++) isuccess_pool_[i+nsuccess_]=int_wkspc[i];
-      nsuccess_+=nsuccess_test;
-      return false;
-    }
-
-    // leaving these available in case we return to this
-    void set_regime_objective(int iregime_) {}
-    void set_record_regime(event_record *rec_) {}
+    bool report_examiner_training_data(bool first2finish_, event_record ** bpool_address_, int *isuccess_pool_,int &nsuccess_,double *u_wmean_);
 
     // for io
 
   protected:
 
     int ntest,
-        nsuccess_test;
+        nsuccess_test,
+        * const isuccess_list=int_wkspc,
+        * const itest_list=int_wkspc+npool;
+
+    double * const ustat_buffer=dub_wkspc;
+
+    event_record *btest;
 
     // event
     void start_detecting_events(int &f_local_,int &iregime_local_,int *f_event_,double &netr2_local_,double &netr2_stable_local_,double &netr2_unstable_local_,double *t_history_,double *r2stable_bead_,double *netr2_regime_,double *r2unstable_bead_,double *alphaev_bead_);
     void update_event_data(int final_frame_, int *f_event_, double *r2i_, double *alphai_);
 
     // training
-    bool update_training_data(int i_, double r2success_threshold_);
+    inline void clear_record_residuals(double *r2_1, double *r2_2, double *r2_3)
+    {for (int i = 0; i < nbeads; i++) r2_1[i]=r2_2[i]=r2_3[i]=0.0;}
 
-    inline void clear_examiner_residuals(double *r2s_c_, double *r2n_r_,double *r2us_c_)
-    {for (int i = 0; i < nbeads; i++) r2_state_comp[0][i]=r2s_c_[i]=r2n_r_[i]=r2us_c_[i]=0.0;}
+    inline bool update_training_data(int i_, double r2success_threshold_)
+    {
+      itest_list[ntest++]=i_;
+      bool success_local=(*r2_objective)<r2success_threshold_;
+      if (success_local) isuccess_list[nsuccess_test++] = i_;
+      return success_local;
+    }
 };
 
 class MH_medic

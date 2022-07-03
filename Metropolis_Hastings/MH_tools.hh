@@ -99,6 +99,12 @@ struct event_block
     beads_ordered_[early_index]=index_temp; frames_ordered_[early_index]=frame_temp;
     if (i_next<ncomp-1) earliest_recursive(frames_ordered_,beads_ordered_,i_next+1);
   }
+  inline bool check_stev_convergence()
+  {
+    bool conv_out=true;
+    for (int i = 0; i < ncomp; i++) if (stev_comp<(nstates-1)) conv_out=false;
+    return conv_out; 
+  }
 };
 
 struct event_detector: public event_block

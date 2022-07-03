@@ -98,7 +98,7 @@ bool MH_examiner::examine_u(event_record *rec_, int i_, double r2success_thresho
           *r2_stable_comp=rec_->r2stable_bead,
           *netr2_regime=rec_->netr2_regime,
           *r2_unstable_comp=rec_->r2unstable_bead;
-  clear_examiner_residuals(r2_stable_comp, netr2_regime, r2_unstable_comp);
+  clear_record_residuals(r2_stable_comp, netr2_regime, r2_unstable_comp);
 
   // purely stable residuals
   for (int i_f = 1; i_f <= stev_earliest; i_f++)

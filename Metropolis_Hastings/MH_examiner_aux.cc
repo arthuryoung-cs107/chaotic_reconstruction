@@ -113,7 +113,7 @@ void MH_examiner::restore_event_record(event_record *rec_, double *r2_Fb_, doubl
           *net_r2_regime=rec_->netr2_regime,
           *r2_unstable=rec_->r2unstable_bead;
 
-  for (int i = 0; i < nbeads; i++) r2_stable[i]=net_r2_regime[i]=r2_unstable[i]=0.0;
+  clear_record_residuals(r2_stable,net_r2_regime,r2_unstable);
 
   for (int i_frame=0,k=0; i_frame <= frame_last; i_frame++)
     for (int i_bead = 0; i_bead < nbeads; i_bead++,k++)
@@ -135,12 +135,33 @@ void MH_examiner::restore_event_record(event_record *rec_, double *r2_Fb_, doubl
   rec_->record_event_data(&nf_obs,&net_r2_local);
 }
 
-bool MH_examiner::update_training_data(int i_, double r2success_threshold_)
+void MH_examiner::consolidate_examiner_training_data(event_record ** pool_)
 {
-  ntest++;
-  bool success_local=(net_r2_regime)<r2success_threshold_;
-  if (success_local) int_wkspc[nsuccess_test++] = i_;
-  return success_local;
+  if (ntest>0) bpool=pool_[itest_list[0]];
+  for (int i = 0; i < ntest; i++)
+  {
+    int i_test=itest_list[i];
+    double  *ui=pool_[i_test]->u,
+            wi=pool_[i_test]->w;
+    for (int j = 0; j < ulen; j++) ustat_buffer[j]+=wi*ui[j];
+    if (btest->isworse(pool_[i_test])) btest=pool_[i_test];
+  }
 }
 
-void
+bool MH_examiner::report_examiner_training_data(bool first2finish_, event_record ** bpool_address_, int *isuccess_pool_,int &nsuccess_,double *u_wmean_)
+{
+  for (int i = 0; i < nsuccess_test; i++) isuccess_pool_[i+nsuccess_]=int_wkspc[i];
+  nsuccess_+=nsuccess_test;
+  if (first2finish_)
+  {
+    first2finish_=false;
+    *bpool_address_=btest;
+    for (int i = 0; i < ulen; i++) u_wmean_[i]=ustat_buffer[i];
+  }
+  else
+  {
+    if (btest->isbetter(*bpool_address_)) *bpool_address_=btest;
+    for (int i = 0; i < ulen; i++) u_wmean_[i]+=ustat_buffer[i];
+  }
+  return false;
+}

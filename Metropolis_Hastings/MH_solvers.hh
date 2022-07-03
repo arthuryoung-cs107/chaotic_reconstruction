@@ -4,14 +4,14 @@
 #include "MH_workers.hh"
 
 const int genetic_train_const_ilen=2;
-const int genetic_train_const_dlen=2;
+const int genetic_train_const_dlen=3;
 const int genetic_train_it_ilen=2;
 const int genetic_train_it_dlen=2;
 class MH_genetic : public basic_MH_trainer, public event_block
 {
   public:
 
-    MH_genetic(MH_train_struct &mhts_, int Class_max_, int gen_max_, double t_wheels0_, double alpha_tol_, double rs_full_factor_);
+    MH_genetic(MH_train_struct &mhts_, int Class_max_, int gen_max_, int itrain_max_, double t_wheels0_, double alpha_tol_, double rs_full_factor_, double train_tol_);
     ~MH_genetic();
 
     void run(bool verbose_=true);
@@ -32,6 +32,7 @@ class MH_genetic : public basic_MH_trainer, public event_block
 
     const double  alpha_tol,
                   rs_full_factor,
+                  train_tol,
                   * const genetic_train_const_dubs = &alpha_tol;
 
           double  prob_best,
@@ -42,55 +43,76 @@ class MH_genetic : public basic_MH_trainer, public event_block
 
     MH_examiner ** const examiners;
 
-    event_record  ** const records,
+    event_record  * bleader,
+                  * wleader,
+                  * bpool,
+                  ** const records,
                   ** const leaders,
                   ** const pool,
                   ** const leader_board,
                   ** const candidates;
 
     // run
+    inline void initialize_genetic_run()
+    {
+      initialize_basic_trainer_run();
+      Class_count=event_block_count=0;
+      prob_best=prob_worst=0.0;
+    }
 
-    void initialize_genetic_run();
-    bool check_convergence();
+    void train_event_block(bool verbose_);
 
     // event
     void find_events(bool verbose_);
     void clear_genetic_event_data();
-    void consolidate_genetic_event_data();
-    void consolidate_genetic_event_data(int bleader_index_);
-    void synchronise_genetic_event_data();
-    void report_genetic_event_data();
-    void stage_event_search();
-
-    // training
-    void train_event_block(bool verbose_); // alternate between stable and unstable residuals
-    void train_incremental_event_block(bool verbose_=true); // incrementally consider unstable residuals
-    void set_stable_objective();
-    void set_unstable_objective();
-    void clear_genetic_training_data();
-    bool check_stable_convergence(int stable_itcount_);
-    bool check_unstable_convergence(int unstable_itcount_);
-    void consolidate_genetic_training_data();
-
-    inline void report_genetic_training_data()
+    inline void consolidate_genetic_event_data()
     {
-      if (nreplace) write_Class_diagnostics(Class_count);
-      write_generation_diagnostics(gen_count);
+      for (int i = 0; i < nbeads; i++)
+      {
+        comps_ordered[i]=i;
+        stev_ordered[i]=stev_comp[i];
+      }
+      event_block::consolidate_event_data();
+    }
+    inline void consolidate_genetic_event_data(int bleader_index_)
+    {
+      pool[bleader_index_]->determine_event_block(stev_earliest,stev_latest,stev_comp,stev_ordered,comps_ordered);
+      event_block::consolidate_event_data();
     }
 
-    void set_leader_records();
+    inline void define_genetic_event_block(double sigma_scaled_)
+      {event_block::define_event_block(sigma_scaled_);}
+
+    void synchronise_genetic_event_data();
+    void report_genetic_event_data();
+    inline void stage_event_search() {take_records(leaders,pool,nlead);}
+
+    // training
+    double set_stable_objective();
+    double set_unstable_objective();
+    void train_objective(bool verbose_,int &nit_,int &nit_objective_);
+    inline void clear_genetic_training_data() {clear_basic_trainer_training_data();}
+    double consolidate_genetic_training_data(double wsum_pool_,double rho2_,int &nreplace_,double &r2_scale_);
+
+    inline void report_genetic_training_data(int nreplace_,int &Class_count_,int &gen_count_)
+    {
+      if (nreplace_) write_Class_diagnostics(Class_count_++);
+      write_generation_diagnostics(gen_count_++);
+    }
+
+    bool check_objective_convergence(int nit_, int nit_objective_, bool &training_success_);
 
     // sampling
-    void reload_leaders(int bleader_index_);
+    double set_leader_records(event_record **blead_address_, int &bleader_rid_, int &wleader_rid_, double &br2_, double &wr2_);
     void respawn_pool(double wsum_, int offset_=0);
-
-    // inelegant, but I kind of screwed myself over by not planning around this polymorphism issue
     double compute_weights(double r2_min_, double rho2in_, event_record ** recs_, int n_);
     double compute_weights(double r2_min_, double rho2in_);
     double compute_weighted_ustats(double wsum_, event_record ** recs_, int n_);
 
     inline void take_records(event_record ** rin_, event_record ** rout_, int ncap_)
-    {for (int i = 0; i < ncap_; i++) int replace_status = rout_[i]->take_record(rin_[i]);}
+    {
+      for (int i = 0; i < ncap_; i++) int replace_status=rout_[i]->take_record(rin_[i]);
+    }
 
     inline int take_records(event_record ** rin_, event_record ** rout_, int *repl_list_, int ncap_)
     {
@@ -102,19 +124,27 @@ class MH_genetic : public basic_MH_trainer, public event_block
     // io
     void stage_diagnostics();
     void close_diagnostics();
-    void write_event_diagnostics(int &event_block_count_);
-    void write_Class_diagnostics(int &Class_count_);
-    void write_generation_diagnostics(int &gen_count_);
+    void write_event_diagnostics(int event_block_count_);
+    void write_Class_diagnostics(int Class_count_);
+    void write_generation_diagnostics(int gen_count_);
 
     inline void write_genetic_it_ints(FILE * file_)
-    {write_basic_train_it_ints(file_);fwrite(genetic_train_it_ints,sizeof(int),genetic_train_it_ilen,file_);}
+    {
+      write_basic_train_it_ints(file_);
+      fwrite(genetic_train_it_ints,sizeof(int),genetic_train_it_ilen,file_);
+    }
 
     inline void write_genetic_it_dubs(FILE * file_)
-    {write_basic_train_it_dubs(file_);fwrite(genetic_train_it_dubs,sizeof(double),genetic_train_it_dlen,file_);}
+    {
+      write_basic_train_it_dubs(file_);
+      fwrite(genetic_train_it_dubs,sizeof(double),genetic_train_it_dlen,file_);
+    }
 
-    void write_ustats(FILE * file_);
-    inline int genetic_it_ilen_full() {return basic_train_it_ilen_full() + genetic_train_it_ilen;}
-    inline int genetic_it_dlen_full() {return basic_train_it_dlen_full() + genetic_train_it_dlen;}
+    inline int genetic_it_ilen_full()
+      {return basic_train_it_ilen_full() + genetic_train_it_ilen;}
+
+    inline int genetic_it_dlen_full()
+      {return basic_train_it_dlen_full() + genetic_train_it_dlen;}
 };
 
 class MH_doctor : public MH_genetic

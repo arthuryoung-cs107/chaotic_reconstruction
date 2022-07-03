@@ -18,10 +18,11 @@ const double dt_sim = 0.002;
 const double t_wheels = -1.0;
 
 const double noise_sigma = 1e-1;
+
 const double alpha_tol=10.0;
 const double rs_full_factor=1.0;
 
-const int Class_max=100;
+const int Class_max=1000;
 const int gen_max=1000;
 
 const bool test_generation=true;

@@ -69,7 +69,7 @@ class thread_worker: public swirl, public thread_worker_struct
       {
         advance((ts[f_local_]-ts[f_local_-1])/t_phys,d_ang[f_local_-1], comega_s[f_local_],dt_sim);
         t_history_[2]=t_history_[1]; t_history_[1]=t_history_[0]; t_history_[0]=ts[f_local_];
-        return xs+(f_local_*ndof);
+        return xs+(f_local_*2*nbeads);
       }
       inline double compute_residual(double xs_, double ys_, double xr_, double yr_)
       {
@@ -217,14 +217,18 @@ class basic_thread_worker: public thread_worker, public event_detector
     public:
 
       basic_thread_worker(swirl_param &sp_, proximity_grid *pg_, wall_list &wl_, thread_worker_struct &tws_, int thread_id_, double alpha_tol_): thread_worker(sp_, pg_, wl_, tws_, thread_id_), event_detector(nbeads, Frames, 2, alpha_tol_),
-      int_wkspc(new int[npool]), dub_wkspc(new double[ulen]) {}
+      int_wkspc(new int[2*npool]), dub_wkspc(new double[ulen]) {}
 
       ~basic_thread_worker() {delete [] int_wkspc; delete [] dub_wkspc;}
 
       int * const int_wkspc;
       double * const dub_wkspc;
 
-      inline void clear_basic_tw_training_data() {memset(int_wkspc,0,npool*sizeof(int));}
+      inline void clear_basic_tw_training_data()
+      {
+        memset(int_wkspc,0,2*npool*sizeof(int));
+        for (int i = 0; i < ulen; i++) dub_wkspc[i]=0.0;
+      }
 
     protected:
 
@@ -268,7 +272,8 @@ class basic_MH_trainer: public MH_trainer, public gaussian_likelihood
 
       const double t_wheels0; // initial drift fraction
 
-      double t_wheels; // current drift fraction
+      double  t_wheels, // current drift fraction
+              r2_scale;
 
       int * const ndup_leaders,
           * const irepl_leaders,
