@@ -1,6 +1,4 @@
 #include "MH_solvers.hh"
-
-#include <assert.h>
 #include <sys/stat.h>
 
 // MH_genetic
@@ -136,7 +134,6 @@ bool MH_genetic::train_objective(bool verbose_, int &nit_, int &nit_objective_, 
   bool training_success;
   do
   {
-    nit_train_++;
     int nsuccess_local=nsuccess=0;
     bool first2finish=true;
     double wsum_pool=0.0;
@@ -157,18 +154,18 @@ bool MH_genetic::train_objective(bool verbose_, int &nit_, int &nit_objective_, 
       ex_t->consolidate_examiner_training_data(pool);
       #pragma omp critical
       {
-        bpool=ex_t->report_examiner_training_data(first2finish,&bpool,isuccess_pool,nsuccess,u_wmean);
+        first2finish=ex_t->report_examiner_training_data(first2finish,&bpool,isuccess_pool,nsuccess,u_wmean);
       }
     }
     double wsum_leaders = consolidate_genetic_training_data(wsum_pool,rho2_,nreplace,r2_scale);
     report_genetic_training_data(nreplace,Class_count,gen_count);
-    if (check_objective_convergence(++nit_train_, ++nit_train_objective_, training_success)) break;
+    if (check_objective_convergence(++nit_, ++nit_objective_, training_success)) break;
     else respawn_pool(wsum_leaders);
   } while (true);
   return training_success;
 }
 
-bool check_objective_convergence(int nit_, int nit_objective_, bool &training_success_)
+bool MH_genetic::check_objective_convergence(int nit_, int nit_objective_, bool &training_success_)
 {
   if (br2<rho2*(1.0+train_tol))
   {
@@ -183,7 +180,7 @@ bool check_objective_convergence(int nit_, int nit_objective_, bool &training_su
   else return false;
 }
 
-bool check_run_convergence(bool stable_conv_, bool unstable_conv_)
+bool MH_genetic::check_run_convergence(bool stable_conv_, bool unstable_conv_)
 {
   if (event_block::check_stev_convergence()&&stable_conv_&&unstable_conv_)
   {

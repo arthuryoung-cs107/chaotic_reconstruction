@@ -1,8 +1,10 @@
 #include "MH_solvers.hh"
+#include <cassert>
+#include <sys/stat.h>
 
 // MH_doctor
 
-MH_doctor::MH_doctor(MH_train_struct &mhts_, int test_id_, int test_relay_id_, int Frames_test_, double alpha_tol_): MH_genetic(mhts_,0,0,0.0,alpha_tol_,1.0),
+MH_doctor::MH_doctor(MH_train_struct &mhts_, int test_id_, int test_relay_id_, int Frames_test_, double alpha_tol_): MH_genetic(mhts_,0,0,0,0.0,alpha_tol_,1.0,0.0),
 test_id(test_id_), test_relay_id(test_relay_id_), Frames_test(Frames_test_),
 test_buffer(new char[io->obuf_len+100]),
 TEST_refp(new double[2*Frames_test*nbeads]),
@@ -26,7 +28,8 @@ medics(new MH_medic*[nt])
 
   #pragma omp parallel
   {
-    medics[tid] = new MH_medic(*(examiners[thread_num()]), Frames_test, test_buffer, test_buf_end);
+    int tid=thread_num();
+    medics[tid] = new MH_medic(*(examiners[tid]), Frames_test, test_buffer, test_buf_end);
   }
 }
 
@@ -76,9 +79,9 @@ void MH_doctor::initialize_doctor_run()
     // consider the reference data
     for (int frame_i = 0; frame_i < Frames_test; frame_i++)
     {
-      int foffset = ndof*frame_i;
+      int foffset = 2*nbeads*frame_i;
       double *f = xs+(foffset);
-      for (int bead_i = 0, j=0; bead_i < nbeads; bead_i++, j+=dof)
+      for (int bead_i = 0, j=0; bead_i < nbeads; bead_i++, j+=2)
       {TEST_refp[j+foffset]=f[j]; TEST_refp[j+1+foffset]=f[j+1];}
     }
 }
@@ -91,7 +94,7 @@ void MH_doctor::stage_doctor_diagnostics()
   int header_genetic_len=2;
   int header_genetic[] = {header_genetic_len, genetic_train_const_ilen, genetic_train_const_dlen};
   int header_doctor_len = 1;
-  int header_doctor[] = {MHdoc_header_len, Frames_test};
+  int header_doctor[] = {header_doctor_len, Frames_test};
   sprintf(test_buffer+test_buf_end, "startspecs.mhdat");
   FILE * startspecs_file = fopen(test_buffer, "wb");
   write_MH_params(startspecs_file);
@@ -101,7 +104,7 @@ void MH_doctor::stage_doctor_diagnostics()
   fwrite(genetic_train_const_dubs, sizeof(double), header_genetic[2], startspecs_file);
   // write MH_doctor starting data
   fwrite(header_doctor, sizeof(int), header_doctor_len+1, startspecs_file);
-  fwrite(TEST_refp, sizeof(double), ndof*Frames_test, startspecs_file);
+  fwrite(TEST_refp, sizeof(double), 2*nbeads*Frames_test, startspecs_file);
   fclose(startspecs_file);
 }
 
@@ -119,7 +122,7 @@ void MH_doctor::close_doctor_diagnostics()
 {
   int hlen=2;
   int header[] = {hlen, npool, stev_latest};
-  sprintf(obuf+obuf_end, "event_block%d.mhdat",event_block_count_);
+  sprintf(obuf+obuf_end, "endspecs.mhdat");
   FILE * data_file = fopen(obuf, "wb");
   fwrite(stev_comp, sizeof(int), nbeads, data_file);
   fwrite(stev_ordered, sizeof(int), nbeads, data_file);

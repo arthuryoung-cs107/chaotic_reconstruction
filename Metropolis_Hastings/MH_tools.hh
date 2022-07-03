@@ -102,8 +102,8 @@ struct event_block
   inline bool check_stev_convergence()
   {
     bool conv_out=true;
-    for (int i = 0; i < ncomp; i++) if (stev_comp<(nstates-1)) conv_out=false;
-    return conv_out; 
+    for (int i = 0; i < ncomp; i++) if (stev_comp[i]<(nstates-1)) conv_out=false;
+    return conv_out;
   }
 };
 

@@ -78,7 +78,7 @@ void MH_examiner::consolidate_examiner_event_data()
     else if (s_it++==stev_latest)
     {
       printf("(MH_examiner::consolidate_event_data) this shouldn't happen\n");
-      for ( i = 0; i < ncomp; i++) if (!(stev_comp[i])) stev_comp[i]=stev_latest;
+      for (int i = 0; i < ncomp; i++) if (!(stev_comp[i])) stev_comp[i]=stev_latest;
       break;
     }
   } while (true);
@@ -137,7 +137,7 @@ void MH_examiner::restore_event_record(event_record *rec_, double *r2_Fb_, doubl
 
 void MH_examiner::consolidate_examiner_training_data(event_record ** pool_)
 {
-  if (ntest>0) bpool=pool_[itest_list[0]];
+  if (ntest>0) btest=pool_[itest_list[0]];
   for (int i = 0; i < ntest; i++)
   {
     int i_test=itest_list[i];

@@ -2,7 +2,7 @@
 
 // MH_medic
 
-MH_medic::MH_medic(MH_examiner * ex_, int Frames_test_, char * test_buffer_, size_t test_buf_end_): ex(ex_),
+MH_medic::MH_medic(MH_examiner &ex_, int Frames_test_, char * test_buffer_, size_t test_buf_end_): ex(ex_),
 buf_end(test_buf_end_), Frames_test(Frames_test_),
 mtest_buffer(new char[buf_end+50]),
 TEST_p(new double[ndof*Frames_test]), TEST_INTr2(new double[nbeads*Frames_test])
@@ -75,7 +75,7 @@ void MH_medic::test_u(event_record * rec_, int i_, bool verbose_)
           *alphaev_bead=rec_->alpha_bead,
           *pref;
 
-  start_test_u(f_local,iregime_local,f_event,t_history,netr2_local,netr2_stable_local,netr2_unstable_local,r2stable_bead,netr2_regime,r2unstable_bead,alphaev_bead);
+  start_test_u(f_local,iregime_local,f_event,netr2_local,netr2_stable_local,netr2_unstable_local,t_history,r2stable_bead,netr2_regime,r2unstable_bead,alphaev_bead);
 
   do
   {
@@ -83,7 +83,7 @@ void MH_medic::test_u(event_record * rec_, int i_, bool verbose_)
     for (int i=0,j=0,k=f_local*ndof,l=f_local*nbeads; i < nbeads; i++,j+=dof,k+=dof,l++)
     {
       double rsq = compute_residual(psim[k]=q[i].x,psim[k+1]=q[i].y,TEST_p[k],TEST_p[k+1],pref[j],pref[j+1]);
-      net_r2_local+=r2_state_comp[f_local][i]=rsq;
+      netr2_local+=r2_state_comp[f_local][i]=rsq;
 
       update_integral_history(0.5*(rsq+r2_state_comp[f_local-1][i])*(t_history[0]-t_history[1]),i);
 
@@ -98,19 +98,19 @@ void MH_medic::test_u(event_record * rec_, int i_, bool verbose_)
         {
           f_event[i]=f_local-1;
           alphaev_bead[i]=alpha_it;
-          net_r2_unstable_local+=r2_unstable_bead[i]=net_r2_regime[++iregime_local]=rsq;
+          netr2_unstable_local+=r2unstable_bead[i]=netr2_regime[++iregime_local]=rsq;
         }
         else
         {
           r2stable_bead[i]+=rsq;
-          net_r2_stable_local+=rsq;
+          netr2_stable_local+=rsq;
           netr2_regime[iregime_local]+=rsq;
         }
       }
       else
       {
         r2unstable_bead[i]+=rsq;
-        net_r2_unstable_local+=rsq;
+        netr2_unstable_local+=rsq;
         netr2_regime[iregime_local]+=rsq;
       }
     }
@@ -124,10 +124,10 @@ void MH_medic::test_u(event_record * rec_, int i_, bool verbose_)
       break;
     }
   } while(true);
-  net_r2=net_r2_local,
-  net_r2_stable=net_r2_stable_local,
-  net_r2_regime=net_r2_stable_local,
-  net_r2_unstable=net_r2_unstable_local;
+  net_r2=netr2_local,
+  net_r2_stable=netr2_stable_local,
+  net_r2_regime=netr2_stable_local,
+  net_r2_unstable=netr2_unstable_local;
 
   update_event_data(f_local,f_event);
 
@@ -222,8 +222,8 @@ void MH_medic::synchronise_medic_event_data(int *nf_, int stev_earliest_, int st
   // event_block::synchronise_event_data
   stev_earliest=stev_earliest_;
   stev_latest=stev_latest_;
-  rho2stable=rho2stable_; 
-  for (int i = 0; i < ncomp; i++)
+  rho2stable=rho2stable_;
+  for (int i = 0; i < nbeads; i++)
   {
     stev_comp[i]=stev_c_[i];
     stev_ordered[i]=stev_o_[i];

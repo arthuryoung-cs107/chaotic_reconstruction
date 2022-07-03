@@ -20,7 +20,7 @@ void MH_examiner::detect_events(event_record *rec_, double *r2i_, double *alphai
           *alphaev_bead=rec_->alpha_bead,
           *pref;
 
-  start_detecting_events(f_local,iregime_local,f_event,t_history,netr2_local,netr2_stable_local,netr2_unstable_local,r2stable_bead,netr2_regime,r2unstable_bead,alphaev_bead);
+  start_detecting_events(f_local,iregime_local,f_event,netr2_local,netr2_stable_local,netr2_unstable_local,t_history,r2stable_bead,netr2_regime,r2unstable_bead,alphaev_bead);
 
   do
   {
@@ -29,7 +29,7 @@ void MH_examiner::detect_events(event_record *rec_, double *r2i_, double *alphai
     for (int i=0,j=0; i < nbeads; i++,j+=dof)
     {
       double rsq=thread_worker::compute_residual(q[i].x,q[i].y,pref[j],pref[j+1]);
-      net_r2_local+=r2_state_comp[f_local][i]=rsq;
+      netr2_local+=r2_state_comp[f_local][i]=rsq;
 
       basic_thread_worker::update_integral_history(0.5*(rsq+r2_state_comp[f_local-1][i])*(t_history[0]-t_history[1]),i);
 
@@ -41,19 +41,19 @@ void MH_examiner::detect_events(event_record *rec_, double *r2i_, double *alphai
         {
           f_event[i]=f_local-1;
           alphaev_bead[i]=alpha_it;
-          net_r2_unstable_local+=r2unstable_bead[i]=netr2_regime[++iregime_local]=rsq;
+          netr2_unstable_local+=r2unstable_bead[i]=netr2_regime[++iregime_local]=rsq;
         }
         else
         {
-          net_r2_stable_local+=rsq;
+          netr2_stable_local+=rsq;
           r2stable_bead[i]+=rsq;
           netr2_regime[iregime_local]+=rsq;
         }
       }
       else
       {
-        net_r2_unstable_local+=rsq;
-        r2_unstable_bead[i]+=rsq;
+        netr2_unstable_local+=rsq;
+        r2unstable_bead[i]+=rsq;
         netr2_regime[iregime_local]+=rsq;
       }
     }
@@ -68,10 +68,10 @@ void MH_examiner::detect_events(event_record *rec_, double *r2i_, double *alphai
       break;
     }
   } while(true);
-  net_r2=net_r2_local;
-  net_r2_stable=net_r2_stable_local;
-  net_r2_regime=net_r2_stable_local;
-  net_r2_unstable=net_r2_unstable_local;
+  net_r2=netr2_local;
+  net_r2_stable=netr2_stable_local;
+  net_r2_regime=netr2_stable_local;
+  net_r2_unstable=netr2_unstable_local;
 
   // set thread worker statistics data
   update_event_data(f_local, f_event, r2i_, alphai_);

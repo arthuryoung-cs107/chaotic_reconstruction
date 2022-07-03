@@ -10,6 +10,11 @@ class MH_examiner: public basic_thread_worker
     MH_examiner(swirl_param &sp_, proximity_grid *pg_, wall_list &wl_, thread_worker_struct &tws_, int thread_id_, double alpha_tol_): basic_thread_worker(sp_, pg_, wl_, tws_, thread_id_, alpha_tol_) {}
     ~MH_examiner() {}
 
+    int * const isuccess_list=int_wkspc,
+        * const itest_list=int_wkspc+npool;
+
+    double * const ustat_buffer=dub_wkspc;
+
     // event
     inline void clear_examiner_event_data() {event_block::clear_event_data(); ntest=0;}
     void detect_events(event_record *rec_, double *r2i_, double *alphai_);
@@ -22,7 +27,7 @@ class MH_examiner: public basic_thread_worker
       nf_obs=nf_[0]; nf_stable=nf_[1]; nf_regime=nf_[2]; nf_unstable=nf_[3];
     }
 
-    void restore_event_record(event_record *rec_, double *r2_Fb_);
+    void restore_event_record(event_record *rec_, double *r2_Fb_, double *alpha_Fb_);
 
     // training
     inline void set_stable_objective() {r2_objective=&net_r2_stable;}
@@ -36,13 +41,10 @@ class MH_examiner: public basic_thread_worker
     // for io
 
   protected:
+    friend class MH_medic;
 
     int ntest,
-        nsuccess_test,
-        * const isuccess_list=int_wkspc,
-        * const itest_list=int_wkspc+npool;
-
-    double * const ustat_buffer=dub_wkspc;
+        nsuccess_test;
 
     event_record *btest;
 
@@ -66,7 +68,7 @@ class MH_examiner: public basic_thread_worker
 class MH_medic
 {
   public:
-    MH_medic(MH_examiner *ex_, int Frames_test_, char * test_buffer_);
+    MH_medic(MH_examiner &ex_, int Frames_test_, char * test_buffer_, size_t test_buf_end_);
     ~MH_medic();
 
     MH_examiner &ex;
@@ -86,19 +88,25 @@ class MH_medic
 
     const int nbeads=ex.nbeads,
               dof=ex.dof,
-              ndof=ex.ndof;
+              ndof=ex.ndof,
+              thread_id=ex.thread_id;
 
-    const double  t_phys=ex.t_phys;
+    const double  t_phys=ex.t_phys,
+                  alpha_tol=ex.alpha_tol;
 
-    int * const stev_comp = ex.stev_comp,
+    int * const stev_comp=ex.stev_comp,
+        * const stev_ordered=ex.stev_ordered,
+        * const comps_ordered=ex.comps_ordered,
         ** const nev_state_comp=ex.nev_state_comp,
         ** const nobs_state_comp=ex.nobs_state_comp;
 
     double  * const ts=ex.ts,
             * const d_ang=ex.d_ang,
-            * const comega=ex.comega,
+            * const comega_s=ex.comega_s,
             * const xs=ex.xs,
             * const psim=ex.psim,
+            * const rho2stable_comp=ex.rho2stable_comp,
+            * const delrho2_regime=ex.delrho2_regime,
             ** const r2_state_comp=ex.r2_state_comp,
             ** const alpha_state_comp=ex.alpha_state_comp,
             ** const INTr2_comp_history=ex.INTr2_comp_history;
@@ -127,6 +135,7 @@ class MH_medic
             net_r2_stable,
             net_r2_regime,
             net_r2_unstable,
+            rho2stable,
             * const TEST_p,
             * const TEST_INTr2;
 
@@ -137,7 +146,7 @@ class MH_medic
     // wrapper functions
 
     inline void reset_sim(double *utest_, double t0_, double ctheta0_, double comega0_, double *p0_)
-    {ex.reset_sim(utest_,t0_,ctheta0_,p0_);}
+    {ex.reset_sim(utest_,t0_,ctheta0_,comega0_,p0_);}
 
     inline double * advance_sim(int f_local_,double *t_history_)
     {return ex.advance_sim(f_local_,t_history_);}

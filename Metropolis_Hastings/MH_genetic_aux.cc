@@ -92,7 +92,7 @@ double MH_genetic::set_stable_objective(double &r2_scale_)
     #pragma omp for reduction(min:r2_min) nowait
     for (int i = 0; i < npool; i++)
     {
-      ex_t->restore_event_record(pool[i],r2_pool_Framebead[i]);
+      ex_t->restore_event_record(pool[i],r2_pool_Framebead[i],alpha_pool_Framebead[i]);
       double r2_it = pool[i]->set_record_stable();
       if (r2_it<r2_min) r2_min=r2_it;
       leader_board[i]=pool[i];
@@ -100,7 +100,7 @@ double MH_genetic::set_stable_objective(double &r2_scale_)
     #pragma omp for
     for (int i = 0; i < nlead; i++)
     {
-      double r2_work = ex_t->set_record_stable();
+      double r2_work = leaders[i]->set_record_stable();
     }
   }
   double w_sum_full = compute_weights(r2_min,rho2stable,pool,npool);
@@ -112,13 +112,13 @@ double MH_genetic::set_stable_objective(double &r2_scale_)
   report_genetic_training_data(nreplace,Class_count,gen_count);
 
   // resample pool
-  double w_sum=0.0; // given that weights have already been computed, just sum up leader terms
+  double wsum_leaders=0.0; // given that weights have already been computed, just sum up leader terms
 
-  #pragma omp for reduction(+:w_sum)
+  #pragma omp parallel for reduction(+:wsum_leaders)
   for (int i = 0; i < nlead; i++)
-    w_sum+=leaders[i]->w;
+    wsum_leaders+=leaders[i]->w;
 
-  respawn_pool(w_sum);
+  respawn_pool(wsum_leaders);
   return rho2stable;
 }
 
@@ -149,13 +149,13 @@ double MH_genetic::set_unstable_objective(double &r2_scale_)
   report_genetic_training_data(nreplace,Class_count,gen_count);
 
   // resample pool
-  double w_sum=0.0; // given that weights have already been computed, just sum up leader terms
+  double wsum_leaders=0.0; // given that weights have already been computed, just sum up leader terms
 
-  #pragma omp for reduction(+:w_sum)
+  #pragma omp parallel for reduction(+:wsum_leaders)
   for (int i = 0; i < nlead; i++)
-    w_sum+=leaders[i]->w;
+    wsum_leaders+=leaders[i]->w;
 
-  respawn_pool(w_sum);
+  respawn_pool(wsum_leaders);
   return rho2unstable;
 }
 
@@ -199,7 +199,7 @@ void MH_genetic::compute_weighted_ustats(double wsum_, event_record ** recs_, in
     for (int i = 0; i < n_; i++)
     {
       double wrati=(recs_[i]->w)/wsum_;
-      for (int j = 0; j < ulen; j++) uwkspc_t[j]+=wrati_*(recs_[i]->u[j]);
+      for (int j = 0; j < ulen; j++) uwkspc_t[j]+=wrati*(recs_[i]->u[j]);
     }
     #pragma omp critical
     {
@@ -403,7 +403,7 @@ void MH_genetic::respawn_pool(double w_sum_, int offset_)
   }
 
   for (int i = 0; i < leader_count; i++) if (ndup_leaders[i])
-  {leaders_[i]->dup_count+=ndup_leaders[i]; ndup_unique++;}
+  {leaders[i]->dup_count+=ndup_leaders[i]; ndup_unique++;}
 }
 
 void MH_genetic::close_diagnostics()
@@ -412,7 +412,7 @@ void MH_genetic::close_diagnostics()
   int header[] = {header_len, genetic_it_ilen_full(), genetic_it_dlen_full()};
   sprintf(obuf+obuf_end, "endspecs.mhdat");
   FILE * endspecs_file = fopen(obuf, "wb");
-  fwrite(header_ints, sizeof(int), header_len+1, endspecs_file);
+  fwrite(header, sizeof(int), header_len+1, endspecs_file);
   write_genetic_it_ints(endspecs_file);
   write_genetic_it_dubs(endspecs_file);
   records[0]->write_event_rec_full_header(endspecs_file, nlead+npool);

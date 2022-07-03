@@ -242,6 +242,7 @@ class basic_thread_worker: public thread_worker, public event_detector
               net_r2_stable,
               net_r2_regime,
               net_r2_unstable,
+              *r2_objective,
               * const basic_tw_dubs = &net_r2;
 
       inline void update_integral_history(double INT_now_, int ibead_)

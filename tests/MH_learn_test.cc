@@ -21,9 +21,11 @@ const double noise_sigma = 1e-1;
 
 const double alpha_tol=10.0;
 const double rs_full_factor=1.0;
+const double train_tol=0.1;
 
 const int Class_max=1000;
 const int gen_max=1000;
+const int itrain_max=100;
 
 const bool test_generation=true;
 const bool learn_data=false;
@@ -61,7 +63,7 @@ int main()
   MH_params mh_par(&mh_io, ulen, nlead, npool, dt_sim, t_phys, noise_sigma);
   MH_train_struct mhts(&mh_par, &sp_min, &sp_max, &wl);
 
-  MH_genetic mh_gen(mhts,Class_max,gen_max,t_wheels,alpha_tol,rs_full_factor);
+  MH_genetic mh_gen(mhts,Class_max,gen_max,itrain_max,t_wheels,alpha_tol,rs_full_factor,train_tol);
   // mh_gen.run(verbose);
   return 0;
 }

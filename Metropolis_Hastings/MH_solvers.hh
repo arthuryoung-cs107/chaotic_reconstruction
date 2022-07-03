@@ -3,7 +3,7 @@
 
 #include "MH_workers.hh"
 
-const int genetic_train_const_ilen=2;
+const int genetic_train_const_ilen=3;
 const int genetic_train_const_dlen=3;
 const int genetic_train_it_ilen=2;
 const int genetic_train_it_dlen=2;
@@ -24,6 +24,7 @@ class MH_genetic : public basic_MH_trainer, public event_block
 
     const int Class_max,
               gen_max,
+              itrain_max,
               * const genetic_train_const_ints = &Class_max;
 
           int Class_count,
@@ -60,10 +61,12 @@ class MH_genetic : public basic_MH_trainer, public event_block
       prob_best=prob_worst=0.0;
     }
 
-    void train_event_block(bool verbose_);
+    void find_events(bool verbose_);
+    void train_event_block(bool verbose_, bool &stable_convergence_, bool &unstable_convergence_);
+    bool check_run_convergence(bool stable_conv_, bool unstable_conv_);
 
     // event
-    void find_events(bool verbose_);
+
     void clear_genetic_event_data();
     inline void consolidate_genetic_event_data()
     {
@@ -88,9 +91,9 @@ class MH_genetic : public basic_MH_trainer, public event_block
     inline void stage_event_search() {take_records(leaders,pool,nlead);}
 
     // training
-    double set_stable_objective();
-    double set_unstable_objective();
-    void train_objective(bool verbose_,int &nit_,int &nit_objective_);
+    double set_stable_objective(double &r2_scale_);
+    double set_unstable_objective(double &r2_scale_);
+    bool train_objective(bool verbose_,int &nit_,int &nit_objective_,double rho2_);
     inline void clear_genetic_training_data() {clear_basic_trainer_training_data();}
     double consolidate_genetic_training_data(double wsum_pool_,double rho2_,int &nreplace_,double &r2_scale_);
 
@@ -103,11 +106,11 @@ class MH_genetic : public basic_MH_trainer, public event_block
     bool check_objective_convergence(int nit_, int nit_objective_, bool &training_success_);
 
     // sampling
-    double set_leader_records(event_record **blead_address_, int &bleader_rid_, int &wleader_rid_, double &br2_, double &wr2_);
+    double set_leader_records(int &nreplace_, event_record **blead_address_, int &bleader_rid_, int &wleader_rid_, double &br2_, double &wr2_);
     void respawn_pool(double wsum_, int offset_=0);
     double compute_weights(double r2_min_, double rho2in_, event_record ** recs_, int n_);
     double compute_weights(double r2_min_, double rho2in_);
-    double compute_weighted_ustats(double wsum_, event_record ** recs_, int n_);
+    void compute_weighted_ustats(double wsum_, event_record ** recs_, int n_);
 
     inline void take_records(event_record ** rin_, event_record ** rout_, int ncap_)
     {
