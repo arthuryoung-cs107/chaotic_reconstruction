@@ -47,6 +47,8 @@ struct record: public record_struct
     write_dubs(file_);
     write_chunks(file_);
   }
+  inline void print_record(const char indent_[]="  ")
+  {printf("%s(record): ichunk_len=%d, dchunk_len=%d\n", indent_, ichunk_len,dchunk_len);}
 };
 
 class thread_worker: public swirl, public thread_worker_struct
@@ -178,7 +180,7 @@ struct basic_record: public record
           w,
           * const basic_rec_dubs = &r2;
 
-  inline double get_r2() {return *dub_compare_bad;}
+  // sampling
 
   inline void init_basic_record(int gen_=0,int Class_=-1,int dup_count_=0,int parent_count_=0,int parent_rid_=-1,int parent_gen_=-1,int parent_Class_=-1,double r2_=0.0,double w_=0.0)
   {
@@ -187,6 +189,10 @@ struct basic_record: public record
     parent_gen=parent_gen_; parent_Class=parent_Class_;
     r2=r2_; w=w_;
   }
+
+  // training
+
+  inline double get_r2() {return *dub_compare_bad;}
 
   inline int take_basic_record(basic_record * rec_)
   {
@@ -199,6 +205,8 @@ struct basic_record: public record
     else return 0;
   }
 
+  // io
+
   inline int basic_rec_ilen_full() {return basic_rec_ilen;}
   inline int basic_rec_dlen_full() {return basic_rec_dlen;}
 
@@ -208,6 +216,24 @@ struct basic_record: public record
   inline void write_basic_rec_dubs(FILE * file_)
   {fwrite(basic_rec_dubs, sizeof(double), basic_rec_dlen, file_);}
 
+  // debugging
+
+  inline void print_basic_record(const char indent_[]=" ", bool print_all_=true)
+  {
+    printf("%s(basic_record) int data:\n", indent_);
+    printf("%s gen: %d\n",indent_,gen);
+    printf("%s Class: %d\n",indent_,Class);
+    printf("%s dup_count: %d\n",indent_,dup_count);
+    printf("%s parent_count: %d\n",indent_,parent_count);
+    printf("%s parent_rid: %d\n",indent_,parent_rid);
+    printf("%s parent_gen: %d\n",indent_,parent_gen);
+    printf("%s parent_Class: %d\n",indent_,parent_Class);
+
+    printf("%s(basic_record) double data:\n", indent_);
+    printf("%s r2: %e\n",indent_,r2);
+    printf("%s w: %e\n",indent_,w);
+    if (print_all_) print_record();
+  }
 };
 
 const int basic_tw_ilen=4;
@@ -250,6 +276,21 @@ class basic_thread_worker: public thread_worker, public event_detector
         INTr2_comp_history[ibead_][2]=INTr2_comp_history[ibead_][1];
         INTr2_comp_history[ibead_][1]=INTr2_comp_history[ibead_][0];
         INTr2_comp_history[ibead_][0]+=INT_now_;
+      }
+
+      // debugging
+
+      inline void print_basic_tw()
+      {
+        printf(" nf_obs: %d\n", nf_obs);
+        printf(" nf_stable: %d\n", nf_stable);
+        printf(" nf_regime: %d\n", nf_regime);
+        printf(" nf_unstable: %d\n", nf_unstable);
+
+        printf(" net_r2: %e\n", net_r2);
+        printf(" net_r2_stable: %e\n", net_r2_stable);
+        printf(" net_r2_regime: %e\n", net_r2_regime);
+        printf(" net_r2_unstable: %e\n", net_r2_unstable);
       }
 };
 

@@ -22,9 +22,10 @@ void MH_genetic::synchronise_genetic_event_data()
 {
   int nf_obs, nf_stable, nf_regime, nf_unstable;
   event_block::set_state_counts(nf_obs, nf_stable, nf_regime, nf_unstable);
+  int nf_vec[] = {nf_obs, nf_stable, nf_regime, nf_unstable};
   #pragma omp parallel
   {
-    examiners[thread_num()]->synchronise_examiner_event_data(&nf_obs,stev_earliest,stev_latest,rho2stable,stev_comp,stev_ordered,comps_ordered,rho2stable_comp,delrho2_regime);
+    examiners[thread_num()]->synchronise_examiner_event_data(nf_vec,stev_earliest,stev_latest,rho2stable,stev_comp,stev_ordered,comps_ordered,rho2stable_comp,delrho2_regime);
   }
 }
 
@@ -106,8 +107,8 @@ double MH_genetic::set_stable_objective(bool verbose_, double &r2_scale_)
 
   if (verbose_) verbose_set_stable_objective_1();
 
-  double w_sum_full = compute_weights(r2_min,rho2stable,pool,npool);
-  compute_weighted_ustats(w_sum_full,pool,npool);
+  double wsum_full = compute_weights(r2_min,rho2stable,pool,npool);
+  compute_weighted_ustats(wsum_full,pool,npool);
 
   // collect leaders
   pick_nbest_records(leader_board,nlead,npool);
@@ -122,9 +123,9 @@ double MH_genetic::set_stable_objective(bool verbose_, double &r2_scale_)
 
   #pragma omp parallel for reduction(+:wsum_leaders)
   for (int i = 0; i < nlead; i++)
-    wsum_leaders+=leaders[i]->w;
+    wsum_leaders+=w_leaders[i]=leaders[i]->w;
 
-  respawn_pool(verbose_, wsum_leaders);
+  respawn_pool(verbose_, wsum_leaders, w_leaders);
   return rho2stable;
 }
 
@@ -148,8 +149,8 @@ double MH_genetic::set_unstable_objective(bool verbose_, double &r2_scale_)
 
   if (verbose_) verbose_set_unstable_objective_1();
 
-  double w_sum_full = compute_weights(r2_min,rho2unstable,records,npool+nlead);
-  compute_weighted_ustats(w_sum_full,records,npool+nlead);
+  double wsum_full = compute_weights(r2_min,rho2unstable,records,npool+nlead);
+  compute_weighted_ustats(wsum_full,records,npool+nlead);
 
   // collect leaders
   pick_nbest_records(leader_board,nlead,npool+nlead);
@@ -163,9 +164,9 @@ double MH_genetic::set_unstable_objective(bool verbose_, double &r2_scale_)
 
   #pragma omp parallel for reduction(+:wsum_leaders)
   for (int i = 0; i < nlead; i++)
-    wsum_leaders+=leaders[i]->w;
+    wsum_leaders+=w_leaders[i]=leaders[i]->w;
 
-  respawn_pool(verbose_, wsum_leaders);
+  respawn_pool(verbose_, wsum_leaders, w_leaders);
   return rho2unstable;
 }
 
@@ -182,14 +183,14 @@ double MH_genetic::compute_weights(double r2_min_, double rho2in_, event_record 
   return wsum;
 }
 
-double MH_genetic::compute_weights(double r2_min_, double rho2in_)
+double MH_genetic::compute_weights(double r2_min_, double rho2in_, double *w_leaders_)
 {
   double  wsum=0.0,
           r_min_=sqrt(r2_min_),
           rho_=sqrt(rho2in_);
 
   for (int i = 0; i < nlead; i++)
-    wsum+=leaders[i]->w=gaussian_likelihood::compute_weight(sqrt(leaders[i]->get_r2()),r_min_,rho_);
+    wsum+=w_leaders_[i]=leaders[i]->w=gaussian_likelihood::compute_weight(sqrt(leaders[i]->get_r2()),r_min_,rho_);
 
   return wsum;
 }
@@ -257,7 +258,7 @@ double MH_genetic::set_leader_records(int &nreplace_, event_record **blead_addre
     int repl_index = irepl_leaders[i];
     // make sure that first bit of leaderboard is always pointing to leaders
     leader_board[repl_index]=leaders[repl_index];
-    leaders[repl_index]->init_basic_record(gen_count,Class_count);
+    leaders[repl_index]->Class=Class_count;
   }
 
   leader_count=nlead;
@@ -271,11 +272,10 @@ double MH_genetic::set_leader_records(int &nreplace_, event_record **blead_addre
   bleader_rid_=bleader_rid_local; wleader_rid_=wleader_rid_local;
   br2_=leaders[bleader_rid_local]->get_r2(); wr2_=leaders[wleader_rid_local]->get_r2();
   blead_address_[0]=leaders[bleader_rid_local]; blead_address_[1]=leaders[wleader_rid_local];
-  printf("\nbr2=%e\n", br2);
   return wr2_;
 }
 
-double MH_genetic::consolidate_genetic_training_data(double wsum_pool_,double rho2_,int &nreplace_,double &r2_scale_)
+double MH_genetic::consolidate_genetic_training_data(double wsum_pool_,double * w_leaders_, double rho2_,int &nreplace_,double &r2_scale_)
 {
   // begin by completing weighted statistics
   double inv_w= 1.0/wsum_pool_;
@@ -320,7 +320,7 @@ double MH_genetic::consolidate_genetic_training_data(double wsum_pool_,double rh
   r2_scale_=set_leader_records(nreplace_,&bleader,bleader_rid,wleader_rid,br2,wr2);
   prob_best=gaussian_likelihood::compute_prob(sqrt(br2),sqrt(rho2_));
   prob_worst=gaussian_likelihood::compute_prob(sqrt(wr2),sqrt(rho2_));
-  return compute_weights(r2_scale_,rho2_);
+  return compute_weights(r2_scale_,rho2_,w_leaders_);
 }
 
 void MH_genetic::write_Class_diagnostics(int Class_count_)

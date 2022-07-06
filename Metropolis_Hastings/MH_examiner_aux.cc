@@ -103,35 +103,52 @@ bool MH_examiner::report_examiner_event_data(bool first2finish_, int &stev_earli
 
 void MH_examiner::restore_event_record(event_record *rec_, double *r2_Fb_, double *alpha_Fb_)
 {
-  int frame_last=stev_ordered[nbeads-1];
-  double  net_r2_local=0.0,
-          net_r2_stable_local=0.0,
-          net_r2_regime_local=0.0,
-          net_r2_unstable_local=0.0,
-          *r2_stable=rec_->r2stable_bead,
-          *net_r2_regime=rec_->netr2_regime,
-          *r2_unstable=rec_->r2unstable_bead;
+  int frame_last=stev_ordered[nbeads-1],
+      iregime_local=0,
+      *f_event=rec_->evframe_bead;
 
-  clear_record_residuals(r2_stable,net_r2_regime,r2_unstable);
+  double  netr2_local=0.0,
+          netr2_stable_local=0.0,
+          netr2_unstable_local=0.0,
+          *r2stable_bead=rec_->r2stable_bead,
+          *netr2_regime=rec_->netr2_regime,
+          *r2unstable_bead=rec_->r2unstable_bead,
+          *alphaev_bead=rec_->alpha_bead;
+
+  clear_record_residuals(r2stable_bead,netr2_regime,r2unstable_bead);
 
   for (int i_frame=0,k=0; i_frame <= frame_last; i_frame++)
     for (int i_bead = 0; i_bead < nbeads; i_bead++,k++)
     {
       double r2_it = r2_Fb_[k];
-      net_r2_local+=r2_it;
-      if (i_frame<=stev_comp[i_bead])
+      netr2_local+=r2_it;
+      if (i_frame<=(stev_comp[i_bead]+1))
       {
-        net_r2_stable_local+=r2_it; r2_stable[i_bead]+=r2_it;
-        if (i_frame==stev_comp[i_bead])
+        if (i_frame==(stev_comp[i_bead]+1)) // if we've hit our synchronised event frame
         {
-          rec_->evframe_bead[i_bead]=i_frame;
-          rec_->alpha_bead[i_bead]=alpha_Fb_[k];
+          f_event[i_bead]=i_frame-1;
+          alphaev_bead[i_bead]=alpha_Fb_[k];
+          netr2_unstable_local+=r2unstable_bead[i_bead]=netr2_regime[++iregime_local]=r2_it;
+        }
+        else
+        {
+          netr2_stable_local+=r2_it;
+          r2stable_bead[i_bead]+=r2_it;
+          netr2_regime[iregime_local]+=r2_it;
         }
       }
-      else {net_r2_unstable_local+=r2_it; r2_unstable[i_bead]+=r2_it;}
+      else
+      {
+        netr2_stable_local+=r2_it;
+        r2stable_bead[i_bead]+=r2_it;
+        netr2_regime[iregime_local]+=r2_it;
+      }
     }
-  net_r2_regime_local=net_r2_stable;
-  rec_->record_event_data(&nf_obs,&net_r2_local);
+  net_r2=netr2_local;
+  net_r2_stable=netr2_stable_local;
+  net_r2_regime=netr2_stable_local;
+  net_r2_unstable=netr2_unstable_local;
+  rec_->record_event_data(&nf_obs,&net_r2);
 }
 
 void MH_examiner::consolidate_examiner_training_data(event_record ** pool_)
@@ -149,6 +166,7 @@ void MH_examiner::consolidate_examiner_training_data(event_record ** pool_)
 
 bool MH_examiner::report_examiner_training_data(bool first2finish_, event_record ** bpool_address_, int *isuccess_pool_,int &nsuccess_,double *u_wmean_)
 {
+  // printf("thread %d reporting. nsuccess_test: %d, current nsuccess: %d \n", thread_id, nsuccess_test, nsuccess_);
   for (int i = 0; i < nsuccess_test; i++) isuccess_pool_[i+nsuccess_]=int_wkspc[i];
   nsuccess_+=nsuccess_test;
   if (first2finish_)

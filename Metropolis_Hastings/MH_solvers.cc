@@ -144,14 +144,14 @@ bool MH_genetic::train_objective(bool verbose_, int &nit_, int &nit_objective_, 
     bool first2finish=true;
     double wsum_pool=0.0;
     clear_genetic_training_data();
-    #pragma omp parallel
+    #pragma omp parallel reduction(+:nsuccess_local) reduction(+:wsum_pool)
     {
       MH_examiner *ex_t=examiners[thread_num()];
       ex_t->clear_examiner_training_data();
       double  r_scale=sqrt(r2_scale),
               rho=sqrt(rho2_);
 
-      #pragma omp for reduction(+:nsuccess_local) reduction(+:wsum_pool) nowait
+      #pragma omp for nowait
       for (int i = 0; i < npool; i++)
       {
         if (ex_t->examine_u(pool[i],i,wr2)) nsuccess_local++;
@@ -164,17 +164,17 @@ bool MH_genetic::train_objective(bool verbose_, int &nit_, int &nit_objective_, 
       }
     }
     if (verbose_) verbose_train_objective_1(nit_);
-    double wsum_leaders = consolidate_genetic_training_data(wsum_pool,rho2_,nreplace,r2_scale);
+    double wsum_leaders = consolidate_genetic_training_data(wsum_pool, w_leaders,rho2_,nreplace,r2_scale);
     if (verbose_) verbose_train_objective_2();
 
     report_genetic_training_data(nreplace,Class_count,gen_count);
     if (check_objective_convergence(++nit_, ++nit_objective_, training_success)) break;
-    else respawn_pool(verbose_, wsum_leaders);
+    else respawn_pool(verbose_,wsum_leaders,w_leaders);
   } while (true);
   return training_success;
 }
 
-void MH_genetic::respawn_pool(bool verbose_, double w_sum_, int offset_)
+void MH_genetic::respawn_pool(bool verbose_, double w_sum_, double *w_leaders_, int offset_)
 {
   memset(ndup_leaders,0,nlead*sizeof(int));
   for (int i = 0; i < ulen; i++) u_var[i]=u_mean[i]=0.0;
@@ -200,7 +200,7 @@ void MH_genetic::respawn_pool(bool verbose_, double w_sum_, int offset_)
       {
         int j=0;
         double uni = (w_sum_/rs_full_factor)*rng_t->rand_uni();
-        while ((j<leader_count)&&(uni>0.0)) uni-=w_leaders[j++];
+        while ((j<leader_count)&&(uni>0.0)) uni-=w_leaders_[j++];
         if (j>0)
         {
           if (uni<0.0)

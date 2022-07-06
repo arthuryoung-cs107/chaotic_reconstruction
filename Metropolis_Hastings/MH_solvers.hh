@@ -97,7 +97,7 @@ class MH_genetic : public basic_MH_trainer, public event_block
     double set_unstable_objective(bool verbose_, double &r2_scale_);
     bool train_objective(bool verbose_,int &nit_,int &nit_objective_,double rho2_);
     inline void clear_genetic_training_data() {clear_basic_trainer_training_data();}
-    double consolidate_genetic_training_data(double wsum_pool_,double rho2_,int &nreplace_,double &r2_scale_);
+    double consolidate_genetic_training_data(double wsum_pool_,double *w_leaders_,double rho2_,int &nreplace_,double &r2_scale_);
 
     inline void report_genetic_training_data(int nreplace_,int &Class_count_,int &gen_count_)
     {
@@ -109,9 +109,9 @@ class MH_genetic : public basic_MH_trainer, public event_block
 
     // sampling
     double set_leader_records(int &nreplace_, event_record **blead_address_, int &bleader_rid_, int &wleader_rid_, double &br2_, double &wr2_);
-    void respawn_pool(bool verbose_, double wsum_, int offset_=0);
+    void respawn_pool(bool verbose_, double wsum_, double *w_leaders_, int offset_=0);
     double compute_weights(double r2_min_, double rho2in_, event_record ** recs_, int n_);
-    double compute_weights(double r2_min_, double rho2in_);
+    double compute_weights(double r2_min_, double rho2in_, double *w_leaders_);
     void compute_weighted_ustats(double wsum_, event_record ** recs_, int n_);
 
     inline void take_records(event_record ** rin_, event_record ** rout_, int ncap_)
@@ -183,7 +183,7 @@ class MH_genetic : public basic_MH_trainer, public event_block
     {
       if (offset_) printf("(MH_genetic::respawn_pool) %d reloads, ", offset_);
       else printf("(MH_genetic::respawn_pool) ");
-      printf("%d redraws, %d duplicates (%d unique)\n", nredraw, ndup, ndup_unique);
+      printf("%d redraws, %d duplicates (%d unique).\n", nredraw, ndup, ndup_unique);
     }
 
     // debugging write outs
@@ -191,7 +191,7 @@ class MH_genetic : public basic_MH_trainer, public event_block
     inline void DEBUG_WRITEOUT_CHECK_consolidate_genetic_event_data_POST()
     {
       printf("(post consolidate_genetic_event_data)\n");
-      printf("stev_earliest: %d, stev_latest: %d\n");
+      printf("stev_earliest: %d, stev_latest: %d\n",stev_earliest,stev_latest);
       printf("stev_comp: "); for (int i = 0; i < nbeads; i++) printf("%d, ",stev_comp[i]); printf("\n");
       printf("stev_ordered: "); for (int i = 0; i < nbeads; i++) printf("%d, ",stev_ordered[i]); printf("\n");
       printf("comps_ordered: "); for (int i = 0; i < nbeads; i++) printf("%d, ",comps_ordered[i]); printf("\n");

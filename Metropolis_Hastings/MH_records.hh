@@ -56,8 +56,9 @@ struct event_record : public basic_record
     success=success_;
   }
 
-  // sampling
   int take_record(event_record *r_);
+
+  // sampling
 
   // io
   void write_event_rec_full_header(FILE * file_, int len_=0);
@@ -81,6 +82,36 @@ struct event_record : public basic_record
   inline int event_rec_dlen_full() {return basic_rec_dlen_full() + event_rec_dlen;}
   inline int event_rec_ilen_train() {return basic_rec_ilen_full() + event_rec_it_ilen;}
   inline int event_rec_dlen_train() {return basic_rec_dlen_full() + event_rec_it_dlen;}
+
+  // debugging
+
+  inline void print_event_record(int nlead_, int npool_)
+  {
+    printf("(event_record) record %d of %d leaders, %d pool.\n", rid,nlead_,npool_);
+    printf("(event_record) int data:\n");
+    printf(" nfobs: %d\n",nfobs);
+    printf(" nfstable: %d\n",nfstable);
+    printf(" nfregime: %d\n",nfregime);
+    printf(" nfunstable: %d\n",nfunstable);
+
+    printf("(event_record) double data:\n");
+    printf(" r2stable: %e\n",r2stable);
+    printf(" r2regime: %e\n",r2regime);
+    printf(" r2unstable: %e\n",r2unstable);
+
+    printf("(event_record) evframe_bead: "); print_bead_row_vec(evframe_bead);
+    printf("(event_record) r2stable_bead: "); print_bead_row_vec(r2stable_bead);
+    printf("(event_record) netr2_regime: "); print_bead_row_vec(netr2_regime);
+    printf("(event_record) r2unstable_bead: "); print_bead_row_vec(r2unstable_bead);
+    printf("(event_record) alpha_bead: "); print_bead_row_vec(alpha_bead);
+
+    print_basic_record();
+  }
+
+  inline void print_bead_row_vec(int * ivec_)
+  {for (int i = 0; i < nbeads; i++) printf("%d ", ivec_[i]); printf("\n");}
+  inline void print_bead_row_vec(double * dvec_)
+  {for (int i = 0; i < nbeads; i++) printf("%e ", dvec_[i]); printf("\n");}
 
   private:
     const int event_rec_it_ichunk_len,

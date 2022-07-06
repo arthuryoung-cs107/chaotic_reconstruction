@@ -30,6 +30,7 @@ class MH_examiner: public basic_thread_worker
     void restore_event_record(event_record *rec_, double *r2_Fb_, double *alpha_Fb_);
 
     // training
+
     inline void set_stable_objective() {r2_objective=&net_r2_stable;}
     inline void set_unstable_objective() {r2_objective=&net_r2_unstable;}
     inline void clear_examiner_training_data() {clear_basic_tw_training_data(); ntest=0; nsuccess_test=0;}
@@ -38,7 +39,14 @@ class MH_examiner: public basic_thread_worker
 
     bool report_examiner_training_data(bool first2finish_, event_record ** bpool_address_, int *isuccess_pool_,int &nsuccess_,double *u_wmean_);
 
-    // for io
+    // debugging
+
+    inline void print_examiner(int thread_count_)
+    {
+      printf("(MH_examiner) worker %d of %d:\n", thread_id, thread_count_);
+      print_basic_tw();
+    }
+
 
   protected:
     friend class MH_medic;
@@ -58,6 +66,7 @@ class MH_examiner: public basic_thread_worker
 
     inline bool update_training_data(int i_, double r2success_threshold_)
     {
+      printf("thread %d: r2_objective %e, r2_threshold: %e\n", thread_id, (*r2_objective), r2success_threshold_);
       itest_list[ntest++]=i_;
       bool success_local=(*r2_objective)<r2success_threshold_;
       if (success_local) isuccess_list[nsuccess_test++] = i_;
