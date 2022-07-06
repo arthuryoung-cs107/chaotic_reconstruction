@@ -104,13 +104,17 @@ void MH_genetic::find_events(bool verbose_)
         mur2_state_comp,mualpha_state_comp);
     }
   }
+  if (verbose_) verbose_find_events_1();
 
   // sort event states chronologically, given stev_comp is already set
   if (gen_count>0) consolidate_genetic_event_data(bleader_rid); // using our best guess
   else consolidate_genetic_event_data(); // using conservative estimates
 
+  if (verbose_) verbose_find_events_2();
+
   // compute expected residuals using presumed noise level
   define_genetic_event_block(sigma_scaled);
+  if (verbose_) verbose_find_events_3();
   synchronise_genetic_event_data(); // set event data of thread workers to the consolidated values
   report_genetic_event_data(); // finish event stats and write out results
 }
@@ -121,11 +125,13 @@ void MH_genetic::train_event_block(bool verbose_, bool &stable_convergence_, boo
 
   // perform stable training
   int nit_stable_train=0;
-  double rho2_stable_local=rho2=set_stable_objective(r2_scale);
+  double rho2_stable_local=rho2=set_stable_objective(verbose_, r2_scale);
   stable_convergence_=train_objective(verbose_,nit_train,nit_stable_train,rho2_stable_local);
+  printf("(MH_genetic::train_event_block) done with stable training\n");
+  getchar();
   // perform unstable training
   int nit_unstable_train=0;
-  double rho2_unstable_local=rho2=set_unstable_objective(r2_scale);
+  double rho2_unstable_local=rho2=set_unstable_objective(verbose_, r2_scale);
   unstable_convergence_=train_objective(verbose_,nit_train,nit_unstable_train,rho2_unstable_local);
 }
 
@@ -157,12 +163,85 @@ bool MH_genetic::train_objective(bool verbose_, int &nit_, int &nit_objective_, 
         first2finish=ex_t->report_examiner_training_data(first2finish,&bpool,isuccess_pool,nsuccess,u_wmean);
       }
     }
+    if (verbose_) verbose_train_objective_1(nit_);
     double wsum_leaders = consolidate_genetic_training_data(wsum_pool,rho2_,nreplace,r2_scale);
+    if (verbose_) verbose_train_objective_2();
+
     report_genetic_training_data(nreplace,Class_count,gen_count);
     if (check_objective_convergence(++nit_, ++nit_objective_, training_success)) break;
-    else respawn_pool(wsum_leaders);
+    else respawn_pool(verbose_, wsum_leaders);
   } while (true);
   return training_success;
+}
+
+void MH_genetic::respawn_pool(bool verbose_, double w_sum_, int offset_)
+{
+  memset(ndup_leaders,0,nlead*sizeof(int));
+  for (int i = 0; i < ulen; i++) u_var[i]=u_mean[i]=0.0;
+  ndup=nredraw=ndup_unique=0;
+
+  #pragma omp parallel
+  {
+    int tid = thread_num(),
+        *dup_t = examiners[tid]->int_wkspc;
+    double  *u_stat_t = examiners[tid]->dub_wkspc,
+            inv_npool = 1.0/((double)npool),
+            inv_npoolm1 = 1.0/((double)(npool-1));
+    MH_rng * rng_t = rng[tid];
+
+    memset(dup_t,0,nlead*sizeof(int));
+    for (int i = 0; i < ulen; i++) u_stat_t[i]=0.0;
+
+    #pragma omp for reduction(+:ndup) reduction(+:nredraw) nowait
+    for (int i = 0; i < npool; i++)
+    {
+      if (i<offset_) pool[i]->take_record(leaders[i]); // reloading the leaders
+      else
+      {
+        int j=0;
+        double uni = (w_sum_/rs_full_factor)*rng_t->rand_uni();
+        while ((j<leader_count)&&(uni>0.0)) uni-=w_leaders[j++];
+        if (j>0)
+        {
+          if (uni<0.0)
+          {ndup++; dup_t[--j]++; duplicate_u(pool[i],leaders[j],rng_t);}
+          else
+          {nredraw++; redraw_u(pool[i],rng_t);}
+        }
+        else
+        {nredraw++; redraw_u(pool[i],rng_t);}
+      }
+      for (int i_u = 0; i_u < ulen; i_u++) u_stat_t[i_u]+=inv_npool*pool[i]->u[i_u];
+    }
+    #pragma omp critical
+    {
+      for (int i = 0; i < leader_count; i++) ndup_leaders[i]+=dup_t[i];
+      for (int i = 0; i < ulen; i++) u_mean[i]+=u_stat_t[i];
+    }
+    for (int i = 0; i < ulen; i++) u_stat_t[i]=0.0;
+
+    #pragma omp barrier
+
+    #pragma omp for nowait
+    for (int i = 0; i < npool; i++)
+    {
+      double *ui = pool[i]->u;
+      for (int j = 0; j < ulen; j++)
+      {
+        double diff_j=ui[j]-u_mean[j];
+        u_stat_t[i]+=(inv_npoolm1)*diff_j*diff_j;
+      }
+    }
+    #pragma omp critical
+    {
+      for (int i = 0; i < ulen; i++) u_var[i]+=u_stat_t[i];
+    }
+  }
+
+  for (int i = 0; i < leader_count; i++) if (ndup_leaders[i])
+  {leaders[i]->dup_count+=ndup_leaders[i]; ndup_unique++;}
+
+  if (verbose_) verbose_respawn_pool(offset_);
 }
 
 bool MH_genetic::check_objective_convergence(int nit_, int nit_objective_, bool &training_success_)

@@ -10,9 +10,10 @@ const int param_id=0;
 const int MH_id=0;
 
 const int ulen = 12;
-const int nbeads=3;
+const int nbeads=5;
 const int nlead = 12;
-const int npool = 1000;
+// const int npool = 1000;
+const int npool = 100;
 const double dt_sim = 0.002;
 // const double t_wheels = 0.012;
 const double t_wheels = -1.0;
@@ -64,6 +65,6 @@ int main()
   MH_train_struct mhts(&mh_par, &sp_min, &sp_max, &wl);
 
   MH_genetic mh_gen(mhts,Class_max,gen_max,itrain_max,t_wheels,alpha_tol,rs_full_factor,train_tol);
-  // mh_gen.run(verbose);
+  mh_gen.run(true);
   return 0;
 }

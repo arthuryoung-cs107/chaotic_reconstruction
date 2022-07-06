@@ -90,9 +90,11 @@ class MH_genetic : public basic_MH_trainer, public event_block
     void report_genetic_event_data();
     inline void stage_event_search() {take_records(leaders,pool,nlead);}
 
+    inline double get_rho2unstable() {return event_block::comp_rho2unstable(sigma_scaled);}
+
     // training
-    double set_stable_objective(double &r2_scale_);
-    double set_unstable_objective(double &r2_scale_);
+    double set_stable_objective(bool verbose_, double &r2_scale_);
+    double set_unstable_objective(bool verbose_, double &r2_scale_);
     bool train_objective(bool verbose_,int &nit_,int &nit_objective_,double rho2_);
     inline void clear_genetic_training_data() {clear_basic_trainer_training_data();}
     double consolidate_genetic_training_data(double wsum_pool_,double rho2_,int &nreplace_,double &r2_scale_);
@@ -107,7 +109,7 @@ class MH_genetic : public basic_MH_trainer, public event_block
 
     // sampling
     double set_leader_records(int &nreplace_, event_record **blead_address_, int &bleader_rid_, int &wleader_rid_, double &br2_, double &wr2_);
-    void respawn_pool(double wsum_, int offset_=0);
+    void respawn_pool(bool verbose_, double wsum_, int offset_=0);
     double compute_weights(double r2_min_, double rho2in_, event_record ** recs_, int n_);
     double compute_weights(double r2_min_, double rho2in_);
     void compute_weighted_ustats(double wsum_, event_record ** recs_, int n_);
@@ -148,6 +150,56 @@ class MH_genetic : public basic_MH_trainer, public event_block
 
     inline int genetic_it_dlen_full()
       {return basic_train_it_dlen_full() + genetic_train_it_dlen;}
+
+  private:
+
+    // verbose
+
+    inline void verbose_find_events_1()
+      {printf("(MH_genetic::find_events) Found event block %d with generation %d.", event_block_count,gen_count);}
+
+    inline void verbose_find_events_2() {printf(" Earliest, latest frames: %d, %d\n", stev_earliest, stev_latest);}
+    inline void verbose_find_events_3()
+      {printf("(bead,frame), chronologically:\n");
+      for (int i = 0; i < nbeads; i++) printf("(%d %d)\n",comps_ordered[i],stev_ordered[i]);}
+
+    inline void verbose_set_stable_objective_1()
+    {printf("(MH_genetic::set_stable_objective) %d stable frames, rho2 = %e. ", nstates_stable(),rho2stable);}
+
+    inline void verbose_set_stable_objective_2() {printf("nreplace: %d, r2 best (%d): %e, r2 worst: %e.\n", nreplace, bleader_rid, br2, wr2);}
+
+    inline void verbose_set_unstable_objective_1()
+    {printf("(MH_genetic::set_unstable_objective) %d unstable frames, rho2 = %e", nstates_unstable(),get_rho2unstable());}
+
+    inline void verbose_set_unstable_objective_2() {printf("r2 best (%d): %e, r2 worst: %e.\n", bleader_rid, br2, wr2);}
+
+    inline void verbose_train_objective_1(int nit_)
+      {printf("(MH_genetic::train_objective) gen %d, Class %d, nit %d: %d candidates, best candidate r2 = %e. ", gen_count, Class_count, nit_, ncandidates, br2);}
+
+    inline void verbose_train_objective_2()
+      {printf("%d replacements, r2 best (%d): %e, r2 worst: %e.\n", nreplace, bleader_rid, br2, wr2);}
+
+    inline void verbose_respawn_pool(int offset_)
+    {
+      if (offset_) printf("(MH_genetic::respawn_pool) %d reloads, ", offset_);
+      else printf("(MH_genetic::respawn_pool) ");
+      printf("%d redraws, %d duplicates (%d unique)\n", nredraw, ndup, ndup_unique);
+    }
+
+    // debugging write outs
+
+    inline void DEBUG_WRITEOUT_CHECK_consolidate_genetic_event_data_POST()
+    {
+      printf("(post consolidate_genetic_event_data)\n");
+      printf("stev_earliest: %d, stev_latest: %d\n");
+      printf("stev_comp: "); for (int i = 0; i < nbeads; i++) printf("%d, ",stev_comp[i]); printf("\n");
+      printf("stev_ordered: "); for (int i = 0; i < nbeads; i++) printf("%d, ",stev_ordered[i]); printf("\n");
+      printf("comps_ordered: "); for (int i = 0; i < nbeads; i++) printf("%d, ",comps_ordered[i]); printf("\n");
+    }
+
+    inline void DEBUG_WRITEOUT_STOP_find_events()
+      {printf("Event data synchronised and reported\n");getchar();}
+
 };
 
 class MH_doctor : public MH_genetic

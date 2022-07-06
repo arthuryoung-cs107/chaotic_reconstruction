@@ -90,14 +90,18 @@ struct event_block
       if (frames_ordered_[i]<out) out=frames_ordered_[early_index_=i];
     return out;
   }
-  inline void earliest_recursive(int *frames_ordered_, int *beads_ordered_, int i_next)
+  inline void earliest_recursive(int *stev_ordered_, int *comps_ordered_, int i_next)
   {
-    int early_index, early_frame, index_temp, frame_temp;
-    early_frame = earliest(frames_ordered_,early_index,i_next);
-    index_temp=i_next; frame_temp=frames_ordered_[index_temp];
-    beads_ordered_[index_temp]=early_index; frames_ordered_[index_temp]=early_frame;
-    beads_ordered_[early_index]=index_temp; frames_ordered_[early_index]=frame_temp;
-    if (i_next<ncomp-1) earliest_recursive(frames_ordered_,beads_ordered_,i_next+1);
+    int early_index, // index position of next earliest event frame in stev_ordered_
+        early_frame=earliest(stev_ordered_,early_index,i_next), // value of next earliest event frame
+        early_bead=comps_ordered_[early_index]; // bead id associated with next earliest event frame
+
+    stev_ordered_[early_index]=stev_ordered_[i_next];
+    stev_ordered_[i_next]=early_frame;
+
+    comps_ordered_[early_index]=comps_ordered_[i_next];
+    comps_ordered_[i_next]=early_bead;
+    if (i_next<ncomp-1) earliest_recursive(stev_ordered_,comps_ordered_,i_next+1);
   }
   inline bool check_stev_convergence()
   {
@@ -105,6 +109,10 @@ struct event_block
     for (int i = 0; i < ncomp; i++) if (stev_comp[i]<(nstates-1)) conv_out=false;
     return conv_out;
   }
+  inline int nstates_stable() {int n=0; for (int i = 0; i < ncomp; i++) n+=stev_comp[i]; return n;}
+  inline int nstates_unstable() {return stev_latest*ncomp-nstates_stable();}
+  inline double comp_rho2unstable(double sigma_scaled_) {return (((double)2*stev_latest*ncomp)*(sigma_scaled_*sigma_scaled_))-rho2stable;}
+
 };
 
 struct event_detector: public event_block

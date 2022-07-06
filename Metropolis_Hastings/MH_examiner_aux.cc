@@ -77,7 +77,6 @@ void MH_examiner::consolidate_examiner_event_data()
     if (found_all) break;
     else if (s_it++==stev_latest)
     {
-      printf("(MH_examiner::consolidate_event_data) this shouldn't happen\n");
       for (int i = 0; i < ncomp; i++) if (!(stev_comp[i])) stev_comp[i]=stev_latest;
       break;
     }

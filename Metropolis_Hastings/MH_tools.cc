@@ -43,7 +43,7 @@ void event_block::clear_event_data()
   for (int i=0,k=0; i < ncomp; i++)
   {
     stev_comp[i]=0;
-    for (int j = 0; j < nstates; i++,k++)
+    for (int j = 0; j < nstates; j++,k++)
     {
       nev_state_comp[0][k]=nobs_state_comp[0][k]=0;
       mur2_state_comp[0][k]=stdr2_state_comp[0][k]=
@@ -54,13 +54,13 @@ void event_block::clear_event_data()
 
 void event_block::consolidate_event_data()
 {
-  // assumes that stev_comp, stev_ordered, and comps_ordered are already initialized.
-  int early_index, early_frame, index_temp, frame_temp;
-  early_frame = earliest(stev_ordered,early_index,0);
-  index_temp=0; frame_temp=stev_ordered[index_temp];
+  // assumes that stev_ordered and comps_ordered are already initialized to stev_comp order
+  int early_index,
+      early_frame=earliest(stev_comp,early_index,0);
 
-  comps_ordered[index_temp]=early_index; stev_ordered[index_temp]=early_frame;
-  comps_ordered[early_index]=index_temp; stev_ordered[early_index]=frame_temp;
+  stev_ordered[early_index]=stev_ordered[0]; stev_ordered[0]=early_frame;
+  comps_ordered[0]=early_index; comps_ordered[early_index]=0;
+
   if (ncomp>1) earliest_recursive(stev_ordered,comps_ordered,1);
 }
 

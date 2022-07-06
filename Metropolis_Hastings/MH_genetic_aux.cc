@@ -81,7 +81,7 @@ void MH_genetic::write_event_diagnostics(int event_block_count_)
   fclose(data_file);
 }
 
-double MH_genetic::set_stable_objective(double &r2_scale_)
+double MH_genetic::set_stable_objective(bool verbose_, double &r2_scale_)
 {
   // start by using the r2_pool_Framebead data to adjust the records back to the correct event data
   double r2_min=DBL_MAX;
@@ -103,12 +103,18 @@ double MH_genetic::set_stable_objective(double &r2_scale_)
       double r2_work = leaders[i]->set_record_stable();
     }
   }
+
+  if (verbose_) verbose_set_stable_objective_1();
+
   double w_sum_full = compute_weights(r2_min,rho2stable,pool,npool);
   compute_weighted_ustats(w_sum_full,pool,npool);
 
   // collect leaders
   pick_nbest_records(leader_board,nlead,npool);
   r2_scale_=set_leader_records(nreplace,&bleader,bleader_rid,wleader_rid,br2,wr2);
+
+  if (verbose_) verbose_set_stable_objective_2();
+
   report_genetic_training_data(nreplace,Class_count,gen_count);
 
   // resample pool
@@ -118,14 +124,13 @@ double MH_genetic::set_stable_objective(double &r2_scale_)
   for (int i = 0; i < nlead; i++)
     wsum_leaders+=leaders[i]->w;
 
-  respawn_pool(wsum_leaders);
+  respawn_pool(verbose_, wsum_leaders);
   return rho2stable;
 }
 
-double MH_genetic::set_unstable_objective(double &r2_scale_)
+double MH_genetic::set_unstable_objective(bool verbose_, double &r2_scale_)
 {
-  double  rho2full = ((double)2*stev_latest*ncomp)*(sigma_scaled*sigma_scaled),
-          rho2unstable=rho2=rho2full-rho2stable; // rho2unstable
+  double rho2unstable = get_rho2unstable();
 
   double r2_min=DBL_MAX;
   #pragma omp parallel
@@ -140,14 +145,19 @@ double MH_genetic::set_unstable_objective(double &r2_scale_)
       leader_board[i]=records[i];
     }
   }
+
+  if (verbose_) verbose_set_unstable_objective_1();
+
   double w_sum_full = compute_weights(r2_min,rho2unstable,records,npool+nlead);
   compute_weighted_ustats(w_sum_full,records,npool+nlead);
 
   // collect leaders
   pick_nbest_records(leader_board,nlead,npool+nlead);
   r2_scale_=set_leader_records(nreplace,&bleader,bleader_rid,wleader_rid,br2,wr2);
-  report_genetic_training_data(nreplace,Class_count,gen_count);
 
+  if (verbose_) verbose_set_unstable_objective_2();
+
+  report_genetic_training_data(nreplace,Class_count,gen_count);
   // resample pool
   double wsum_leaders=0.0; // given that weights have already been computed, just sum up leader terms
 
@@ -155,7 +165,7 @@ double MH_genetic::set_unstable_objective(double &r2_scale_)
   for (int i = 0; i < nlead; i++)
     wsum_leaders+=leaders[i]->w;
 
-  respawn_pool(wsum_leaders);
+  respawn_pool(verbose_, wsum_leaders);
   return rho2unstable;
 }
 
@@ -261,6 +271,7 @@ double MH_genetic::set_leader_records(int &nreplace_, event_record **blead_addre
   bleader_rid_=bleader_rid_local; wleader_rid_=wleader_rid_local;
   br2_=leaders[bleader_rid_local]->get_r2(); wr2_=leaders[wleader_rid_local]->get_r2();
   blead_address_[0]=leaders[bleader_rid_local]; blead_address_[1]=leaders[wleader_rid_local];
+  printf("\nbr2=%e\n", br2);
   return wr2_;
 }
 
@@ -336,74 +347,6 @@ void MH_genetic::write_generation_diagnostics(int gen_count_)
   write_genetic_it_dubs(gen_file);
   basic_MH_trainer::write_ustats(gen_file);
   fclose(gen_file);
-}
-
-void MH_genetic::respawn_pool(double w_sum_, int offset_)
-{
-  memset(ndup_leaders,0,nlead*sizeof(int));
-  for (int i = 0; i < ulen; i++) u_var[i]=u_mean[i]=0.0;
-  ndup=nredraw=ndup_unique=0;
-
-  #pragma omp parallel
-  {
-    int tid = thread_num(),
-        *dup_t = examiners[tid]->int_wkspc;
-    double  *u_stat_t = examiners[tid]->dub_wkspc,
-            inv_npool = 1.0/((double)npool),
-            inv_npoolm1 = 1.0/((double)(npool-1));
-    MH_rng * rng_t = rng[tid];
-
-    memset(dup_t,0,nlead*sizeof(int));
-    for (int i = 0; i < ulen; i++) u_stat_t[i]=0.0;
-
-    #pragma omp for reduction(+:ndup) reduction(+:nredraw) nowait
-    for (int i = 0; i < npool; i++)
-    {
-      if (i<offset_) pool[i]->take_record(leaders[i]); // reloading the leaders
-      else
-      {
-        int j=0;
-        double uni = (w_sum_/rs_full_factor)*rng_t->rand_uni();
-        while ((j<leader_count)&&(uni>0.0)) uni-=w_leaders[j++];
-        if (j>0)
-        {
-          if (uni<0.0)
-          {ndup++; dup_t[--j]++; duplicate_u(pool[i],leaders[j],rng_t);}
-          else
-          {nredraw++; redraw_u(pool[i],rng_t);}
-        }
-        else
-        {nredraw++; redraw_u(pool[i],rng_t);}
-      }
-      for (int i_u = 0; i_u < ulen; i_u++) u_stat_t[i_u]+=inv_npool*pool[i]->u[i_u];
-    }
-    #pragma omp critical
-    {
-      for (int i = 0; i < leader_count; i++) ndup_leaders[i]+=dup_t[i];
-      for (int i = 0; i < ulen; i++) u_mean[i]+=u_stat_t[i];
-    }
-    for (int i = 0; i < ulen; i++) u_stat_t[i]=0.0;
-
-    #pragma omp barrier
-
-    #pragma omp for nowait
-    for (int i = 0; i < npool; i++)
-    {
-      double *ui = pool[i]->u;
-      for (int j = 0; j < ulen; j++)
-      {
-        double diff_j=ui[j]-u_mean[j];
-        u_stat_t[i]+=(inv_npoolm1)*diff_j*diff_j;
-      }
-    }
-    #pragma omp critical
-    {
-      for (int i = 0; i < ulen; i++) u_var[i]+=u_stat_t[i];
-    }
-  }
-
-  for (int i = 0; i < leader_count; i++) if (ndup_leaders[i])
-  {leaders[i]->dup_count+=ndup_leaders[i]; ndup_unique++;}
 }
 
 void MH_genetic::close_diagnostics()
