@@ -94,7 +94,7 @@ class MH_genetic : public basic_MH_trainer, public event_block
       event_block::consolidate_event_data();
     }
 
-    inline void define_genetic_event_block(double sigma_scaled_)
+    inline void define_genetic_event_block()
       {event_block::define_event_block(sigma_scaled_);}
 
     void synchronise_genetic_event_data();

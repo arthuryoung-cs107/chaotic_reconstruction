@@ -10,9 +10,6 @@ class MH_examiner: public basic_thread_worker
     MH_examiner(swirl_param &sp_, proximity_grid *pg_, wall_list &wl_, thread_worker_struct &tws_, int thread_id_, double alpha_tol_): basic_thread_worker(sp_, pg_, wl_, tws_, thread_id_, alpha_tol_) {}
     ~MH_examiner() {}
 
-    int * const isuccess_list=int_wkspc,
-        * const itest_list=int_wkspc+npool;
-
     double * const ustat_buffer=dub_wkspc;
 
     // event
@@ -21,18 +18,14 @@ class MH_examiner: public basic_thread_worker
     void consolidate_examiner_event_data();
     bool report_examiner_event_data(bool first2finish_, int &stev_earliest_, int &stev_latest_, int *stev_c_, int ** nev_s_c_, int ** nobs_s_c_, double ** r2_s_c_, double **alpha_s_c_);
 
-    inline void synchronise_examiner_event_data(int *nf_, int stev_earliest_, int stev_latest_, double rho2stable_, int *stev_c_, int *stev_o_, int *comps_o_,double *rho2s_c_, double *drho2_r_)
-    {
-      event_block::synchronise_event_data(stev_earliest_,stev_latest_,rho2stable_,stev_c_,stev_o_,comps_o_,rho2s_c_,drho2_r_);
-      nf_obs=nf_[0]; nf_stable=nf_[1]; nf_regime=nf_[2]; nf_unstable=nf_[3];
-    }
+    inline void synchronise_examiner_event_data(int stev_earliest_, int stev_latest_, int *stev_c_, int *stev_o_, int *comps_o_,double *rho2s_c_,double *rho2us_c_)
+      {event_block::synchronise_event_data(stev_earliest_,stev_latest_,stev_c_,stev_o_,comps_o_,rho2s_c_,rho2us_c_);}
 
     void restore_event_record(event_record *rec_, double *r2_Fb_, double *alpha_Fb_);
 
     // training
 
-    inline void set_stable_objective() {r2_objective=&net_r2_stable;}
-    inline void set_unstable_objective() {r2_objective=&net_r2_unstable;}
+    inline void set_objective(double rho2_objective_) {rho2_objective=rho2_objective_;}
     inline void clear_examiner_training_data() {clear_basic_tw_training_data(); ntest=0; nsuccess_test=0;}
     bool examine_u(event_record *pooli_, int i_, double r2success_threshold_);
     void consolidate_examiner_training_data(event_record ** pool_);

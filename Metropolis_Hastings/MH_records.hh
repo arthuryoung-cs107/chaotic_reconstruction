@@ -7,33 +7,38 @@ int comp_event_rec_ichunk_len(int nbeads_);
 int comp_event_rec_dchunk_len(int nbeads_);
 int comp_event_rec_it_ichunk_len(int nbeads_);
 int comp_event_rec_it_dchunk_len(int nbeads_);
-const int event_rec_ilen = 4;
+const int event_rec_ilen = 3;
 const int event_rec_dlen = 3;
 const int event_rec_it_ilen = 0;
-const int event_rec_it_dlen = 3;
+const int event_rec_it_dlen = 2;
 struct event_record : public basic_record
 {
-  event_record(record_struct &rs_, int rid_, int * ichunk_, double * dchunk_, double * u_);
-  event_record(record_struct &rs_, int rid_, int * ichunk_, double * dchunk_, double * u_, MH_rng * ran_, double *umin_, double *umax_);
+  event_record(record_struct &rs_, int rid_, int * ichunk_, double * dchunk_, double * u_): basic_record(rs_, rid_, ichunk_, dchunk_, u_),
+  event_rec_it_ichunk_len(comp_event_rec_it_ichunk_len(nbeads)), event_rec_it_dchunk_len(comp_event_rec_it_dchunk_len(nbeads))
+  {}
+
+  event_record(record_struct &rs_, int rid_, int * ichunk_, double * dchunk_, double * u_, MH_rng * ran_, double *umin_, double *umax_): basic_record(rs_, rid_, ichunk_, dchunk_, u_, ran_, umin_, umax_),
+  event_rec_it_ichunk_len(comp_event_rec_it_ichunk_len(nbeads)), event_rec_it_dchunk_len(comp_event_rec_it_dchunk_len(nbeads))
+  {}
+
   ~event_record() {}
 
   int nfobs,
       nfstable,
-      nfregime,
       nfunstable,
       * const event_rec_ints = &nfobs;
 
-  double  r2stable,
-          r2regime,
+  double  r2net,
+          r2stable,
           r2unstable,
           * const event_rec_dubs = &r2stable;
 
-  int * evframe_bead;
+  int * evframe_bead=ichunk;
 
-  double  * r2stable_bead,
-          * netr2_regime,
-          * r2unstable_bead,
-          * alpha_bead;
+  double  * const r2net_bead=dchunk,
+          * const r2stable_bead=dchunk+nbeads,
+          * const r2unstable_bead=dchunk+2*nbeads,
+          * const alpha_bead=dchunk+3*nbeads;
 
   // event
 
@@ -47,12 +52,13 @@ struct event_record : public basic_record
 
   // training
 
+  inline double set_record_net() {dub_compare_bad = &r2net; return r2net;}
   inline double set_record_stable() {dub_compare_bad = &r2stable; return r2stable;}
   inline double set_record_unstable() {dub_compare_bad = &r2unstable; return r2unstable;}
 
   inline void record_training_data(double *double_data_, bool success_)
   {
-    r2=double_data_[0]; r2stable=double_data_[1]; r2regime=double_data_[2]; r2unstable=double_data_[3];
+    r2=r2net=double_data_[0]; r2stable=double_data_[1]; r2unstable=double_data_[3];
     success=success_;
   }
 
@@ -91,17 +97,15 @@ struct event_record : public basic_record
     printf("(event_record) int data:\n");
     printf(" nfobs: %d\n",nfobs);
     printf(" nfstable: %d\n",nfstable);
-    printf(" nfregime: %d\n",nfregime);
     printf(" nfunstable: %d\n",nfunstable);
 
     printf("(event_record) double data:\n");
+    printf(" r2net: %e\n",r2net);
     printf(" r2stable: %e\n",r2stable);
-    printf(" r2regime: %e\n",r2regime);
     printf(" r2unstable: %e\n",r2unstable);
 
     printf("(event_record) evframe_bead: "); print_row_vec(evframe_bead,nbeads);
     printf("(event_record) r2stable_bead: "); print_row_vec(r2stable_bead,nbeads);
-    printf("(event_record) netr2_regime: "); print_row_vec(netr2_regime,nbeads);
     printf("(event_record) r2unstable_bead: "); print_row_vec(r2unstable_bead,nbeads);
     printf("(event_record) alpha_bead: "); print_row_vec(alpha_bead,nbeads);
 

@@ -113,8 +113,9 @@ void MH_genetic::find_events(bool verbose_)
   if (verbose_) verbose_find_events_2();
 
   // compute expected residuals using presumed noise level
-  define_genetic_event_block(sigma_scaled);
+  define_genetic_event_block();
   if (verbose_) verbose_find_events_3();
+
   synchronise_genetic_event_data(); // set event data of thread workers to the consolidated values
   report_genetic_event_data(); // finish event stats and write out results
 }

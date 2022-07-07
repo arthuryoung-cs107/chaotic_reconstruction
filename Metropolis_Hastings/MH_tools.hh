@@ -39,11 +39,13 @@ struct MH_rng
 
 struct event_block
 {
-  event_block(int ncomp_, int nstates_);
+  event_block(int ncomp_, int nstates_, int dim_=2)
   ~event_block();
 
   const int ncomp, // nbeads, in a general sense
-            nstates; // Frames, in a general sense
+            nstates, // Frames, in a general sense
+            dim, // dimension of each component (x,y)
+            dof; // dof per state (i.e. sum x and y for every bead)
 
   int stev_earliest, // state index of earliest detected event (pertains to one system component)
       stev_latest, // state index of latest detected event (pertains to one system component)
@@ -53,10 +55,9 @@ struct event_block
       ** const nev_state_comp, // counts of events experienced at each sequence state for many trials
       ** const nobs_state_comp; // number of observations of system state for many trials of event detection
 
-  double  rho2stable, // net expected STABLE residual across all system components
-          rho2regime, // net expected residual for current active regime
+  double  rho2_objective,
           * const rho2stable_comp, // expected STABLE residual for each system component in the event block
-          * const delrho2_regime, // expected UNSTABLE residual addition for each training regime
+          * const rho2unstable_comp,
           ** const mur2_state_comp, // workspaces for collecting statistics on state sequence
           ** const stdr2_state_comp, // ...
           ** const mualpha_state_comp, // ...
@@ -71,14 +72,13 @@ struct event_block
     printf("%s(event_block) stev_comp: ",indent_); print_row_vec(stev_comp, ncomp);
     printf("%s(event_block) stev_ordered: ",indent_); print_row_vec(stev_ordered, ncomp);
     printf("%s(event_block) rho2stable_comp: ",indent_); print_row_vec(rho2stable_comp, ncomp);
-    printf("%s(event_block) delrho2_regime: ",indent_); print_row_vec(delrho2_regime, ncomp);
+    printf("%s(event_block) rho2unstable_comp: ",indent_); print_row_vec(rho2unstable_comp, ncomp);
   }
-
 
   virtual void clear_event_data();
   virtual void consolidate_event_data();
-  virtual void define_event_block(double sigma_scaled_,int dof_=2);
-  virtual void synchronise_event_data(int stev_earliest_, int stev_latest_, double rho2stable_, int *stev_c_, int *stev_o_, int *comps_o_,double *rho2s_c_, double *drho2_r_);
+  virtual void define_event_block(double sigma_scaled_);
+  virtual void synchronise_event_data(int stev_earliest_, int stev_latest_, int *stev_c_, int *stev_o_, int *comps_o_,double *rho2s_c_, double *rho2us_c_);
   inline void report_event_data(int ** nev_s_c_, int ** nobs_s_c_, double ** r2_s_c_, double **alpha_s_c_)
   {
     for (int i = 0; i < ncomp*stev_latest; i++)
@@ -88,15 +88,6 @@ struct event_block
       r2_s_c_[0][i] += mur2_state_comp[0][i];
       alpha_s_c_[0][i] += mualpha_state_comp[0][i];
     }
-  }
-  inline void set_state_counts(int &nstate_obs_, int &nstate_stable_, int &nstate_regime_, int &nstate_unstable_)
-  {
-    int nstate_stable_local=0;
-    for (int i = 0; i < ncomp; i++) nstate_stable_local+=stev_comp[i];
-    nstate_obs_=ncomp*stev_ordered[ncomp-1];
-    nstate_stable_=nstate_stable_local;
-    nstate_regime_=nstate_stable_local;
-    nstate_unstable_=nstate_obs_-nstate_stable_;
   }
   inline int earliest(int *frames_ordered_, int &early_index_, int index_start_)
   {
@@ -131,57 +122,67 @@ struct event_block
 
 struct event_detector: public event_block
 {
-  event_detector(int ncomp_, int nstates_, int dof_, double alpha_tol_);
-  ~event_detector();
+  event_detector(int ncomp_, int nstates_, int dim_, double alpha_tol_): event_block(ncomp_,nstates_,dim_),
+  alpha_tol(alpha_tol_),
+  r2_state_comp(Tmatrix<double>(nstates,ncomp)), alpha_state_comp(Tmatrix<double>(nstates,ncomp)),
+  INTr2_comp_history(Tmatrix<double>(ncomp,3)) {}
 
-  const int dof, // x,y
-            ndof; // dof per state
-        int stev_early,
-            stev_late,
-            iregime_active;
+  ~event_detector()
+  {
+    free_Tmatrix<double>(r2_state_comp); free_Tmatrix<double>(alpha_state_comp);
+    free_Tmatrix<double>(INTr2_comp_history);
+  }
+
+  int stev_early,
+      stev_late;
 
   const double alpha_tol;
 
   double  ** const r2_state_comp,
           ** const alpha_state_comp,
-          ** const INTr2_comp_history,
-          ** const r2_regime_comp;
+          ** const INTr2_comp_history;
+
+  inline void update_integral_history(double INT_now_, int ibead_)
+  {
+    INTr2_comp_history[ibead_][2]=INTr2_comp_history[ibead_][1];
+    INTr2_comp_history[ibead_][1]=INTr2_comp_history[ibead_][0];
+    INTr2_comp_history[ibead_][0]+=INT_now_;
+  }
 
   inline double alpha_comp(double *a_, double t_p1, double t_m1)
-  {return log(a_[0]/a_[2])/log(t_p1/t_m1);}
+    {return log(a_[0]/a_[2])/log(t_p1/t_m1);}
   inline double alpha_comp(double a_p1, double a_m1, double t_p1, double t_m1)
-  {return log(a_p1/a_m1)/log(t_p1/t_m1);}
+    {return log(a_p1/a_m1)/log(t_p1/t_m1);}
 };
 
 struct gaussian_likelihood
 {
-  gaussian_likelihood(double sigma_noise_, double cl_): sigma_noise(sigma_noise_), cl(cl_), sigma_scaled(cl*sigma_noise) {}
+  gaussian_likelihood(double sigma_noise_, double cl_): sigma_noise(sigma_noise_), noise_scale(cl_), sigma_scaled(noise_scale*sigma_noise) {}
   ~gaussian_likelihood() {}
 
   const double  sigma_noise,
-                cl,
+                noise_scale,
                 sigma_scaled;
 
   inline void print_gaussian_likelihood(const char indent_[])
-    {printf("%s(gaussian_likelihood) sigma_noise = %e, cl = %e, sigma_scaled = %e\n", indent_,sigma_noise,cl,sigma_scaled);}
+    {printf("%s(gaussian_likelihood) sigma_noise = %e, noise_scale = %e, sigma_scaled = %e\n", indent_,sigma_noise,noise_scale,sigma_scaled);}
 
   inline double compute_weight(double r_, double r_min_, double rho_)
     {// arguments provided unsquared so that we can avoid issues with machine precision
     return exp(0.5*((r_min_-r_)/rho_)*((r_min_+r_)/rho_));}
 
   inline double compute_prob(double r_, double rho_)
-    {return (1.0/(rho_*sqrt(root2pi)))*exp(-0.5*(r_/rho_)*(r_/rho_));}
+    {return (1.0/(rho_*root2pi))*exp(-0.5*(r_/rho_)*(r_/rho_));}
 
-  inline double expected_r2(int * obs_states_, int ncomp_, int ndof_=2)
+  inline double comp_rho2(int * obs_states_, int ncomp_, int dim_=2)
   {
-    int net_obs=0;
-    for (int i = 0; i < ncomp_; i++) net_obs+=ndof_*obs_states_[i];
-    return sigma_scaled*sigma_scaled*((double)net_obs);
+    int net_stobs=0; // number of observed system STATES
+    for (int i = 0; i < ncomp_; i++) net_stobs+=obs_states_[i];
+    return (sigma_scaled*((double)(dim_*net_stobs)))*sigma_scaled;
   }
 
   private:
     const double root2pi=sqrt(2.0*M_PI);
-
 };
 
 #endif

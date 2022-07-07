@@ -111,21 +111,21 @@ class MH_trainer : public MH_params
               dchunk_width;
 
     int leader_count, // 0: current number of leaders
-        gen_count, // 1: how many pools have been drawn
-        nsuccess, // 2: number of parameters better than current worst leader in recent trial
-        ncandidates, // 3: number of candidates to compare to current leaders
-        bleader_rid, // 4: index of current best leader
-        wleader_rid, // 5: index of current worst leader
-        nreplace, // 6: number of leader replacements following evaluation of recent trial
-        ndup, // 7: total number of leader duplication and perturbations from recent resampling
-        ndup_unique, // 8: total number of unique duplications from recent resampling
-        nredraw, // 9: total number of trial particles drawn from proposal distribution in recent resampling
+        gen_count,    // 1: how many pools have been drawn
+        nsuccess,     // 2: number of parameters better than current worst leader in recent trial
+        ncandidates,  // 3: number of candidates to compare to current leaders
+        bleader_rid,  // 4: index of current best leader
+        wleader_rid,  // 5: index of current worst leader
+        nreplace,     // 6: number of leader replacements following evaluation of recent trial
+        ndup,         // 7: total number of leader duplication and perturbations from recent resampling
+        ndup_unique,  // 8: total number of unique duplications from recent resampling
+        nredraw,      // 9: total number of trial particles drawn from proposal distribution in recent resampling
         * const MHT_it_ints = &leader_count,
         ** const ichunk; // space for records to store integer parameters
 
     double  rho2, // 0: current expected residual
-            br2, // 1: current best leader residual
-            wr2, // 2: current worst leader residual
+            br2,  // 1: current best leader residual
+            wr2,  // 2: current worst leader residual
             * const MHT_it_dubs = &rho2,
             * const umin = &(sp_min.Kn), // lower bound on u parameters
             * const umax = &(sp_max.Kn), // upper bound on u parameters
@@ -183,7 +183,7 @@ class MH_trainer : public MH_params
 };
 
 const int basic_rec_ilen=7;
-const int basic_rec_dlen=2;
+const int basic_rec_dlen=1;
 struct basic_record: public record
 {
   basic_record(record_struct &rs_, int rid_, int * ichunk_, double * dchunk_, double * u_): record(rs_, rid_, ichunk_, dchunk_, u_) {init_basic_record();}
@@ -203,18 +203,17 @@ struct basic_record: public record
       parent_Class, // 6: leader Class this particle comes from
       * const basic_rec_ints = &gen;
 
-  double  r2,
-          w,
-          * const basic_rec_dubs = &r2;
+  double  w,
+          * const basic_rec_dubs = &w;
 
   // sampling
 
-  inline void init_basic_record(int gen_=0,int Class_=-1,int dup_count_=0,int parent_count_=0,int parent_rid_=-1,int parent_gen_=-1,int parent_Class_=-1,double r2_=0.0,double w_=0.0)
+  inline void init_basic_record(int gen_=0,int Class_=-1,int dup_count_=0,int parent_count_=0,int parent_rid_=-1,int parent_gen_=-1,int parent_Class_=-1,double w_=0.0)
   {
     gen=gen_; Class=Class_; dup_count=dup_count_;
     parent_count=parent_count_; parent_rid=parent_rid_;
     parent_gen=parent_gen_; parent_Class=parent_Class_;
-    r2=r2_; w=w_;
+    w=w_;
   }
 
   // debugging
@@ -237,7 +236,6 @@ struct basic_record: public record
   }
 
   // training
-
   inline double get_r2() {return *dub_compare_bad;}
 
   inline int take_basic_record(basic_record * rec_)
@@ -252,7 +250,6 @@ struct basic_record: public record
   }
 
   // io
-
   inline int basic_rec_ilen_full() {return basic_rec_ilen;}
   inline int basic_rec_dlen_full() {return basic_rec_dlen;}
 
@@ -263,62 +260,35 @@ struct basic_record: public record
   {fwrite(basic_rec_dubs, sizeof(double), basic_rec_dlen, file_);}
 };
 
-const int basic_tw_ilen=4;
-const int basic_tw_dlen=4;
 class basic_thread_worker: public thread_worker, public event_detector
 {
     public:
 
       basic_thread_worker(swirl_param &sp_, proximity_grid *pg_, wall_list &wl_, thread_worker_struct &tws_, int thread_id_, double alpha_tol_): thread_worker(sp_, pg_, wl_, tws_, thread_id_), event_detector(nbeads, Frames, 2, alpha_tol_),
-      int_wkspc(new int[2*npool]), dub_wkspc(new double[ulen]) {}
+      int_wkspc(new int[iwkspc_len(npool)]), dub_wkspc(new double[ulen]) {}
 
       ~basic_thread_worker() {delete [] int_wkspc; delete [] dub_wkspc;}
 
-      int * const int_wkspc;
+      int * const int_wkspc,
+          * const itest_list=int_wkspc,
+          * const isuccess_list=int_wkspc+npool;
+
       double * const dub_wkspc;
 
       inline void clear_basic_tw_training_data()
       {
-        memset(int_wkspc,0,2*npool*sizeof(int));
+        memset(int_wkspc,0,iwkspc_len(npool)*sizeof(int));
         for (int i = 0; i < ulen; i++) dub_wkspc[i]=0.0;
       }
 
     protected:
 
-      int nf_obs,
-          nf_stable,
-          nf_regime,
-          nf_unstable,
-          * const basic_tw_ints = &nf_obs;
-
-      double  net_r2,
-              net_r2_stable,
-              net_r2_regime,
-              net_r2_unstable,
-              *r2_objective,
-              * const basic_tw_dubs = &net_r2;
-
-      inline void update_integral_history(double INT_now_, int ibead_)
-      {
-        INTr2_comp_history[ibead_][2]=INTr2_comp_history[ibead_][1];
-        INTr2_comp_history[ibead_][1]=INTr2_comp_history[ibead_][0];
-        INTr2_comp_history[ibead_][0]+=INT_now_;
-      }
-
       // debugging
-      inline void print_basic_tw(const char indent_[], double sigma_scaled_=-1.0)
-      {
-        printf("%s(basic_thread_worker) nf_obs: %d\n", indent_,nf_obs);
-        printf("%s(basic_thread_worker) nf_stable: %d\n", indent_,nf_stable);
-        printf("%s(basic_thread_worker) nf_regime: %d\n", indent_,nf_regime);
-        printf("%s(basic_thread_worker) nf_unstable: %d\n", indent_,nf_unstable);
+      inline void print_basic_tw(const char indent_[], double sigma_scaled_)
+        {print_event_block(sigma_scaled_,indent_);}
 
-        printf("%s(basic_thread_worker) net_r2: %e\n", indent_,net_r2);
-        printf("%s(basic_thread_worker) net_r2_stable: %e\n", indent_,net_r2_stable);
-        printf("%s(basic_thread_worker) net_r2_regime: %e\n", indent_,net_r2_regime);
-        printf("%s(basic_thread_worker) net_r2_unstable: %e\n", indent_,net_r2_unstable);
-        if (sigma_scaled_>0.0) print_event_block(sigma_scaled_,indent_);
-      }
+    private:
+      inline int iwkspc_len(int npool_) {return 2*npool_;}
 };
 
 class basic_MH_trainer: public MH_trainer, public gaussian_likelihood
@@ -364,7 +334,7 @@ class basic_MH_trainer: public MH_trainer, public gaussian_likelihood
       // sampling
       virtual void duplicate_u(basic_record *rec_child_, basic_record *rec_parent_, MH_rng *rng_t_);
       virtual void redraw_u(basic_record * rec_pool_, MH_rng * rng_t_)
-      {redraw_u_uni(rec_pool_, rng_t_); rec_pool_->init_basic_record(gen_count);}
+        {redraw_u_uni(rec_pool_, rng_t_); rec_pool_->init_basic_record(gen_count);}
 
       // training
       inline void clear_basic_MHT_training_data() {memset(isuccess_pool,0,npool*sizeof(int));nsuccess=0;}
