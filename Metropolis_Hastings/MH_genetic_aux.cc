@@ -66,6 +66,7 @@ void MH_genetic::write_event_diagnostics(int event_block_count_)
   int header[] = {hlen, npool, stev_latest};
   sprintf(obuf+obuf_end, "event_block%d.mhdat",event_block_count_);
   FILE * data_file = fopen(obuf, "wb");
+  fwrite(header, sizeof(int), hlen+1, data_file);
   fwrite(stev_comp, sizeof(int), nbeads, data_file);
   fwrite(stev_ordered, sizeof(int), nbeads, data_file);
   fwrite(comps_ordered, sizeof(int), nbeads, data_file);
