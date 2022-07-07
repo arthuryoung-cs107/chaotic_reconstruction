@@ -28,6 +28,7 @@ classdef MH_genetic_data
 
             nbeads = obj.MHpar.nbeads;
             nb_x_F = nbeads*stev_latest;
+            ulen = obj.MHpar.ulen;
 
             event_block_out = struct(   'stev_comp',fread(file,nbeads,'int=>int'), ...
                                         'stev_ordered',fread(file,nbeads,'int=>int'), ...
@@ -40,14 +41,17 @@ classdef MH_genetic_data
                                         'stdr2_state_comp',fread(file,nb_x_F,'double=>double'), ...
                                         'mualpha_state_comp',fread(file,nb_x_F,'double=>double'), ...
                                         'stdalpha_state_comp',fread(file,nb_x_F,'double=>double'), ...
-                                        'pool',record_block(file));
+                                        'pool',record_block(file,ulen));
         end
         function Class_out = read_Class_i(obj, i_)
             file = fopen([obj.test_dir_name 'Class' num2str(i_) '.mhdat']);
             header = fread(file,3,'int=>int');
             [hlen,ilen,dlen] = deal(header(1),header(2),header(3));
             Class_out = MH_genetic_data.read_int_double_chunk(file,ilen,dlen);
-            Class_out.leaders = record_block(file);
+
+            ulen = obj.MHpar.ulen;
+
+            Class_out.leaders = record_block(file,ulen);
         end
         function gen_out = read_gen_i(obj, i_)
             file = fopen([obj.test_dir_name 'gen' num2str(i_) '.mhdat']);

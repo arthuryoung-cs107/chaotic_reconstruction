@@ -100,8 +100,6 @@ class MH_trainer : public MH_params
     ~MH_trainer();
 
     virtual void run(bool verbose_) = 0;
-    virtual void stage_diagnostics() = 0;
-    virtual void close_diagnostics() = 0;
 
   protected:
 
@@ -142,15 +140,44 @@ class MH_trainer : public MH_params
     proximity_grid ** const pg; // array of proximity grids.
     MH_rng ** rng; // random number generators
 
-    inline void redraw_u_uni(record * rec_pool_, MH_rng * rng_t_)
-    {rec_pool_->draw_ranuni(rng_t_,umin,umax);}
+    // debugging
+
+    inline void print_MHT(const char indent_[])
+    {
+      printf("%s(MH_trainer) leader_count: %d\n", indent_,leader_count);
+      printf("%s(MH_trainer) gen_count: %d\n", indent_,gen_count);
+      printf("%s(MH_trainer) nsuccess: %d\n", indent_,nsuccess);
+      printf("%s(MH_trainer) ncandidates: %d\n", indent_,ncandidates);
+      printf("%s(MH_trainer) bleader_rid: %d\n", indent_,bleader_rid);
+      printf("%s(MH_trainer) wleader_rid: %d\n", indent_,wleader_rid);
+      printf("%s(MH_trainer) nreplace: %d\n", indent_,nreplace);
+      printf("%s(MH_trainer) ndup: %d\n", indent_,ndup);
+      printf("%s(MH_trainer) ndup_unique: %d\n", indent_,ndup_unique);
+      printf("%s(MH_trainer) nredraw: %d\n", indent_,nredraw);
+
+      printf("%s(MH_trainer) rho2: %e\n",indent_,rho2);
+      printf("%s(MH_trainer) br2: %e\n",indent_,br2);
+      printf("%s(MH_trainer) wr2: %e\n",indent_,wr2);
+    }
+
+    // run
     inline void initialize_MHT_run()
     {
       for (int i = 0; i < MHT_it_ilen; i++) MHT_it_ints[i]=0;
       for (int i = 0; i < MHT_it_dlen; i++) MHT_it_dubs[i]=0.0;
     }
+
+    // sampling
+    inline void redraw_u_uni(record * rec_pool_, MH_rng * rng_t_)
+    {rec_pool_->draw_ranuni(rng_t_,umin,umax);}
+
+    // io
+    virtual void stage_diagnostics() = 0;
+    virtual void close_diagnostics() = 0;
     inline void write_MHT_it_ints(FILE * file_) {fwrite(MHT_it_ints, sizeof(int), MHT_it_ilen, file_);}
     inline void write_MHT_it_dubs(FILE * file_) {fwrite(MHT_it_dubs, sizeof(double), MHT_it_dlen, file_);}
+
+    // aux
     inline double max(double a_,double b_ ) {return (a_>b_)?a_:b_;}
     inline double min(double a_,double b_ ) {return (a_<b_)?a_:b_;}
 };
@@ -190,6 +217,25 @@ struct basic_record: public record
     r2=r2_; w=w_;
   }
 
+  // debugging
+
+  inline void print_basic_record(const char indent_[]=" ", bool print_all_=true)
+  {
+    printf("%s(basic_record) int data:\n", indent_);
+    printf("%s gen: %d\n",indent_,gen);
+    printf("%s Class: %d\n",indent_,Class);
+    printf("%s dup_count: %d\n",indent_,dup_count);
+    printf("%s parent_count: %d\n",indent_,parent_count);
+    printf("%s parent_rid: %d\n",indent_,parent_rid);
+    printf("%s parent_gen: %d\n",indent_,parent_gen);
+    printf("%s parent_Class: %d\n",indent_,parent_Class);
+
+    printf("%s(basic_record) double data:\n", indent_);
+    printf("%s r2: %e\n",indent_,r2);
+    printf("%s w: %e\n",indent_,w);
+    if (print_all_) print_record();
+  }
+
   // training
 
   inline double get_r2() {return *dub_compare_bad;}
@@ -215,25 +261,6 @@ struct basic_record: public record
 
   inline void write_basic_rec_dubs(FILE * file_)
   {fwrite(basic_rec_dubs, sizeof(double), basic_rec_dlen, file_);}
-
-  // debugging
-
-  inline void print_basic_record(const char indent_[]=" ", bool print_all_=true)
-  {
-    printf("%s(basic_record) int data:\n", indent_);
-    printf("%s gen: %d\n",indent_,gen);
-    printf("%s Class: %d\n",indent_,Class);
-    printf("%s dup_count: %d\n",indent_,dup_count);
-    printf("%s parent_count: %d\n",indent_,parent_count);
-    printf("%s parent_rid: %d\n",indent_,parent_rid);
-    printf("%s parent_gen: %d\n",indent_,parent_gen);
-    printf("%s parent_Class: %d\n",indent_,parent_Class);
-
-    printf("%s(basic_record) double data:\n", indent_);
-    printf("%s r2: %e\n",indent_,r2);
-    printf("%s w: %e\n",indent_,w);
-    if (print_all_) print_record();
-  }
 };
 
 const int basic_tw_ilen=4;
@@ -279,18 +306,18 @@ class basic_thread_worker: public thread_worker, public event_detector
       }
 
       // debugging
-
-      inline void print_basic_tw()
+      inline void print_basic_tw(const char indent_[], double sigma_scaled_=-1.0)
       {
-        printf(" nf_obs: %d\n", nf_obs);
-        printf(" nf_stable: %d\n", nf_stable);
-        printf(" nf_regime: %d\n", nf_regime);
-        printf(" nf_unstable: %d\n", nf_unstable);
+        printf("%s(basic_thread_worker) nf_obs: %d\n", indent_,nf_obs);
+        printf("%s(basic_thread_worker) nf_stable: %d\n", indent_,nf_stable);
+        printf("%s(basic_thread_worker) nf_regime: %d\n", indent_,nf_regime);
+        printf("%s(basic_thread_worker) nf_unstable: %d\n", indent_,nf_unstable);
 
-        printf(" net_r2: %e\n", net_r2);
-        printf(" net_r2_stable: %e\n", net_r2_stable);
-        printf(" net_r2_regime: %e\n", net_r2_regime);
-        printf(" net_r2_unstable: %e\n", net_r2_unstable);
+        printf("%s(basic_thread_worker) net_r2: %e\n", indent_,net_r2);
+        printf("%s(basic_thread_worker) net_r2_stable: %e\n", indent_,net_r2_stable);
+        printf("%s(basic_thread_worker) net_r2_regime: %e\n", indent_,net_r2_regime);
+        printf("%s(basic_thread_worker) net_r2_unstable: %e\n", indent_,net_r2_unstable);
+        if (sigma_scaled_>0.0) print_event_block(sigma_scaled_,indent_);
       }
 };
 
@@ -327,16 +354,26 @@ class basic_MH_trainer: public MH_trainer, public gaussian_likelihood
               * const u_wmean,
               * const u_wvar;
 
-      virtual void duplicate_u(basic_record *rec_child_, basic_record *rec_parent_, MH_rng *rng_t_);
+      // debugging
+      inline void print_basic_MHT(const char indent_[]="     ")
+        {print_MHT(indent_); print_gaussian_likelihood(indent_);}
 
+      // run
+      inline void initialize_basic_MHT_run() {initialize_MHT_run(); t_wheels=t_wheels0;}
+
+      // sampling
+      virtual void duplicate_u(basic_record *rec_child_, basic_record *rec_parent_, MH_rng *rng_t_);
       virtual void redraw_u(basic_record * rec_pool_, MH_rng * rng_t_)
       {redraw_u_uni(rec_pool_, rng_t_); rec_pool_->init_basic_record(gen_count);}
-      inline void clear_basic_trainer_training_data() {memset(isuccess_pool,0,npool*sizeof(int));nsuccess=0;}
-      inline void initialize_basic_trainer_run() {initialize_MHT_run(); t_wheels=t_wheels0;}
-      inline int basic_train_it_ilen_full() {return MHT_it_ilen;}
-      inline int basic_train_it_dlen_full() {return MHT_it_dlen;}
-      inline void write_basic_train_it_ints(FILE * file_) {write_MHT_it_ints(file_);}
-      inline void write_basic_train_it_dubs(FILE * file_) {write_MHT_it_dubs(file_);}
+
+      // training
+      inline void clear_basic_MHT_training_data() {memset(isuccess_pool,0,npool*sizeof(int));nsuccess=0;}
+
+      // io
+      inline int basic_MHT_it_ilen_full() {return MHT_it_ilen;}
+      inline int basic_MHT_it_dlen_full() {return MHT_it_dlen;}
+      inline void write_basic_MHT_it_ints(FILE * file_) {write_MHT_it_ints(file_);}
+      inline void write_basic_MHT_it_dubs(FILE * file_) {write_MHT_it_dubs(file_);}
       inline void write_ustats(FILE *file_)
       {
         fwrite(u_mean,sizeof(double),ulen,file_);

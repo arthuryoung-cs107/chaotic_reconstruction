@@ -99,19 +99,14 @@ struct event_record : public basic_record
     printf(" r2regime: %e\n",r2regime);
     printf(" r2unstable: %e\n",r2unstable);
 
-    printf("(event_record) evframe_bead: "); print_bead_row_vec(evframe_bead);
-    printf("(event_record) r2stable_bead: "); print_bead_row_vec(r2stable_bead);
-    printf("(event_record) netr2_regime: "); print_bead_row_vec(netr2_regime);
-    printf("(event_record) r2unstable_bead: "); print_bead_row_vec(r2unstable_bead);
-    printf("(event_record) alpha_bead: "); print_bead_row_vec(alpha_bead);
+    printf("(event_record) evframe_bead: "); print_row_vec(evframe_bead,nbeads);
+    printf("(event_record) r2stable_bead: "); print_row_vec(r2stable_bead,nbeads);
+    printf("(event_record) netr2_regime: "); print_row_vec(netr2_regime,nbeads);
+    printf("(event_record) r2unstable_bead: "); print_row_vec(r2unstable_bead,nbeads);
+    printf("(event_record) alpha_bead: "); print_row_vec(alpha_bead,nbeads);
 
     print_basic_record();
   }
-
-  inline void print_bead_row_vec(int * ivec_)
-  {for (int i = 0; i < nbeads; i++) printf("%d ", ivec_[i]); printf("\n");}
-  inline void print_bead_row_vec(double * dvec_)
-  {for (int i = 0; i < nbeads; i++) printf("%e ", dvec_[i]); printf("\n");}
 
   private:
     const int event_rec_it_ichunk_len,

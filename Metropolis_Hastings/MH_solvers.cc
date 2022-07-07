@@ -126,6 +126,11 @@ void MH_genetic::train_event_block(bool verbose_, bool &stable_convergence_, boo
   // perform stable training
   int nit_stable_train=0;
   double rho2_stable_local=rho2=set_stable_objective(verbose_, r2_scale);
+
+  print_MH_genetic();
+  examiners[0]->print_MH_examiner(get_nt(),sigma_scaled);
+  getchar();
+
   stable_convergence_=train_objective(verbose_,nit_train,nit_stable_train,rho2_stable_local);
   printf("(MH_genetic::train_event_block) done with stable training\n");
   getchar();

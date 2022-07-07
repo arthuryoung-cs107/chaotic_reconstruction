@@ -41,10 +41,10 @@ class MH_examiner: public basic_thread_worker
 
     // debugging
 
-    inline void print_examiner(int thread_count_)
+    inline void print_MH_examiner(int thread_count_, double sigma_scaled_)
     {
       printf("(MH_examiner) worker %d of %d:\n", thread_id, thread_count_);
-      print_basic_tw();
+      print_basic_tw("     ",sigma_scaled_);
     }
 
 
@@ -65,7 +65,7 @@ class MH_examiner: public basic_thread_worker
     {for (int i = 0; i < nbeads; i++) r2_1[i]=r2_2[i]=r2_3[i]=0.0;}
 
     inline bool update_training_data(int i_, double r2success_threshold_)
-    {      
+    {
       itest_list[ntest++]=i_;
       bool success_local=(*r2_objective)<r2success_threshold_;
       if (success_local) isuccess_list[nsuccess_test++] = i_;

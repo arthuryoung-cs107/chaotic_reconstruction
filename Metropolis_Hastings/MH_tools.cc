@@ -1,22 +1,13 @@
 #include "MH_tools.hh"
 
 void fseek_SAFE(FILE *fp,long int offset,int origin)
-{
-  if(fseek(fp,offset,origin)!=0)
-  {
-    printf("fseek_SAFE: error shifting file position by %ld bytes\n",offset);
-    exit(1);
-  }
-}
+  {if(fseek(fp,offset,origin)!=0) {printf("fseek_SAFE: error shifting file position by %ld bytes\n",offset); exit(1);}}
 
 void fread_SAFE(void *ptr,size_t size,size_t count,FILE *fp)
-{
-  if(fread(ptr,size,count,fp)!=count)
-  {
-    printf("fread_SAFE: can't read file\n");
-    exit(1);
-  }
-}
+  {if (fread(ptr,size,count,fp)!=count) {printf("fread_SAFE: can't read file\n"); exit(1);}}
+
+void print_row_vec(int *ivec_, int n_) {for (int i = 0; i < n_; i++) printf("%d ", ivec_[i]); printf("\n");}
+void print_row_vec(double *dvec_, int n_) {for (int i = 0; i < n_; i++) printf("%e ", dvec_[i]); printf("\n");}
 
 // event_block
 

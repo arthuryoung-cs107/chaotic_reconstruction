@@ -21,6 +21,8 @@ template <typename T> void free_Tmatrix(T ** Tmat_)
 
 void fseek_SAFE(FILE *fp,long int offset,int origin);
 void fread_SAFE(void *ptr,size_t size,size_t count,FILE *fp);
+void print_row_vec(int *ivec_, int n_);
+void print_row_vec(double *dvec_, int n_);
 
 struct MH_rng
 {
@@ -59,6 +61,19 @@ struct event_block
           ** const stdr2_state_comp, // ...
           ** const mualpha_state_comp, // ...
           ** const stdalpha_state_comp; // ...
+
+  // debugging
+
+  inline void print_event_block(double sigma_scaled_, const char indent_[]="     ")
+  {
+    printf("%s(event_block) stev_earliest: %d, stev_latest: %d \n", indent_, stev_earliest, stev_latest);
+    printf("%s(event_block) rho2stable: %e, rho2regime: %e, rho2unstable: %e\n", indent_, rho2stable, rho2regime, comp_rho2unstable(sigma_scaled_));
+    printf("%s(event_block) stev_comp: ",indent_); print_row_vec(stev_comp, ncomp);
+    printf("%s(event_block) stev_ordered: ",indent_); print_row_vec(stev_ordered, ncomp);
+    printf("%s(event_block) rho2stable_comp: ",indent_); print_row_vec(rho2stable_comp, ncomp);
+    printf("%s(event_block) delrho2_regime: ",indent_); print_row_vec(delrho2_regime, ncomp);
+  }
+
 
   virtual void clear_event_data();
   virtual void consolidate_event_data();
@@ -112,7 +127,6 @@ struct event_block
   inline int nstates_stable() {int n=0; for (int i = 0; i < ncomp; i++) n+=stev_comp[i]; return n;}
   inline int nstates_unstable() {return stev_latest*ncomp-nstates_stable();}
   inline double comp_rho2unstable(double sigma_scaled_) {return (((double)2*stev_latest*ncomp)*(sigma_scaled_*sigma_scaled_))-rho2stable;}
-
 };
 
 struct event_detector: public event_block
@@ -148,13 +162,16 @@ struct gaussian_likelihood
                 cl,
                 sigma_scaled;
 
+  inline void print_gaussian_likelihood(const char indent_[])
+    {printf("%s(gaussian_likelihood) sigma_noise = %e, cl = %e, sigma_scaled = %e\n", indent_,sigma_noise,cl,sigma_scaled);}
+
   inline double compute_weight(double r_, double r_min_, double rho_)
-  {
-    // arguments provided unsquared so that we can avoid issues with machine precision
-    return exp(0.5*((r_min_-r_)/rho_)*((r_min_+r_)/rho_));
-  }
+    {// arguments provided unsquared so that we can avoid issues with machine precision
+    return exp(0.5*((r_min_-r_)/rho_)*((r_min_+r_)/rho_));}
+
   inline double compute_prob(double r_, double rho_)
-  {return (1.0/(rho_*sqrt(root2pi)))*exp(-0.5*(r_/rho_)*(r_/rho_));}
+    {return (1.0/(rho_*sqrt(root2pi)))*exp(-0.5*(r_/rho_)*(r_/rho_));}
+
   inline double expected_r2(int * obs_states_, int ncomp_, int ndof_=2)
   {
     int net_obs=0;

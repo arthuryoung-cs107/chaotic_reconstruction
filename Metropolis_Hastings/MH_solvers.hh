@@ -53,10 +53,21 @@ class MH_genetic : public basic_MH_trainer, public event_block
                   ** const leader_board,
                   ** const candidates;
 
+
+    // debugging write outs
+
+    inline void print_MH_genetic()
+    {
+      printf("(MH_genetic) Class_count: %d, event_block_count %d\n", Class_count,event_block_count);
+      printf("(MH_genetic) prob_best: %e, prob_worst %e\n", prob_best,prob_worst);
+      print_basic_MHT("     ");
+      print_event_block(sigma_scaled,"     ");
+    }
+
     // run
     inline void initialize_genetic_run()
     {
-      initialize_basic_trainer_run();
+      initialize_basic_MHT_run();
       Class_count=event_block_count=0;
       prob_best=prob_worst=0.0;
     }
@@ -96,7 +107,7 @@ class MH_genetic : public basic_MH_trainer, public event_block
     double set_stable_objective(bool verbose_, double &r2_scale_);
     double set_unstable_objective(bool verbose_, double &r2_scale_);
     bool train_objective(bool verbose_,int &nit_,int &nit_objective_,double rho2_);
-    inline void clear_genetic_training_data() {clear_basic_trainer_training_data();}
+    inline void clear_genetic_training_data() {clear_basic_MHT_training_data();}
     double consolidate_genetic_training_data(double wsum_pool_,double *w_leaders_,double rho2_,int &nreplace_,double &r2_scale_);
 
     inline void report_genetic_training_data(int nreplace_,int &Class_count_,int &gen_count_)
@@ -135,21 +146,21 @@ class MH_genetic : public basic_MH_trainer, public event_block
 
     inline void write_genetic_it_ints(FILE * file_)
     {
-      write_basic_train_it_ints(file_);
+      write_basic_MHT_it_ints(file_);
       fwrite(genetic_train_it_ints,sizeof(int),genetic_train_it_ilen,file_);
     }
 
     inline void write_genetic_it_dubs(FILE * file_)
     {
-      write_basic_train_it_dubs(file_);
+      write_basic_MHT_it_dubs(file_);
       fwrite(genetic_train_it_dubs,sizeof(double),genetic_train_it_dlen,file_);
     }
 
     inline int genetic_it_ilen_full()
-      {return basic_train_it_ilen_full() + genetic_train_it_ilen;}
+      {return basic_MHT_it_ilen_full() + genetic_train_it_ilen;}
 
     inline int genetic_it_dlen_full()
-      {return basic_train_it_dlen_full() + genetic_train_it_dlen;}
+      {return basic_MHT_it_dlen_full() + genetic_train_it_dlen;}
 
   private:
 
@@ -185,21 +196,6 @@ class MH_genetic : public basic_MH_trainer, public event_block
       else printf("(MH_genetic::respawn_pool) ");
       printf("%d redraws, %d duplicates (%d unique).\n", nredraw, ndup, ndup_unique);
     }
-
-    // debugging write outs
-
-    inline void DEBUG_WRITEOUT_CHECK_consolidate_genetic_event_data_POST()
-    {
-      printf("(post consolidate_genetic_event_data)\n");
-      printf("stev_earliest: %d, stev_latest: %d\n",stev_earliest,stev_latest);
-      printf("stev_comp: "); for (int i = 0; i < nbeads; i++) printf("%d, ",stev_comp[i]); printf("\n");
-      printf("stev_ordered: "); for (int i = 0; i < nbeads; i++) printf("%d, ",stev_ordered[i]); printf("\n");
-      printf("comps_ordered: "); for (int i = 0; i < nbeads; i++) printf("%d, ",comps_ordered[i]); printf("\n");
-    }
-
-    inline void DEBUG_WRITEOUT_STOP_find_events()
-      {printf("Event data synchronised and reported\n");getchar();}
-
 };
 
 class MH_doctor : public MH_genetic
