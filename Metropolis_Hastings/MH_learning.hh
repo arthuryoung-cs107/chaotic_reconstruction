@@ -66,7 +66,6 @@ class thread_worker: public swirl, public thread_worker_struct
               * const psim;
 
       void reset_sim(double *utest_, double t0_, double ctheta0_, double comega0_, double *p0_);
-
       inline double * advance_sim(int f_local_,double *t_history_)
       {
         advance((ts[f_local_]-ts[f_local_-1])/t_phys,d_ang[f_local_-1], comega_s[f_local_],dt_sim);
@@ -88,7 +87,7 @@ class thread_worker: public swirl, public thread_worker_struct
 };
 
 
-const int MHT_it_ilen=10;
+const int MHT_it_ilen=11;
 const int MHT_it_dlen=3;
 class MH_trainer : public MH_params
 {
@@ -120,6 +119,7 @@ class MH_trainer : public MH_params
         ndup,         // 7: total number of leader duplication and perturbations from recent resampling
         ndup_unique,  // 8: total number of unique duplications from recent resampling
         nredraw,      // 9: total number of trial particles drawn from proposal distribution in recent resampling
+        nreload,      // 10: total number of leader particles reloaded into pool
         * const MHT_it_ints = &leader_count,
         ** const ichunk; // space for records to store integer parameters
 
@@ -236,7 +236,6 @@ struct basic_record: public record
   }
 
   // training
-  inline double get_r2() {return *dub_compare_bad;}
 
   inline int take_basic_record(basic_record * rec_)
   {
@@ -254,41 +253,53 @@ struct basic_record: public record
   inline int basic_rec_dlen_full() {return basic_rec_dlen;}
 
   inline void write_basic_rec_ints(FILE * file_)
-  {fwrite(basic_rec_ints, sizeof(int), basic_rec_ilen, file_);}
+    {fwrite(basic_rec_ints, sizeof(int), basic_rec_ilen, file_);}
 
   inline void write_basic_rec_dubs(FILE * file_)
-  {fwrite(basic_rec_dubs, sizeof(double), basic_rec_dlen, file_);}
+    {fwrite(basic_rec_dubs, sizeof(double), basic_rec_dlen, file_);}
 };
 
 class basic_thread_worker: public thread_worker, public event_detector
 {
     public:
 
-      basic_thread_worker(swirl_param &sp_, proximity_grid *pg_, wall_list &wl_, thread_worker_struct &tws_, int thread_id_, double alpha_tol_): thread_worker(sp_, pg_, wl_, tws_, thread_id_), event_detector(nbeads, Frames, 2, alpha_tol_),
-      int_wkspc(new int[iwkspc_len(npool)]), dub_wkspc(new double[ulen]) {}
+      basic_thread_worker(swirl_param &sp_, proximity_grid *pg_, wall_list &wl_, thread_worker_struct &tws_, int thread_id_, double alpha_tol_, int iwkspc_len_, int dwkspc_len_): thread_worker(sp_, pg_, wl_, tws_, thread_id_), event_detector(nbeads, Frames, 2, alpha_tol_),
+      iwkspc_len(iwkspc_len_), dwkspc_len(dwkspc_len_),
+      int_wkspc(new int[iwkspc_len]), dub_wkspc(new double[dwkspc_len]) {}
 
       ~basic_thread_worker() {delete [] int_wkspc; delete [] dub_wkspc;}
 
-      int * const int_wkspc,
-          * const itest_list=int_wkspc,
-          * const isuccess_list=int_wkspc+npool;
+      const int iwkspc_len,
+                dwkspc_len;
 
-      double * const dub_wkspc;
+      int * const int_wkspc;
+
+      double  netr2,
+              netr2_stable,
+              netr2_unstable,
+              *r2_objective,
+              * const dub_wkspc;
+
+      inline void set_net_objective()
+        {r2_objective=&netr2; rho2_objective=compute_netrho2();}
+      inline void set_stable_objective()
+        {r2_objective=&netr2_stable; rho2_objective=compute_netrho2stable();}
+      inline void set_unstable_objective()
+        {r2_objective=&netr2_unstable; rho2_objective=compute_netrho2unstable();}
 
       inline void clear_basic_tw_training_data()
       {
-        memset(int_wkspc,0,iwkspc_len(npool)*sizeof(int));
-        for (int i = 0; i < ulen; i++) dub_wkspc[i]=0.0;
+        memset(int_wkspc,0,iwkspc_len*sizeof(int));
+        for (int i = 0; i < dwkspc_len; i++) dub_wkspc[i]=0.0;
       }
+
+      inline bool check_success(double r2_threshold_) {return (*r2_objective)<r2_threshold_;}
 
     protected:
 
       // debugging
       inline void print_basic_tw(const char indent_[], double sigma_scaled_)
         {print_event_block(sigma_scaled_,indent_);}
-
-    private:
-      inline int iwkspc_len(int npool_) {return 2*npool_;}
 };
 
 class basic_MH_trainer: public MH_trainer, public gaussian_likelihood

@@ -2,7 +2,7 @@
 
 //MH_examiner
 
-void MH_examiner::start_detecting_events(int &f_local_,int &iregime_local_,int *f_event_,double &netr2_local_,double &netr2_stable_local_,double &netr2_unstable_local_,double *t_history_,double *r2stable_bead_,double *netr2_regime_,double *r2unstable_bead_,double *alphaev_bead_)
+void MH_examiner::start_detecting_events(int &f_local_,int *f_event_,double &netr2_local_,double &netr2_stable_local_,double &netr2_unstable_local_,double *t_history_,double *r2net_bead_,double *r2stable_bead_,double *r2unstable_bead_,double *alphaev_bead_)
 {
   // initialize everything
   f_local_=iregime_local_=0;
@@ -10,7 +10,8 @@ void MH_examiner::start_detecting_events(int &f_local_,int &iregime_local_,int *
   t_history_[0]=t_history_[1]=t_history_[2]=ts[f_local_];
   for (int i = 0; i < nbeads; i++)
   {
-    r2_state_comp[f_local_][i]=INTr2_comp_history[i][0]=INTr2_comp_history[i][1]=r2stable_bead_[i]=netr2_regime_[i]=r2unstable_bead_[i]=0.0;
+    r2_state_comp[f_local_][i]=INTr2_comp_history[i][0]=INTr2_comp_history[i][1]=
+    r2net_bead_[i]=r2stable_bead_[i]=r2unstable_bead_[i]=0.0;
     alpha_state_comp[f_local_][i]=alphaev_bead_[i]=NAN;
     f_event_[i]=0;
   }
@@ -20,10 +21,11 @@ void MH_examiner::start_detecting_events(int &f_local_,int &iregime_local_,int *
   for (int iframe = 1; iframe <= 2; iframe++)
   {
     pref=thread_worker::advance_sim(++f_local_,t_history_);
-    for (int i=0,j=0; i < nbeads; i++,j+=dof)
+    for (int i=0,j=0; i < nbeads; i++,j+=dim)
     {
       double rsq=thread_worker::compute_residual(q[i].x,q[i].y,pref[j],pref[j+1]);
-      netr2_local_+=r2_state_comp[f_local_][i]=rsq;
+      r2_state_comp[f_local_][i]=rsq;
+      netr2_local_+=rsq; r2net_bead_[i]+=rsq;
 
       basic_thread_worker::update_integral_history(0.5*(rsq+r2_state_comp[f_local_-1][i])*(t_history_[0]-t_history_[1]),i);
 
@@ -33,19 +35,18 @@ void MH_examiner::start_detecting_events(int &f_local_,int &iregime_local_,int *
     }
   }
   // set stable residual, assuming that frames 0,1,2 were all stable
-  netr2_stable_local_=netr2_regime_[0]=netr2_local_;
+  netr2_stable_local_=netr2_local_;
 }
 
 void MH_examiner::update_event_data(int final_frame_, int *f_event_, double *r2i_, double *alphai_)
 {
-
   ntest++;
   stev_early=stev_late=f_event_[0];
-  nf_stable=0;
+  nf_stobs=0;
   for (int i=0, k=0; i < nbeads; i++)
   {
     int fevent_it = f_event_[i];
-    nf_stable+=fevent_it;
+    nf_stobs+=fevent_it;
     nev_state_comp[fevent_it][i]++;
     if (fevent_it<stev_early) stev_early = fevent_it;
     if (fevent_it>stev_late) stev_late = fevent_it;
@@ -56,9 +57,8 @@ void MH_examiner::update_event_data(int final_frame_, int *f_event_, double *r2i
       nobs_state_comp[0][k]++;
     }
   }
-  nf_obs=stev_late*nbeads;
-  nf_regime=nf_stable;
-  nf_unstable=nf_obs-nf_stable;
+  nf_netobs=stev_late*nbeads;
+  nf_usobs=nf_netobs-nf_stobs;
   if (stev_early<stev_earliest) stev_earliest=stev_early;
   if (stev_late>stev_latest) stev_latest=stev_late;
 }
@@ -110,45 +110,35 @@ void MH_examiner::restore_event_record(event_record *rec_, double *r2_Fb_, doubl
   double  netr2_local=0.0,
           netr2_stable_local=0.0,
           netr2_unstable_local=0.0,
+          *r2net_bead=rec_->r2net_bead,
           *r2stable_bead=rec_->r2stable_bead,
-          *netr2_regime=rec_->netr2_regime,
           *r2unstable_bead=rec_->r2unstable_bead,
           *alphaev_bead=rec_->alpha_bead;
 
-  clear_record_residuals(r2stable_bead,netr2_regime,r2unstable_bead);
+  rec_->clear_residuals();
 
   for (int i_frame=0,k=0; i_frame <= frame_last; i_frame++)
     for (int i_bead = 0; i_bead < nbeads; i_bead++,k++)
     {
       double r2_it = r2_Fb_[k];
-      netr2_local+=r2_it;
+      netr2_local+=r2_it; r2net_bead[i_bead]+=r2_it;
       if (i_frame<=(stev_comp[i_bead]+1))
       {
         if (i_frame==(stev_comp[i_bead]+1)) // if we've hit our synchronised event frame
         {
-          f_event[i_bead]=i_frame-1;
-          alphaev_bead[i_bead]=alpha_Fb_[k];
-          netr2_unstable_local+=r2unstable_bead[i_bead]=netr2_regime[++iregime_local]=r2_it;
+          f_event[i_bead]=i_frame-1; alphaev_bead[i_bead]=alpha_Fb_[k];
+          netr2_unstable_local+=r2unstable_bead[i_bead]=r2_it;
         }
         else
-        {
-          netr2_stable_local+=r2_it;
-          r2stable_bead[i_bead]+=r2_it;
-          netr2_regime[iregime_local]+=r2_it;
-        }
+          {netr2_stable_local+=r2_it; r2stable_bead[i_bead]+=r2_it;}
       }
       else
-      {
-        netr2_stable_local+=r2_it;
-        r2stable_bead[i_bead]+=r2_it;
-        netr2_regime[iregime_local]+=r2_it;
-      }
+        {netr2_unstable_local+=r2_it; r2unstable_bead[i_bead]+=r2_it;}
     }
   net_r2=netr2_local;
   net_r2_stable=netr2_stable_local;
-  net_r2_regime=netr2_stable_local;
   net_r2_unstable=netr2_unstable_local;
-  rec_->record_event_data(&nf_obs,&net_r2);
+  rec_->record_event_data(&nf_netobs,&net_r2);
 }
 
 void MH_examiner::consolidate_examiner_training_data(event_record ** pool_)

@@ -16,24 +16,6 @@ int event_record::take_record(event_record *r_)
   else return 0;
 }
 
-void event_record::determine_event_block(int &stev_earliest_, int &stev_latest_, int *stev_comp_, int *stev_ordered_, int *comps_ordered_)
-{
-  /* we're only actually setting stev_earliest_, stev_latest_, and stev_comp_ here. Everything else is just staging the event block ordering
-  */
-  int evframe_latest=0,
-      evframe_earliest=Frames;
-  for (int i = 0; i < nbeads; i++)
-  {
-    int evframe_it = evframe_bead[i];
-    stev_comp_[i]=stev_ordered_[i]=evframe_it;
-    comps_ordered_[i]=i;
-    if (evframe_it<evframe_earliest) evframe_earliest=evframe_it;
-    if (evframe_it>evframe_latest) evframe_latest=evframe_it;
-  }
-  stev_earliest_=evframe_earliest;
-  stev_latest_=evframe_latest;
-}
-
 void event_record::write_event_rec_full_header(FILE * file_, int len_)
 {
   int hlen = 5;

@@ -22,7 +22,7 @@ event_block::~event_block()
 {
   delete [] stev_comp; delete [] stev_ordered; delete [] comps_ordered;
   free_Tmatrix<int>(nev_state_comp); free_Tmatrix<int>(nobs_state_comp);
-  delete[] rho2stable_comp; delete[] rho2unstable_comp;
+  delete [] rho2stable_comp; delete [] rho2unstable_comp;
   free_Tmatrix<double>(mur2_state_comp); free_Tmatrix<double>(stdr2_state_comp);
   free_Tmatrix<double>(mualpha_state_comp); free_Tmatrix<double>(stdalpha_state_comp);
 }
@@ -66,10 +66,10 @@ void event_block::define_event_block(double sigma_scaled_)
   }
 }
 
-void event_block::synchronise_event_data(int stev_earliest_, int stev_latest_, int *stev_c_, int *stev_o_, int *comps_o_,double *rho2s_c_, double *rho2us_c_)
+void event_block::synchronise_event_data(int stev_e_, int stev_l_, int *stev_c_, int *stev_o_, int *comps_o_,double *rho2s_c_, double *rho2us_c_)
 {
-  stev_earliest=stev_earliest_;
-  stev_latest=stev_latest_;
+  stev_earliest=stev_e_;
+  stev_latest=stev_l_;
   for (int i = 0; i < ncomp; i++)
   {
     stev_comp[i]=stev_c_[i];

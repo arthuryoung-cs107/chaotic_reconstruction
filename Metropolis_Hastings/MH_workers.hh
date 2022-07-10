@@ -7,10 +7,14 @@ class MH_examiner: public basic_thread_worker
 {
   public:
 
-    MH_examiner(swirl_param &sp_, proximity_grid *pg_, wall_list &wl_, thread_worker_struct &tws_, int thread_id_, double alpha_tol_): basic_thread_worker(sp_, pg_, wl_, tws_, thread_id_, alpha_tol_) {}
+    MH_examiner(swirl_param &sp_, proximity_grid *pg_, wall_list &wl_, thread_worker_struct &tws_, int thread_id_, double alpha_tol_): basic_thread_worker(sp_, pg_, wl_, tws_, thread_id_, alpha_tol_, comp_iwkspc_len(tws_),comp_dwkspc_len(tws_)) {}
     ~MH_examiner() {}
 
-    double * const ustat_buffer=dub_wkspc;
+    int * const dupcount_leaders=int_wkspc,
+        * const itest_list=int_wkspc,
+        * const isuccess_list=int_wkspc+npool;
+
+    double * const ustat_buf=dub_wkspc;
 
     // event
     inline void clear_examiner_event_data() {event_block::clear_event_data(); ntest=0;}
@@ -18,14 +22,13 @@ class MH_examiner: public basic_thread_worker
     void consolidate_examiner_event_data();
     bool report_examiner_event_data(bool first2finish_, int &stev_earliest_, int &stev_latest_, int *stev_c_, int ** nev_s_c_, int ** nobs_s_c_, double ** r2_s_c_, double **alpha_s_c_);
 
-    inline void synchronise_examiner_event_data(int stev_earliest_, int stev_latest_, int *stev_c_, int *stev_o_, int *comps_o_,double *rho2s_c_,double *rho2us_c_)
-      {event_block::synchronise_event_data(stev_earliest_,stev_latest_,stev_c_,stev_o_,comps_o_,rho2s_c_,rho2us_c_);}
+    inline void synchronise_examiner_event_data(int stev_e_, int stev_l_, int *stev_c_, int *stev_o_, int *comps_o_,double *rho2s_c_,double *rho2us_c_)
+      {event_block::synchronise_event_data(stev_e_,stev_l_,stev_c_,stev_o_,comps_o_,rho2s_c_,rho2us_c_);}
 
     void restore_event_record(event_record *rec_, double *r2_Fb_, double *alpha_Fb_);
 
     // training
 
-    inline void set_objective(double rho2_objective_) {rho2_objective=rho2_objective_;}
     inline void clear_examiner_training_data() {clear_basic_tw_training_data(); ntest=0; nsuccess_test=0;}
     bool examine_u(event_record *pooli_, int i_, double r2success_threshold_);
     void consolidate_examiner_training_data(event_record ** pool_);
@@ -45,25 +48,30 @@ class MH_examiner: public basic_thread_worker
     friend class MH_medic;
 
     int ntest,
-        nsuccess_test;
+        nsuccess_test,
+        nf_netobs,  // net number of observation frames
+        nf_stobs,   // net number of stable observation frames
+        nf_usobs;   // net number of unstable observation frames
 
     event_record *btest;
 
     // event
-    void start_detecting_events(int &f_local_,int &iregime_local_,int *f_event_,double &netr2_local_,double &netr2_stable_local_,double &netr2_unstable_local_,double *t_history_,double *r2stable_bead_,double *netr2_regime_,double *r2unstable_bead_,double *alphaev_bead_);
+    void start_detecting_events(int &f_local_,int *f_event_,double &netr2_local_,double &netr2_stable_local_,double &netr2_unstable_local_,double *t_history_,double *r2net_bead,double *r2stable_bead_,double *r2unstable_bead_,double *alphaev_bead_);
     void update_event_data(int final_frame_, int *f_event_, double *r2i_, double *alphai_);
 
     // training
-    inline void clear_record_residuals(double *r2_1, double *r2_2, double *r2_3)
-    {for (int i = 0; i < nbeads; i++) r2_1[i]=r2_2[i]=r2_3[i]=0.0;}
-
     inline bool update_training_data(int i_, double r2success_threshold_)
     {
       itest_list[ntest++]=i_;
-      bool success_local=(*r2_objective)<r2success_threshold_;
-      if (success_local) isuccess_list[nsuccess_test++] = i_;
-      return success_local;
+      if (basic_thread_worker::check_success(r2success_threshold_))
+        {isuccess_list[nsuccess_test++] = i_; return true;}
+      else return false;
     }
+
+  private:
+
+    inline int comp_iwkspc_len(thread_worker_struct &tws_) {return 2*tws_.npool;}
+    inline int comp_dwkspc_len(thread_worker_struct &tws_) {return tws_.ulen;}
 };
 
 class MH_medic
@@ -107,7 +115,7 @@ class MH_medic
             * const xs=ex.xs,
             * const psim=ex.psim,
             * const rho2stable_comp=ex.rho2stable_comp,
-            * const delrho2_regime=ex.delrho2_regime,
+            * const rho2unstable_comp=ex.rho2unstable_comp,
             ** const r2_state_comp=ex.r2_state_comp,
             ** const alpha_state_comp=ex.alpha_state_comp,
             ** const INTr2_comp_history=ex.INTr2_comp_history;
@@ -129,12 +137,10 @@ class MH_medic
         stev_latest,
         nf_obs,
         nf_stable,
-        nf_regime,
         nf_unstable;
 
     double  net_r2,
             net_r2_stable,
-            net_r2_regime,
             net_r2_unstable,
             rho2stable,
             * const TEST_p,

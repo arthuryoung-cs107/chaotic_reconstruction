@@ -88,11 +88,6 @@ class MH_genetic : public basic_MH_trainer, public event_block
       }
       event_block::consolidate_event_data();
     }
-    inline void consolidate_genetic_event_data(int bleader_index_)
-    {
-      pool[bleader_index_]->determine_event_block(stev_earliest,stev_latest,stev_comp,stev_ordered,comps_ordered);
-      event_block::consolidate_event_data();
-    }
 
     inline void define_genetic_event_block()
       {event_block::define_event_block(sigma_scaled_);}
@@ -101,11 +96,8 @@ class MH_genetic : public basic_MH_trainer, public event_block
     void report_genetic_event_data();
     inline void stage_event_search() {take_records(leaders,pool,nlead);}
 
-    inline double get_rho2unstable() {return event_block::comp_rho2unstable(sigma_scaled);}
-
     // training
-    double set_stable_objective(bool verbose_, double &r2_scale_);
-    double set_unstable_objective(bool verbose_, double &r2_scale_);
+    double set_objective(bool verbose_, double &r2_scale_, bool stable_flag_);
     bool train_objective(bool verbose_,int &nit_,int &nit_objective_,double rho2_);
     inline void clear_genetic_training_data() {clear_basic_MHT_training_data();}
     double consolidate_genetic_training_data(double wsum_pool_,double *w_leaders_,double rho2_,int &nreplace_,double &r2_scale_);
@@ -120,7 +112,7 @@ class MH_genetic : public basic_MH_trainer, public event_block
 
     // sampling
     double set_leader_records(int &nreplace_, event_record **blead_address_, int &bleader_rid_, int &wleader_rid_, double &br2_, double &wr2_);
-    void respawn_pool(bool verbose_, double wsum_, double *w_leaders_, int offset_=0);
+    void respawn_pool(bool verbose_, double wsum_, double *w_leaders_, int nreload_=0);
     double compute_weights(double r2_min_, double rho2in_, event_record ** recs_, int n_);
     double compute_weights(double r2_min_, double rho2in_, double *w_leaders_);
     void compute_weighted_ustats(double wsum_, event_record ** recs_, int n_);
@@ -174,15 +166,16 @@ class MH_genetic : public basic_MH_trainer, public event_block
       {printf("(bead,frame), chronologically:\n");
       for (int i = 0; i < nbeads; i++) printf("(%d %d)\n",comps_ordered[i],stev_ordered[i]);}
 
-    inline void verbose_set_stable_objective_1()
-    {printf("(MH_genetic::set_stable_objective) %d stable frames, rho2 = %e. ", nstates_stable(),rho2stable);}
+    inline void verbose_set_objective_1()
+    {
+      printf("(MH_genetic::set_objective) %d %s frames, rho2 = %e. ",
+      (stable_flag)?event_block::nst_stable():event_block::nst_unstable(),
+      (stable_flag)?"STABLE":"UNSTABLE",
+      rho2_objective);
+    }
 
-    inline void verbose_set_stable_objective_2() {printf("nreplace: %d, r2 best (%d): %e, r2 worst: %e.\n", nreplace, bleader_rid, br2, wr2);}
-
-    inline void verbose_set_unstable_objective_1()
-    {printf("(MH_genetic::set_unstable_objective) %d unstable frames, rho2 = %e", nstates_unstable(),get_rho2unstable());}
-
-    inline void verbose_set_unstable_objective_2() {printf("r2 best (%d): %e, r2 worst: %e.\n", bleader_rid, br2, wr2);}
+    inline void verbose_set_objective_2()
+      {printf("nreplace: %d, r2 best (%d): %e, r2 worst (%d): %e.\n",nreplace,bleader_rid,br2,wleader_rid,wr2);}
 
     inline void verbose_train_objective_1(int nit_)
       {printf("(MH_genetic::train_objective) gen %d, Class %d, nit %d: %d candidates, best candidate r2 = %e. ", gen_count, Class_count, nit_, ncandidates, br2);}

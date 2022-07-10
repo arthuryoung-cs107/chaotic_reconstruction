@@ -107,13 +107,13 @@ void MH_genetic::find_events(bool verbose_)
   if (verbose_) verbose_find_events_1();
 
   // sort event states chronologically, given stev_comp is already set
-  if (gen_count>0) consolidate_genetic_event_data(bleader_rid); // using our best guess
-  else consolidate_genetic_event_data(); // using conservative estimates
+  consolidate_genetic_event_data();
 
   if (verbose_) verbose_find_events_2();
 
   // compute expected residuals using presumed noise level
   define_genetic_event_block();
+
   if (verbose_) verbose_find_events_3();
 
   synchronise_genetic_event_data(); // set event data of thread workers to the consolidated values
@@ -126,7 +126,7 @@ void MH_genetic::train_event_block(bool verbose_, bool &stable_convergence_, boo
 
   // perform stable training
   int nit_stable_train=0;
-  double rho2_stable_local=rho2=set_stable_objective(verbose_, r2_scale);
+  double rho2_stable_local=rho2=set_objective(verbose_, r2_scale, stable_flag=true);
 
   print_MH_genetic();
   examiners[0]->print_MH_examiner(get_nt(),sigma_scaled);
@@ -135,9 +135,10 @@ void MH_genetic::train_event_block(bool verbose_, bool &stable_convergence_, boo
   stable_convergence_=train_objective(verbose_,nit_train,nit_stable_train,rho2_stable_local);
   printf("(MH_genetic::train_event_block) done with stable training\n");
   getchar();
+  
   // perform unstable training
   int nit_unstable_train=0;
-  double rho2_unstable_local=rho2=set_unstable_objective(verbose_, r2_scale);
+  double rho2_unstable_local=rho2=set_objective(verbose_, r2_scale, stable_flag=false);
   unstable_convergence_=train_objective(verbose_,nit_train,nit_unstable_train,rho2_unstable_local);
 }
 
@@ -170,7 +171,9 @@ bool MH_genetic::train_objective(bool verbose_, int &nit_, int &nit_objective_, 
       }
     }
     if (verbose_) verbose_train_objective_1(nit_);
-    double wsum_leaders = consolidate_genetic_training_data(wsum_pool, w_leaders,rho2_,nreplace,r2_scale);
+
+    double wsum_leaders = consolidate_genetic_training_data(wsum_pool,w_leaders,rho2_,nreplace,r2_scale);
+
     if (verbose_) verbose_train_objective_2();
 
     report_genetic_training_data(nreplace,Class_count,gen_count);
@@ -180,17 +183,17 @@ bool MH_genetic::train_objective(bool verbose_, int &nit_, int &nit_objective_, 
   return training_success;
 }
 
-void MH_genetic::respawn_pool(bool verbose_, double w_sum_, double *w_leaders_, int offset_)
+void MH_genetic::respawn_pool(bool verbose_, double w_sum_, double *w_leaders_, int nreload_)
 {
   memset(ndup_leaders,0,nlead*sizeof(int));
   for (int i = 0; i < ulen; i++) u_var[i]=u_mean[i]=0.0;
-  ndup=nredraw=ndup_unique=0;
+  ndup=ndup_unique=nredraw=nreload=0;
 
-  #pragma omp parallel
+  #pragma omp parallel reduction(+:ndup) reduction(+:nredraw) reduction(+:nreload)
   {
     int tid = thread_num(),
-        *dup_t = examiners[tid]->int_wkspc;
-    double  *u_stat_t = examiners[tid]->dub_wkspc,
+        *dup_t = examiners[tid]->dupcount_leaders;
+    double  *u_stat_t = examiners[tid]->ustat_buf,
             inv_npool = 1.0/((double)npool),
             inv_npoolm1 = 1.0/((double)(npool-1));
     MH_rng * rng_t = rng[tid];
@@ -198,10 +201,11 @@ void MH_genetic::respawn_pool(bool verbose_, double w_sum_, double *w_leaders_, 
     memset(dup_t,0,nlead*sizeof(int));
     for (int i = 0; i < ulen; i++) u_stat_t[i]=0.0;
 
-    #pragma omp for reduction(+:ndup) reduction(+:nredraw) nowait
+    #pragma omp for nowait
     for (int i = 0; i < npool; i++)
     {
-      if (i<offset_) pool[i]->take_record(leaders[i]); // reloading the leaders
+      if (i<nreload_)
+        {nreload++; pool[i]->take_record(leaders[i]); // reloading the leaders}
       else
       {
         int j=0;
@@ -247,7 +251,7 @@ void MH_genetic::respawn_pool(bool verbose_, double w_sum_, double *w_leaders_, 
   for (int i = 0; i < leader_count; i++) if (ndup_leaders[i])
   {leaders[i]->dup_count+=ndup_leaders[i]; ndup_unique++;}
 
-  if (verbose_) verbose_respawn_pool(offset_);
+  if (verbose_) verbose_respawn_pool(nreload);
 }
 
 bool MH_genetic::check_objective_convergence(int nit_, int nit_objective_, bool &training_success_)
@@ -269,13 +273,22 @@ bool MH_genetic::check_run_convergence(bool stable_conv_, bool unstable_conv_)
 {
   if (event_block::check_stev_convergence()&&stable_conv_&&unstable_conv_)
   {
-    printf("We win.\n");
+    printf("(MH_genetic) We win.\n");
     return true;
   }
   else if (gen_count>=gen_max)
   {
-    printf("max generations reached.\n");
+    printf("(MH_genetic) max generations reached.\n");
     return true;
   }
-  else return false;
+  else
+  {
+    printf("(MH_genetic) event block %d trained. ", event_block_count);
+    if (stable_conv_) printf("Stable component CONVERGED, ");
+    else printf("Stable component FAILED to converge, ");
+    if (unstable_conv_) printf("Unstable component CONVERGED. ");
+    else printf("Unstable component FAILED to converge. ");
+    printf("Preparing new event block.\n");
+    return false;
+  }
 }

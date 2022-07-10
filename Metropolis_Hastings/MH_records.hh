@@ -10,7 +10,7 @@ int comp_event_rec_it_dchunk_len(int nbeads_);
 const int event_rec_ilen = 3;
 const int event_rec_dlen = 3;
 const int event_rec_it_ilen = 0;
-const int event_rec_it_dlen = 2;
+const int event_rec_it_dlen = 3;
 struct event_record : public basic_record
 {
   event_record(record_struct &rs_, int rid_, int * ichunk_, double * dchunk_, double * u_): basic_record(rs_, rid_, ichunk_, dchunk_, u_),
@@ -44,21 +44,20 @@ struct event_record : public basic_record
 
   inline void record_event_data(int *int_data_, double * double_data_)
   {
-    nfobs=int_data_[0]; nfstable=int_data_[1]; nfregime=int_data_[2]; nfunstable=int_data_[3];
-    r2=double_data_[0]; r2stable=double_data_[1]; r2regime=double_data_[2]; r2unstable=double_data_[3];
+    nfobs=int_data_[0]; nfstable=int_data_[1]; nfunstable=int_data_[2];
+    r2net=double_data_[0]; r2stable=double_data_[1]; r2unstable=double_data_[2];
   }
-
-  void determine_event_block(int &stev_earliest_,int &stev_latest_,int *stev_comp_,int *stev_ordered_,int *comps_ordered_);
 
   // training
 
   inline double set_record_net() {dub_compare_bad = &r2net; return r2net;}
   inline double set_record_stable() {dub_compare_bad = &r2stable; return r2stable;}
   inline double set_record_unstable() {dub_compare_bad = &r2unstable; return r2unstable;}
+  inline void clear_residuals() {for (int i = 0; i < 3*nbeads; i++) dchunk[i]=0.0;}
 
   inline void record_training_data(double *double_data_, bool success_)
   {
-    r2=r2net=double_data_[0]; r2stable=double_data_[1]; r2unstable=double_data_[3];
+    r2net=double_data_[0]; r2stable=double_data_[1]; r2unstable=double_data_[2];
     success=success_;
   }
 

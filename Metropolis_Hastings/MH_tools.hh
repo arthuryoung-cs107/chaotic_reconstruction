@@ -42,6 +42,8 @@ struct event_block
   event_block(int ncomp_, int nstates_, int dim_=2)
   ~event_block();
 
+  bool stable_flag;
+
   const int ncomp, // nbeads, in a general sense
             nstates, // Frames, in a general sense
             dim, // dimension of each component (x,y)
@@ -78,7 +80,7 @@ struct event_block
   virtual void clear_event_data();
   virtual void consolidate_event_data();
   virtual void define_event_block(double sigma_scaled_);
-  virtual void synchronise_event_data(int stev_earliest_, int stev_latest_, int *stev_c_, int *stev_o_, int *comps_o_,double *rho2s_c_, double *rho2us_c_);
+  virtual void synchronise_event_data(int stev_e_, int stev_l_, int *stev_c_, int *stev_o_, int *comps_o_,double *rho2s_c_, double *rho2us_c_);
   inline void report_event_data(int ** nev_s_c_, int ** nobs_s_c_, double ** r2_s_c_, double **alpha_s_c_)
   {
     for (int i = 0; i < ncomp*stev_latest; i++)
@@ -115,9 +117,12 @@ struct event_block
     for (int i = 0; i < ncomp; i++) if (stev_comp[i]<(nstates-1)) conv_out=false;
     return conv_out;
   }
-  inline int nstates_stable() {int n=0; for (int i = 0; i < ncomp; i++) n+=stev_comp[i]; return n;}
-  inline int nstates_unstable() {return stev_latest*ncomp-nstates_stable();}
-  inline double comp_rho2unstable(double sigma_scaled_) {return (((double)2*stev_latest*ncomp)*(sigma_scaled_*sigma_scaled_))-rho2stable;}
+  inline double compute_netrho2()
+    {double out=0.0; for (int i = 0; i < ncomp; i++) out+=rho2stable_comp[i]+rho2unstable_comp[i]; return out;}
+  inline double compute_netrho2stable()
+    {double out=0.0; for (int i = 0; i < ncomp; i++) out+=rho2stable_comp[i]; return out;}
+  inline double compute_netrho2unstable()
+    {double out=0.0; for (int i = 0; i < ncomp; i++) out+=rho2unstable_comp[i]; return out;}
 };
 
 struct event_detector: public event_block

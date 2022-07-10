@@ -20,12 +20,15 @@ void MH_genetic::clear_genetic_event_data()
 
 void MH_genetic::synchronise_genetic_event_data()
 {
-  int nf_obs, nf_stable, nf_regime, nf_unstable;
-  event_block::set_state_counts(nf_obs, nf_stable, nf_regime, nf_unstable);
-  int nf_vec[] = {nf_obs, nf_stable, nf_regime, nf_unstable};
   #pragma omp parallel
   {
-    examiners[thread_num()]->synchronise_examiner_event_data(nf_vec,stev_earliest,stev_latest,rho2stable,stev_comp,stev_ordered,comps_ordered,rho2stable_comp,delrho2_regime);
+    examiners[thread_num()]->synchronise_examiner_event_data( stev_earliest,
+                                                              stev_latest,
+                                                              stev_comp,
+                                                              stev_ordered,
+                                                              comps_ordered,
+                                                              rho2stable_comp,
+                                                              rho2unstable_comp);
   }
 }
 
@@ -73,7 +76,7 @@ void MH_genetic::write_event_diagnostics(int event_block_count_)
   fwrite(nev_state_comp, sizeof(int), nbeads*stev_latest, data_file);
   fwrite(nobs_state_comp, sizeof(int), nbeads*stev_latest, data_file);
   fwrite(rho2stable_comp, sizeof(double), nbeads, data_file);
-  fwrite(delrho2_regime, sizeof(double), nbeads, data_file);
+  fwrite(rho2unstable_comp, sizeof(double), nbeads, data_file);
   fwrite(mur2_state_comp, sizeof(double), nbeads*stev_latest, data_file);
   fwrite(stdr2_state_comp, sizeof(double), nbeads*stev_latest, data_file);
   fwrite(mualpha_state_comp, sizeof(double), nbeads*stev_latest, data_file);
@@ -83,43 +86,69 @@ void MH_genetic::write_event_diagnostics(int event_block_count_)
   fclose(data_file);
 }
 
-double MH_genetic::set_stable_objective(bool verbose_, double &r2_scale_)
+double MH_genetic::set_stable_objective(bool verbose_, double &r2_scale_, bool stable_flag_)
 {
-  // start by using the r2_pool_Framebead data to adjust the records back to the correct event data
   double r2_min=DBL_MAX;
-  #pragma omp parallel
+  #pragma omp parallel reduction(min:r2_min)
   {
     MH_examiner *ex_t = examiners[thread_num()];
-    ex_t->set_stable_objective();
-    #pragma omp for reduction(min:r2_min) nowait
-    for (int i = 0; i < npool; i++)
+    if (stable_flag_)
     {
-      ex_t->restore_event_record(pool[i],r2_pool_Framebead[i],alpha_pool_Framebead[i]);
-      double r2_it = pool[i]->set_record_stable();
-      if (r2_it<r2_min) r2_min=r2_it;
-      leader_board[i]=pool[i];
+      ex_t->set_stable_objective();
+      #pragma omp for nowait
+      for (int i = 0; i < npool; i++)
+      {
+        // start by using the r2_pool_Framebead data to adjust the records back to the correct event data
+        ex_t->restore_event_record(pool[i],r2_pool_Framebead[i],alpha_pool_Framebead[i]);
+        double r2_it = pool[i]->set_record_stable();
+        if (r2_it<r2_min) r2_min=r2_it;
+        leader_board[i]=pool[i];
+      }
+      #pragma omp for
+      for (int i = 0; i < nlead; i++)
+      {
+        double r2_work = leaders[i]->set_record_stable();
+      }
     }
-    #pragma omp for
-    for (int i = 0; i < nlead; i++)
+    else
     {
-      double r2_work = leaders[i]->set_record_stable();
+      ex_t->set_unstable_objective();
+      #pragma omp for nowait
+      for (int i = 0; i < npool+nlead; i++)
+      {
+        double r2_it = records[i]->set_record_unstable();
+        if (r2_it<r2_min) r2_min=r2_it;
+        leader_board[i]=records[i];
+      }
     }
   }
 
-  if (verbose_) verbose_set_stable_objective_1();
+  if (verbose_) verbose_set_objective_1();
 
-  double wsum_full = compute_weights(r2_min,rho2stable,pool,npool);
-  compute_weighted_ustats(wsum_full,pool,npool);
+  event_record ** records_use;
+  int n_use;
+  if (stable_flag_)
+  {
+    rho2_objective=event_block::compute_netrho2stable();
+    records_use=pool;
+    n_use=npool;
+  }
+  else
+  {
+    rho2_objective=event_block::compute_netrho2unstable();
+    records_use=records;
+    n_use=nlead+npool;
+  }
+  double  rho2obj=rho2_objective,
+          wsum_full = compute_weights(r2_min,rho2obj,records_use,n_use);
 
-  // collect leaders
-  pick_nbest_records(leader_board,nlead,npool);
+  compute_weighted_ustats(wsum_full,records_use,n_use);
+  pick_nbest_records(leader_board,nlead,n_use);
   r2_scale_=set_leader_records(nreplace,&bleader,bleader_rid,wleader_rid,br2,wr2);
 
-  if (verbose_) verbose_set_stable_objective_2();
+  if (verbose_) verbose_set_objective_2();
 
   report_genetic_training_data(nreplace,Class_count,gen_count);
-
-  // resample pool
   double wsum_leaders=0.0; // given that weights have already been computed, just sum up leader terms
 
   #pragma omp parallel for reduction(+:wsum_leaders)
@@ -127,48 +156,7 @@ double MH_genetic::set_stable_objective(bool verbose_, double &r2_scale_)
     wsum_leaders+=w_leaders[i]=leaders[i]->w;
 
   respawn_pool(verbose_, wsum_leaders, w_leaders);
-  return rho2stable;
-}
-
-double MH_genetic::set_unstable_objective(bool verbose_, double &r2_scale_)
-{
-  double rho2unstable = get_rho2unstable();
-
-  double r2_min=DBL_MAX;
-  #pragma omp parallel
-  {
-    MH_examiner *ex_t = examiners[thread_num()];
-    ex_t->set_unstable_objective();
-    #pragma omp for reduction(min:r2_min) nowait
-    for (int i = 0; i < npool+nlead; i++)
-    {
-      double r2_it = records[i]->set_record_unstable();
-      if (r2_it<r2_min) r2_min=r2_it;
-      leader_board[i]=records[i];
-    }
-  }
-
-  if (verbose_) verbose_set_unstable_objective_1();
-
-  double wsum_full = compute_weights(r2_min,rho2unstable,records,npool+nlead);
-  compute_weighted_ustats(wsum_full,records,npool+nlead);
-
-  // collect leaders
-  pick_nbest_records(leader_board,nlead,npool+nlead);
-  r2_scale_=set_leader_records(nreplace,&bleader,bleader_rid,wleader_rid,br2,wr2);
-
-  if (verbose_) verbose_set_unstable_objective_2();
-
-  report_genetic_training_data(nreplace,Class_count,gen_count);
-  // resample pool
-  double wsum_leaders=0.0; // given that weights have already been computed, just sum up leader terms
-
-  #pragma omp parallel for reduction(+:wsum_leaders)
-  for (int i = 0; i < nlead; i++)
-    wsum_leaders+=w_leaders[i]=leaders[i]->w;
-
-  respawn_pool(verbose_, wsum_leaders, w_leaders);
-  return rho2unstable;
+  return rho2obj;
 }
 
 double MH_genetic::compute_weights(double r2_min_, double rho2in_, event_record ** recs_, int n_)
@@ -203,7 +191,7 @@ void MH_genetic::compute_weighted_ustats(double wsum_, event_record ** recs_, in
   #pragma omp parallel
   {
     int tid = thread_num();
-    double *uwkspc_t = examiners[tid]->ustat_buffer;
+    double *uwkspc_t = examiners[tid]->ustat_buf;
     for (int i = 0; i < ulen; i++) uwkspc_t[i]=0.0;
 
     // compute the weighted mean
