@@ -123,8 +123,6 @@ double MH_genetic::set_objective(bool verbose_, double &r2_scale_, bool stable_f
     }
   }
 
-  if (verbose_) verbose_set_objective_1();
-
   event_record ** records_use;
   int n_use;
   if (stable_flag_)
@@ -139,6 +137,9 @@ double MH_genetic::set_objective(bool verbose_, double &r2_scale_, bool stable_f
     records_use=records;
     n_use=nlead+npool;
   }
+
+  if (verbose_) verbose_set_objective_1();
+
   double  rho2obj=rho2_objective,
           wsum_full = compute_weights(r2_min,rho2obj,records_use,n_use);
 

@@ -51,6 +51,7 @@ int main()
   idmax=set_special_u("max", sp_max_vals);
 
   swirl_param sp_min(sp_min_vals), sp_max(sp_max_vals);
+  double noise_scale = sp_min.cl_im;
 
   // Create the hexagonal dish
   wall_list wl;
@@ -61,7 +62,7 @@ int main()
   wl.add_wall(&wf); wl.add_wall(&wp0); wl.add_wall(&wp1); wl.add_wall(&wp2);
 
   // sampling parameters
-  MH_io mh_io(proc_loc, test_dir, data_name, MH_id, noise_data, noise_sigma);
+  MH_io mh_io(proc_loc, test_dir, data_name, MH_id, noise_data, noise_sigma*noise_scale);
   MH_params mh_par(&mh_io, ulen, nlead, npool, dt_sim, t_phys, noise_sigma);
   MH_train_struct mhts(&mh_par, &sp_min, &sp_max, &wl);
 

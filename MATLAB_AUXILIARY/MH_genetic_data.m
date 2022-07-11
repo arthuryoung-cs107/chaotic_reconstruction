@@ -21,51 +21,6 @@ classdef MH_genetic_data
             obj.test_dir_name = test_dir_name;
             obj.MHpar = MHpar;
         end
-        function event_block_out = read_event_block_i(obj, i_)
-            file = fopen([obj.test_dir_name 'event_block' num2str(i_) '.mhdat']);
-            header = fread(file,3,'int=>int');
-            [hlen,npool,stev_latest]=deal(header(1),header(2),header(3));
-
-            nbeads = obj.MHpar.nbeads;
-            nb_x_F = nbeads*stev_latest;
-            ulen = obj.MHpar.ulen;
-
-            event_block_out = struct(   'stev_comp',fread(file,nbeads,'int=>int'), ...
-                                        'stev_ordered',fread(file,nbeads,'int=>int'), ...
-                                        'comps_ordered',fread(file,nbeads,'int=>int'), ...
-                                        'nev_state_comp',fread(file,nb_x_F,'int=>int'), ...
-                                        'nobs_state_comp',fread(file,nb_x_F,'int=>int'), ...
-                                        'rho2stable_comp',fread(file,nbeads,'double=>double'), ...
-                                        'delrho2_regime',fread(file,nbeads,'double=>double'), ...
-                                        'mur2_state_comp',fread(file,nb_x_F,'double=>double'), ...
-                                        'stdr2_state_comp',fread(file,nb_x_F,'double=>double'), ...
-                                        'mualpha_state_comp',fread(file,nb_x_F,'double=>double'), ...
-                                        'stdalpha_state_comp',fread(file,nb_x_F,'double=>double'), ...
-                                        'pool',record_block(file,ulen));
-        end
-        function Class_out = read_Class_i(obj, i_)
-            file = fopen([obj.test_dir_name 'Class' num2str(i_) '.mhdat']);
-            header = fread(file,3,'int=>int');
-            [hlen,ilen,dlen] = deal(header(1),header(2),header(3));
-            Class_out = MH_genetic_data.read_int_double_chunk(file,ilen,dlen);
-
-            ulen = obj.MHpar.ulen;
-
-            Class_out.leaders = record_block(file,ulen);
-        end
-        function gen_out = read_gen_i(obj, i_)
-            file = fopen([obj.test_dir_name 'gen' num2str(i_) '.mhdat']);
-            header = fread(file,3,'int=>int');
-            [hlen,ilen,dlen] = deal(header(1),header(2),header(3));
-            gen_out = MH_genetic_data.read_int_double_chunk(file,ilen,dlen);
-
-            ulen = obj.MHpar.ulen;
-
-            gen_out.u_mean=fread(file,ulen,'double=>double');
-            gen_out.u_wmean=fread(file,ulen,'double=>double');
-            gen_out.u_var=fread(file,ulen,'double=>double');
-            gen_out.u_wvar=fread(file,ulen,'double=>double');
-        end
     end
 
     methods (Static)
@@ -82,6 +37,74 @@ classdef MH_genetic_data
                                 'dt_sim', dubs(1), ...
                                 't_phys', dubs(2), ...
                                 'sigma', dubs(3));
+        end
+        function event_block_out = read_event_block_i(obj, i_, test_dir_name_, MHpar_)
+            if nargin==2
+                test_dir_name=obj.test_dir_name;
+                nbeads = obj.MHpar.nbeads;
+                ulen = obj.MHpar.ulen;
+            else
+                test_dir_name=test_dir_name_;
+                nbeads = MHpar_.nbeads;
+                ulen = MHpar_.ulen;
+            end
+
+            file = fopen([test_dir_name 'event_block' num2str(i_) '.mhdat']);
+            header = fread(file,3,'int=>int');
+            [hlen,npool,stev_latest]=deal(header(1),header(2),header(3));
+
+            nb_x_F = nbeads*stev_latest;
+
+            event_block_out = struct(   'stev_comp',fread(file,nbeads,'int=>int'), ...
+                                        'stev_ordered',fread(file,nbeads,'int=>int'), ...
+                                        'comps_ordered',fread(file,nbeads,'int=>int'), ...
+                                        'nev_state_comp',fread(file,nb_x_F,'int=>int'), ...
+                                        'nobs_state_comp',fread(file,nb_x_F,'int=>int'), ...
+                                        'rho2stable_comp',fread(file,nbeads,'double=>double'), ...
+                                        'rho2unstable_comp',fread(file,nbeads,'double=>double'), ...
+                                        'mur2_state_comp',fread(file,nb_x_F,'double=>double'), ...
+                                        'stdr2_state_comp',fread(file,nb_x_F,'double=>double'), ...
+                                        'mualpha_state_comp',fread(file,nb_x_F,'double=>double'), ...
+                                        'stdalpha_state_comp',fread(file,nb_x_F,'double=>double'), ...
+                                        'pool',record_block(file,ulen));
+            fclose(file);
+        end
+        function Class_out = read_Class_i(obj, i_, test_dir_name_, MHpar_)
+            if nargin==2
+                test_dir_name=obj.test_dir_name;
+                ulen = obj.MHpar.ulen;
+            else
+                test_dir_name=test_dir_name_;
+                ulen = MHpar_.ulen;
+            end
+
+            file = fopen([test_dir_name 'Class' num2str(i_) '.mhdat']);
+            header = fread(file,3,'int=>int');
+            [hlen,ilen,dlen] = deal(header(1),header(2),header(3));
+            Class_out = MH_genetic_data.read_int_double_chunk(file,ilen,dlen);
+
+            Class_out.leaders = record_block(file,ulen);
+            fclose(file);
+        end
+        function gen_out = read_gen_i(obj, i_, test_dir_name_, MHpar_)
+            if nargin==2
+                test_dir_name=obj.test_dir_name;
+                ulen = obj.MHpar.ulen;
+            else
+                test_dir_name=test_dir_name_;
+                ulen = MHpar_.ulen;
+            end
+
+            file = fopen([test_dir_name 'gen' num2str(i_) '.mhdat']);
+            header = fread(file,3,'int=>int');
+            [hlen,ilen,dlen] = deal(header(1),header(2),header(3));
+            gen_out = MH_genetic_data.read_int_double_chunk(file,ilen,dlen);
+
+            gen_out.u_mean=fread(file,ulen,'double=>double');
+            gen_out.u_wmean=fread(file,ulen,'double=>double');
+            gen_out.u_var=fread(file,ulen,'double=>double');
+            gen_out.u_wvar=fread(file,ulen,'double=>double');
+            fclose(file);
         end
         function chunk_data_out = read_int_double_chunk(file_,ilen_,dlen_)
             chunk_data_out = struct(    'ilen', ilen_, ...
