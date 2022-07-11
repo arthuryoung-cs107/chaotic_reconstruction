@@ -5,7 +5,7 @@
 void MH_examiner::start_detecting_events(int &f_local_,int *f_event_,double &netr2_local_,double &netr2_stable_local_,double &netr2_unstable_local_,double *t_history_,double *r2net_bead_,double *r2stable_bead_,double *r2unstable_bead_,double *alphaev_bead_)
 {
   // initialize everything
-  f_local_=iregime_local_=0;
+  f_local_=0;
   netr2_local_=netr2_stable_local_=netr2_unstable_local_=0.0;
   t_history_[0]=t_history_[1]=t_history_[2]=ts[f_local_];
   for (int i = 0; i < nbeads; i++)
@@ -135,10 +135,10 @@ void MH_examiner::restore_event_record(event_record *rec_, double *r2_Fb_, doubl
       else
         {netr2_unstable_local+=r2_it; r2unstable_bead[i_bead]+=r2_it;}
     }
-  net_r2=netr2_local;
-  net_r2_stable=netr2_stable_local;
-  net_r2_unstable=netr2_unstable_local;
-  rec_->record_event_data(&nf_netobs,&net_r2);
+  netr2=netr2_local;
+  netr2_stable=netr2_stable_local;
+  netr2_unstable=netr2_unstable_local;
+  rec_->record_event_data(&nf_netobs,&netr2);
 }
 
 void MH_examiner::consolidate_examiner_training_data(event_record ** pool_)
@@ -149,7 +149,7 @@ void MH_examiner::consolidate_examiner_training_data(event_record ** pool_)
     int i_test=itest_list[i];
     double  *ui=pool_[i_test]->u,
             wi=pool_[i_test]->w;
-    for (int j = 0; j < ulen; j++) ustat_buffer[j]+=wi*ui[j];
+    for (int j = 0; j < ulen; j++) ustat_buf[j]+=wi*ui[j];
     if (btest->isworse(pool_[i_test])) btest=pool_[i_test];
   }
 }
@@ -162,12 +162,12 @@ bool MH_examiner::report_examiner_training_data(bool first2finish_, event_record
   {
     first2finish_=false;
     *bpool_address_=btest;
-    for (int i = 0; i < ulen; i++) u_wmean_[i]=ustat_buffer[i];
+    for (int i = 0; i < ulen; i++) u_wmean_[i]=ustat_buf[i];
   }
   else
   {
     if (btest->isbetter(*bpool_address_)) *bpool_address_=btest;
-    for (int i = 0; i < ulen; i++) u_wmean_[i]+=ustat_buffer[i];
+    for (int i = 0; i < ulen; i++) u_wmean_[i]+=ustat_buf[i];
   }
   return false;
 }

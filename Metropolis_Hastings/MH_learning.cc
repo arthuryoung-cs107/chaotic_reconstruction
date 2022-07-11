@@ -75,13 +75,13 @@ u_mean(new double[ulen]), u_var(new double[ulen]),
 u_wmean(new double[ulen]), u_wvar(new double[ulen]) {}
 
 
-void basic_MH_trainer::duplicate_u(basic_record *rec_child_, basic_record *rec_parent_, MH_rng *rng_t_)
+void basic_MH_trainer::duplicate_u_basic(basic_record *child_, basic_record *parent_, MH_rng *rng_t_)
 {
-  double  r_ = sqrt(rec_parent_->r2),
+  double  r_ = sqrt(parent_->get_r2()),
           r_rat = r_/sqrt(rho2),
           sigma_fac = max(0.25*(1.0-exp(0.5*(1.0-r_rat)*(1.0+r_rat))), 0.0),
-          *u_child=rec_child_->u,
-          *u_parent=rec_parent_->u;
+          *u_child=child_->u,
+          *u_parent=parent_->u;
   for (int i = 0; i < ulen; i++)
   {
     double z = rng_t_->rand_gau();
@@ -89,5 +89,5 @@ void basic_MH_trainer::duplicate_u(basic_record *rec_child_, basic_record *rec_p
     if (u_child[i]>umax[i]) u_child[i]=umax[i];
     if (u_child[i]<umin[i]) u_child[i]=umin[i];
   }
-  rec_child_->init_basic_record(gen_count);
+  child_->init_basic_record(gen_count);
 }

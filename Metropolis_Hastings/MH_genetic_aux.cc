@@ -86,7 +86,7 @@ void MH_genetic::write_event_diagnostics(int event_block_count_)
   fclose(data_file);
 }
 
-double MH_genetic::set_stable_objective(bool verbose_, double &r2_scale_, bool stable_flag_)
+double MH_genetic::set_objective(bool verbose_, double &r2_scale_, bool stable_flag_)
 {
   double r2_min=DBL_MAX;
   #pragma omp parallel reduction(min:r2_min)
@@ -274,7 +274,7 @@ double MH_genetic::consolidate_genetic_training_data(double wsum_pool_,double * 
 
   #pragma omp parallel
   {
-    double *ustat_t = examiners[thread_num()]->ustat_buffer;
+    double *ustat_t = examiners[thread_num()]->ustat_buf;
     for (int i = 0; i < ulen; i++) ustat_t[i]=0.0;
 
     #pragma omp for

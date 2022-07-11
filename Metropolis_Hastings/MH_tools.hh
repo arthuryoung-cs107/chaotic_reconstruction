@@ -69,7 +69,13 @@ struct event_block
 
   inline void print_event_block(double sigma_scaled_, const char indent_[]="     ")
   {
-    printf("%s(event_block) stev_earliest: %d, stev_latest: %d \n", indent_, stev_earliest, stev_latest);
+    printf("%s(event_block) stev_earliest: %d, stev_latest: %d, nst_full: %d, nst_stable: %d, nst_unstable: %d\n",
+    indent_,
+    stev_earliest,
+    stev_latest,
+    nst_full(),
+    nst_stable(),
+    nst_unstable());
     printf("%s(event_block) rho2_objective: %e, netrho2: %e, rho2stable: %e, rho2unstable: %e\n",
     indent_,
     rho2_objective,
@@ -116,12 +122,19 @@ struct event_block
     comps_ordered_[i_next]=early_bead;
     if (i_next<ncomp-1) earliest_recursive(stev_ordered_,comps_ordered_,i_next+1);
   }
+
   inline bool check_stev_convergence()
   {
     bool conv_out=true;
     for (int i = 0; i < ncomp; i++) if (stev_comp[i]<(nstates-1)) conv_out=false;
     return conv_out;
   }
+
+  inline int stev_last() {return stev_ordered[ncomp-1];}
+  inline int nst_full() {return stev_ordered[ncomp-1]*ncomp;}
+  inline int nst_stable() {int out=0; for (int i = 0; i < ncomp; i++) out+=stev_comp[i]; return out;}
+  inline int nst_unstable() {return nst_full()-nst_stable();}
+
   inline double compute_netrho2()
     {double out=0.0; for (int i = 0; i < ncomp; i++) out+=rho2stable_comp[i]+rho2unstable_comp[i]; return out;}
   inline double compute_netrho2stable()

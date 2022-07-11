@@ -39,8 +39,7 @@ void MH_examiner::detect_events(event_record *rec_, double *r2i_, double *alphai
         all_events_detected=false;
         if (alpha_it>alpha_tol)
         {
-          f_event[i]=f_local-1;
-          alphaev_bead[i]=alpha_it;
+          f_event[i]=f_local-1; alphaev_bead[i]=alpha_it;
           netr2_unstable_local+=r2unstable_bead[i]=rsq;
         }
         else
@@ -67,7 +66,7 @@ void MH_examiner::detect_events(event_record *rec_, double *r2i_, double *alphai
   // set thread worker statistics data
   update_event_data(f_local, f_event, r2i_, alphai_);
   // set record data
-  rec_->record_event_data(&nf_stobs,&netr2);
+  rec_->record_event_data(&nf_netobs,&netr2);
 }
 
 bool MH_examiner::examine_u(event_record *rec_, int i_, double r2success_threshold_)
@@ -107,7 +106,7 @@ bool MH_examiner::examine_u(event_record *rec_, int i_, double r2success_thresho
     {
       double rsq=thread_worker::compute_residual(psim[j], psim[j+1], pref[j], pref[j+1]);
       netr2_local+=rsq; r2net_bead[i]+=rsq;
-      if (i_f<=stev_comp[i_c]) // still stable
+      if (i_f<=stev_comp[i]) // still stable
       {netr2_stable_local+=rsq; r2stable_bead[i]+=rsq;}
       else // unstable
       {netr2_unstable_local+=rsq; r2unstable_bead[i]+=rsq;}

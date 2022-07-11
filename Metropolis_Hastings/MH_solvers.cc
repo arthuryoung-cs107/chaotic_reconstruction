@@ -135,7 +135,7 @@ void MH_genetic::train_event_block(bool verbose_, bool &stable_convergence_, boo
   stable_convergence_=train_objective(verbose_,nit_train,nit_stable_train,rho2_stable_local);
   printf("(MH_genetic::train_event_block) done with stable training\n");
   getchar();
-  
+
   // perform unstable training
   int nit_unstable_train=0;
   double rho2_unstable_local=rho2=set_objective(verbose_, r2_scale, stable_flag=false);
@@ -205,7 +205,7 @@ void MH_genetic::respawn_pool(bool verbose_, double w_sum_, double *w_leaders_, 
     for (int i = 0; i < npool; i++)
     {
       if (i<nreload_)
-        {nreload++; pool[i]->take_record(leaders[i]); // reloading the leaders}
+        {nreload++; pool[i]->take_record(leaders[i]);} // reloading the leaders}
       else
       {
         int j=0;

@@ -82,22 +82,24 @@ class MH_medic
 
     MH_examiner &ex;
 
-    void test_u(event_record *rec_, int i_, bool verbose_);
-
     inline void clear_medic_event_data()
-    {ex.clear_examiner_event_data(); stev_earliest=Frames_test; stev_latest=0; ntest=0;}
+    {ex.clear_examiner_event_data(); stev_earliest=ex.stev_earliest; stev_latest=ex.stev_latest; ntest=ex.ntest;}
 
-    void consolidate_medic_event_data();
-    bool report_medic_event_data(bool first2finish_, int &stev_earliest_, int &stev_latest_, int *stev_c_, int ** nev_s_c_, int ** nobs_s_c_, double ** r2_s_c_, double **alpha_s_c_);
-    void synchronise_medic_event_data(int *nf_, int stev_earliest_, int stev_latest_, double rho2stable_, int *stev_c_, int *stev_o_, int *comps_o_,double *rho2s_c_, double *drho2_r_);
+    void test_u(event_record *rec_, int i_, double *r2i_, double *alphai_, bool verbose_);
+
+    inline void consolidate_medic_event_data()
+      {ex.consolidate_examiner_event_data();}
+
+    inline bool report_medic_event_data(bool first2finish_, int &stev_earliest_, int &stev_latest_, int *stev_c_, int ** nev_s_c_, int ** nobs_s_c_, double ** r2_s_c_, double **alpha_s_c_)
+      {return ex.report_examiner_event_data(first2finish_,stev_earliest_,stev_latest_,stev_c_,nev_s_c_,nobs_s_c_,r2_s_c_,alpha_s_c_);}
 
   protected:
 
     // matching parameters found in MH_examiner
 
     const int nbeads=ex.nbeads,
+              dim=ex.dim,
               dof=ex.dof,
-              ndof=ex.ndof,
               thread_id=ex.thread_id;
 
     const double  t_phys=ex.t_phys,
@@ -135,36 +137,51 @@ class MH_medic
         stev_late,
         stev_earliest,
         stev_latest,
-        nf_obs,
-        nf_stable,
-        nf_unstable;
+        nf_netobs,
+        nf_stobs,
+        nf_usobs;
 
-    double  net_r2,
-            net_r2_stable,
-            net_r2_unstable,
+    double  netr2,
+            netr2_stable,
+            netr2_unstable,
             rho2stable,
             * const TEST_p,
             * const TEST_INTr2;
 
-    void start_test_u(int &f_local_,int &iregime_local_,int *f_event_,double &netr2_local_,double &netr2_stable_local_,double &netr2_unstable_local_,double *t_history_,double *r2stable_bead_,double *netr2_regime_,double *r2unstable_bead_,double *alphaev_bead_);
-    void update_event_data(int f_local_, int *f_event_);
+    void start_test_u(int &f_local_,int *f_event_,double &netr2_local_,double &netr2_stable_local_,double &netr2_unstable_local_,double *t_history_,double *r2net_bead_,double *r2stable_bead_,double *r2unstable_bead_,double *alphaev_bead_);
+
+    inline void update_event_data(int f_local_, int *f_event_, double *r2i_, double *alphai_)
+    {
+      ex.update_event_data(f_local_,f_event_,r2i_,alphai_);
+
+      // update by referencing this medic's examiner
+      ntest=ex.ntest;
+      stev_early=ex.stev_early;
+      stev_late=ex.stev_late;
+      stev_earliest=ex.stev_earliest;
+      stev_latest=ex.stev_latest;
+      nf_netobs=ex.nf_netobs;
+      nf_stobs=ex.nf_stobs;
+      nf_usobs=ex.nf_usobs;
+    }
+
     void write_utest_results(event_record *rec_, int i_);
 
     // wrapper functions
 
     inline void reset_sim(double *utest_, double t0_, double ctheta0_, double comega0_, double *p0_)
-    {ex.reset_sim(utest_,t0_,ctheta0_,comega0_,p0_);}
+      {ex.reset_sim(utest_,t0_,ctheta0_,comega0_,p0_);}
 
     inline double * advance_sim(int f_local_,double *t_history_)
-    {return ex.advance_sim(f_local_,t_history_);}
+      {return ex.advance_sim(f_local_,t_history_);}
 
     inline double compute_residual(double xs_, double ys_, double &x_now_, double &y_now_, double xr_, double yr_)
-    {return ex.compute_residual(xs_,ys_,x_now_,y_now_,xr_,yr_);}
+      {return ex.compute_residual(xs_,ys_,x_now_,y_now_,xr_,yr_);}
 
     inline void update_integral_history(double INT_now_, int ibead_)
-    {ex.update_integral_history(INT_now_,ibead_);}
+      {ex.update_integral_history(INT_now_,ibead_);}
 
     inline double alpha_comp(double *a_, double t_p1, double t_m1)
-    {return ex.alpha_comp(a_,t_p1,t_m1);}
+      {return ex.alpha_comp(a_,t_p1,t_m1);}
 };
 #endif

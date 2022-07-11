@@ -230,8 +230,8 @@ struct basic_record: public record
     printf("%s parent_Class: %d\n",indent_,parent_Class);
 
     printf("%s(basic_record) double data:\n", indent_);
-    printf("%s r2: %e\n",indent_,r2);
     printf("%s w: %e\n",indent_,w);
+    printf("%s r2: %e\n",indent_,get_r2());
     if (print_all_) print_record();
   }
 
@@ -247,6 +247,8 @@ struct basic_record: public record
     }
     else return 0;
   }
+
+  inline double get_r2() {return *dub_compare_bad;}
 
   // io
   inline int basic_rec_ilen_full() {return basic_rec_ilen;}
@@ -343,9 +345,10 @@ class basic_MH_trainer: public MH_trainer, public gaussian_likelihood
       inline void initialize_basic_MHT_run() {initialize_MHT_run(); t_wheels=t_wheels0;}
 
       // sampling
-      virtual void duplicate_u(basic_record *rec_child_, basic_record *rec_parent_, MH_rng *rng_t_);
       virtual void redraw_u(basic_record * rec_pool_, MH_rng * rng_t_)
         {redraw_u_uni(rec_pool_, rng_t_); rec_pool_->init_basic_record(gen_count);}
+
+      void duplicate_u_basic(basic_record *child_, basic_record *parent_, MH_rng *rng_t_);
 
       // training
       inline void clear_basic_MHT_training_data() {memset(isuccess_pool,0,npool*sizeof(int));nsuccess=0;}

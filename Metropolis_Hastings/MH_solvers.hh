@@ -90,7 +90,7 @@ class MH_genetic : public basic_MH_trainer, public event_block
     }
 
     inline void define_genetic_event_block()
-      {event_block::define_event_block(sigma_scaled_);}
+      {event_block::define_event_block(sigma_scaled);}
 
     void synchronise_genetic_event_data();
     void report_genetic_event_data();
@@ -118,9 +118,7 @@ class MH_genetic : public basic_MH_trainer, public event_block
     void compute_weighted_ustats(double wsum_, event_record ** recs_, int n_);
 
     inline void take_records(event_record ** rin_, event_record ** rout_, int ncap_)
-    {
-      for (int i = 0; i < ncap_; i++) int replace_status=rout_[i]->take_record(rin_[i]);
-    }
+      {for (int i = 0; i < ncap_; i++) int replace_status=rout_[i]->take_record(rin_[i]);}
 
     inline int take_records(event_record ** rin_, event_record ** rout_, int *repl_list_, int ncap_)
     {
@@ -128,6 +126,8 @@ class MH_genetic : public basic_MH_trainer, public event_block
       for (int i = 0; i < ncap_; i++) if (rout_[i]->take_record(rin_[i])) repl_list_[nrepl++]=i;
       return nrepl;
     }
+
+    inline void duplicate_u(event_record *child_, event_record *parent_, MH_rng *rng_t_) {duplicate_u_basic(child_,parent_,rng_t_);}
 
     // io
     void stage_diagnostics();
@@ -206,8 +206,9 @@ class MH_doctor : public MH_genetic
     void stage_doctor_diagnostics();
     inline void clear_doctor_event_data() {clear_genetic_event_data();}
     inline void consolidate_doctor_event_data() {consolidate_genetic_event_data();}
-    void synchronise_doctor_event_data();
-    void close_doctor_diagnostics();
+    inline void define_doctor_event_block() {define_genetic_event_block();}
+    inline void synchronise_doctor_event_data() {synchronise_genetic_event_data();}
+    inline void report_doctor_event_data() {report_genetic_event_data();}
 
   private:
 
