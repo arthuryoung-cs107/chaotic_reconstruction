@@ -39,7 +39,7 @@ struct MH_rng
 
 struct event_block
 {
-  event_block(int ncomp_, int nstates_, int dim_=2)
+  event_block(int ncomp_, int nstates_, int dim_=2);
   ~event_block();
 
   bool stable_flag;
@@ -70,7 +70,12 @@ struct event_block
   inline void print_event_block(double sigma_scaled_, const char indent_[]="     ")
   {
     printf("%s(event_block) stev_earliest: %d, stev_latest: %d \n", indent_, stev_earliest, stev_latest);
-    printf("%s(event_block) rho2stable: %e, rho2regime: %e, rho2unstable: %e\n", indent_, rho2stable, rho2regime, comp_rho2unstable(sigma_scaled_));
+    printf("%s(event_block) rho2_objective: %e, netrho2: %e, rho2stable: %e, rho2unstable: %e\n",
+    indent_,
+    rho2_objective,
+    compute_netrho2(),
+    compute_netrho2stable(),
+    compute_netrho2unstable());
     printf("%s(event_block) stev_comp: ",indent_); print_row_vec(stev_comp, ncomp);
     printf("%s(event_block) stev_ordered: ",indent_); print_row_vec(stev_ordered, ncomp);
     printf("%s(event_block) rho2stable_comp: ",indent_); print_row_vec(rho2stable_comp, ncomp);
