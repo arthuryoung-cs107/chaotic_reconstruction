@@ -75,11 +75,11 @@ u_mean(new double[ulen]), u_var(new double[ulen]),
 u_wmean(new double[ulen]), u_wvar(new double[ulen]) {}
 
 
-void basic_MH_trainer::duplicate_u_basic(basic_record *child_, basic_record *parent_, MH_rng *rng_t_)
+void basic_MH_trainer::duplicate_u_basic(basic_record *child_, basic_record *parent_, MH_rng *rng_t_, double fac_low_)
 {
   double  r_ = sqrt(parent_->get_r2()),
           r_rat = r_/sqrt(rho2),
-          sigma_fac = max(0.25*(1.0-exp(0.5*(1.0-r_rat)*(1.0+r_rat))), 0.0),
+          sigma_fac = max(0.25*(1.0-exp(0.5*(1.0-r_rat)*(1.0+r_rat))), fac_low_),
           *u_child=child_->u,
           *u_parent=parent_->u;
   for (int i = 0; i < ulen; i++)

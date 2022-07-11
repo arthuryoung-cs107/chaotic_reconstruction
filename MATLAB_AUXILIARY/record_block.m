@@ -15,7 +15,7 @@ classdef record_block
     methods
         function obj = record_block(file_, ulen_,int_mat_,dub_mat_,ichunk_mat_,dchunk_mat_,u_mat_)
             if (nargin==2)
-                head=fread(file_,6,'int=>int');
+                head=fread(file_,6,'int=>int')
                 [hlen,len,ilen,dlen,ichunk_len,dchunk_len]=deal(head(1),head(2),head(3),head(4),head(5),head(6));
 
                 int_mat=nan(ilen,len);
@@ -23,6 +23,7 @@ classdef record_block
                 ichunk_mat=nan(ichunk_len,len);
                 dchunk_mat=nan(dchunk_len,len);
                 u_mat=nan(ulen_,len);
+                ulen_
                 for i = 1:len
                     int_mat(:,i)=fread(file_,[ilen 1],'int=>int');
                     dub_mat(:,i)=fread(file_,[dlen 1],'double=>double');

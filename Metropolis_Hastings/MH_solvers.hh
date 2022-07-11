@@ -127,7 +127,7 @@ class MH_genetic : public basic_MH_trainer, public event_block
       return nrepl;
     }
 
-    inline void duplicate_u(event_record *child_, event_record *parent_, MH_rng *rng_t_) {duplicate_u_basic(child_,parent_,rng_t_);}
+    inline void duplicate_u(event_record *child_, event_record *parent_, MH_rng *rng_t_) {duplicate_u_basic(child_,parent_,rng_t_,0.1);}
 
     // io
     void stage_diagnostics();

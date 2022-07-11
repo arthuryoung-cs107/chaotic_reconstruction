@@ -2,8 +2,8 @@
 
 int comp_event_rec_ichunk_len(int nbeads_) {return nbeads_;}
 int comp_event_rec_dchunk_len(int nbeads_) {return 4*nbeads_;}
-int comp_event_rec_it_ichunk_len(int nbeads_) {return 0;}
-int comp_event_rec_it_dchunk_len(int nbeads_) {return 3*nbeads_;}
+int comp_event_rec_it_ichunk_len(int nbeads_) {return nbeads_;}
+int comp_event_rec_it_dchunk_len(int nbeads_) {return 4*nbeads_;}
 
 int event_record::take_record(event_record *r_)
 {

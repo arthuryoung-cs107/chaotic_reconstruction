@@ -348,7 +348,7 @@ class basic_MH_trainer: public MH_trainer, public gaussian_likelihood
       virtual void redraw_u(basic_record * rec_pool_, MH_rng * rng_t_)
         {redraw_u_uni(rec_pool_, rng_t_); rec_pool_->init_basic_record(gen_count);}
 
-      void duplicate_u_basic(basic_record *child_, basic_record *parent_, MH_rng *rng_t_);
+      void duplicate_u_basic(basic_record *child_, basic_record *parent_, MH_rng *rng_t_, double fac_low_=0.0);
 
       // training
       inline void clear_basic_MHT_training_data() {memset(isuccess_pool,0,npool*sizeof(int));nsuccess=0;}

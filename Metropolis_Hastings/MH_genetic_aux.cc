@@ -127,13 +127,13 @@ double MH_genetic::set_objective(bool verbose_, double &r2_scale_, bool stable_f
   int n_use;
   if (stable_flag_)
   {
-    rho2_objective=event_block::compute_netrho2stable();
+    rho2_objective=rho2=event_block::compute_netrho2stable();
     records_use=pool;
     n_use=npool;
   }
   else
   {
-    rho2_objective=event_block::compute_netrho2unstable();
+    rho2_objective=rho2=event_block::compute_netrho2unstable();
     records_use=records;
     n_use=nlead+npool;
   }
@@ -333,6 +333,7 @@ void MH_genetic::write_generation_diagnostics(int gen_count_)
   int header_gen[] = {hlen_gen, genetic_it_ilen_full(), genetic_it_dlen_full()};
   sprintf(obuf+obuf_end, "gen%d.mhdat",gen_count_);
   FILE * gen_file = fopen(obuf, "wb");
+  fwrite(header_Class,sizeof(int),hlen_Class+1,Class_file);
   write_genetic_it_ints(gen_file);
   write_genetic_it_dubs(gen_file);
   basic_MH_trainer::write_ustats(gen_file);
