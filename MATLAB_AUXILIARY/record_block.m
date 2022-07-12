@@ -23,7 +23,6 @@ classdef record_block
                 ichunk_mat=nan(ichunk_len,len);
                 dchunk_mat=nan(dchunk_len,len);
                 u_mat=nan(ulen_,len);
-                ulen_
                 for i = 1:len
                     int_mat(:,i)=fread(file_,[ilen 1],'int=>int');
                     dub_mat(:,i)=fread(file_,[dlen 1],'double=>double');

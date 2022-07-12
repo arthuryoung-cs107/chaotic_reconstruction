@@ -333,7 +333,7 @@ void MH_genetic::write_generation_diagnostics(int gen_count_)
   int header_gen[] = {hlen_gen, genetic_it_ilen_full(), genetic_it_dlen_full()};
   sprintf(obuf+obuf_end, "gen%d.mhdat",gen_count_);
   FILE * gen_file = fopen(obuf, "wb");
-  fwrite(header_Class,sizeof(int),hlen_Class+1,Class_file);
+  fwrite(header_gen,sizeof(int),hlen_gen+1,gen_file);
   write_genetic_it_ints(gen_file);
   write_genetic_it_dubs(gen_file);
   basic_MH_trainer::write_ustats(gen_file);
