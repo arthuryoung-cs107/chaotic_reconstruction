@@ -2,8 +2,8 @@
 
 int comp_event_rec_ichunk_len(int nbeads_) {return nbeads_;}
 int comp_event_rec_dchunk_len(int nbeads_) {return 4*nbeads_;}
-int comp_event_rec_it_ichunk_len(int nbeads_) {return nbeads_;}
-int comp_event_rec_it_dchunk_len(int nbeads_) {return 4*nbeads_;}
+int comp_event_rec_it_ichunk_len(int nbeads_) {return 0;}
+int comp_event_rec_it_dchunk_len(int nbeads_) {return 3*nbeads_;}
 
 int event_record::take_record(event_record *r_)
 {
@@ -36,6 +36,7 @@ void event_record::write_event_rec_training_data(FILE *file_)
   write_basic_rec_dubs(file_); fwrite(event_rec_dubs,sizeof(double),event_rec_it_dlen,file_);
   fwrite(ichunk,sizeof(int),event_rec_it_ichunk_len,file_);
   fwrite(dchunk,sizeof(double),event_rec_it_dchunk_len,file_);
+  fwrite(u,sizeof(double),ulen,file_);
 }
 
 int find_worst_record(event_record ** r_, int ncap_)

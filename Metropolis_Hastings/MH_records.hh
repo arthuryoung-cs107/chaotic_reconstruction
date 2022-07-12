@@ -9,7 +9,7 @@ int comp_event_rec_it_ichunk_len(int nbeads_);
 int comp_event_rec_it_dchunk_len(int nbeads_);
 const int event_rec_ilen = 3;
 const int event_rec_dlen = 3;
-const int event_rec_it_ilen = 3;
+const int event_rec_it_ilen = 0;
 const int event_rec_it_dlen = 3;
 struct event_record : public basic_record
 {

@@ -15,26 +15,20 @@ classdef record_block
     methods
         function obj = record_block(file_, ulen_,int_mat_,dub_mat_,ichunk_mat_,dchunk_mat_,u_mat_)
             if (nargin==2)
-                head=fread(file_,6,'int=>int')
-                [hlen,len,ilen,dlen,ichunk_len,dchunk_len]=deal(head(1),head(2),head(3),head(4),head(5),head(6))
-                ulen_
-
+                head=fread(file_,6,'int=>int');
+                [hlen,len,ilen,dlen,ichunk_len,dchunk_len]=deal(head(1),head(2),head(3),head(4),head(5),head(6));
+                
                 int_mat=nan(ilen,len);
                 dub_mat=nan(dlen,len);
                 ichunk_mat=nan(ichunk_len,len);
                 dchunk_mat=nan(dchunk_len,len);
                 u_mat=nan(ulen_,len);
                 for i = 1:len
-                    int_vec=fread(file_,[ilen 1],'int=>int')
-                    dub_vec=fread(file_,[dlen 1],'double=>double')
-                    ichunk_vec=fread(file_,[ichunk_len 1],'int=>int')
-                    dchunk_vec=fread(file_,[dchunk_len 1],'double=>double')
-                    % int_mat(:,i)=fread(file_,[ilen 1],'int=>int');
-                    % dub_mat(:,i)=fread(file_,[dlen 1],'double=>double');
-                    % ichunk_mat(:,i)=fread(file_,[ichunk_len 1],'int=>int');
-                    % dchunk_mat(:,i)=fread(file_,[dchunk_len 1],'double=>double');
-                    % u_mat(:,i)=fread(file_,[ulen_ 1],'double=>double');
-                    pause
+                    int_mat(:,i)=fread(file_,[ilen 1],'int=>int');
+                    dub_mat(:,i)=fread(file_,[dlen 1],'double=>double');
+                    ichunk_mat(:,i)=fread(file_,[ichunk_len 1],'int=>int');
+                    dchunk_mat(:,i)=fread(file_,[dchunk_len 1],'double=>double');
+                    u_mat(:,i)=fread(file_,[ulen_ 1],'double=>double');
                 end
             else
                 ilen=size(int_mat_,1);
