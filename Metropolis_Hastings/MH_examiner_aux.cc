@@ -156,7 +156,7 @@ void MH_examiner::consolidate_examiner_training_data(event_record ** pool_)
 
 bool MH_examiner::report_examiner_training_data(bool first2finish_, event_record ** bpool_address_, int *isuccess_pool_,int &nsuccess_,double *u_wmean_)
 {
-  for (int i = 0; i < nsuccess_test; i++) isuccess_pool_[i+nsuccess_]=int_wkspc[i];
+  for (int i = 0; i < nsuccess_test; i++) isuccess_pool_[i+nsuccess_]=isuccess_list[i];
   nsuccess_+=nsuccess_test;
   if (first2finish_)
   {

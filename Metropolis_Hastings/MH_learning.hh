@@ -307,14 +307,7 @@ class basic_thread_worker: public thread_worker, public event_detector
         for (int i = 0; i < dwkspc_len; i++) dub_wkspc[i]=0.0;
       }
 
-      inline bool check_success(double r2_threshold_)
-      {
-        // if (thread_id==0)
-        // {
-        //   printf("(thread %d) netr2 = %e, netr2_stable = %e, netr2_unstable %e, r2_objective = %e, r2_threshold_ = %e\n", thread_id,netr2,netr2_stable,netr2_unstable,*r2_objective,r2_threshold_);
-        // }
-        return (*r2_objective)<r2_threshold_;
-      }
+      inline bool check_success(double r2_threshold_) {return (*r2_objective)<r2_threshold_;}
 
     protected:
 

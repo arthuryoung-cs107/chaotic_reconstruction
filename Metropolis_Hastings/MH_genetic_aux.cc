@@ -340,13 +340,6 @@ double MH_genetic::consolidate_genetic_training_data(double wsum_pool_,double * 
   ncandidates=nsuccess;
   for (int i = 0; i < nsuccess; i++) candidates[i]=pool[isuccess_pool[i]];
 
-  // for (int i = 0; i < nsuccess; i++)
-  // {
-  //   candidates[i]=pool[isuccess_pool[i]];
-  //   printf("candidate %d: isuccess = %d, rid = %d , r2 = %e\n", i, isuccess_pool[i], candidates[i]->rid, candidates[i]->get_r2());
-  // }
-  // getchar();
-
   // if we have more successful particles than we can store, we have to narrow down the candidates
   if (nsuccess>nlead) pick_nbest_records(candidates,ncandidates=nlead,nsuccess);
   pick_nbest_records(leader_board,nlead,nlead+ncandidates);

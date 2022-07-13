@@ -174,7 +174,6 @@ bool MH_genetic::train_objective(bool verbose_, int &nit_, int &nit_objective_, 
     report_genetic_training_data(nreplace,Class_count,gen_count);
     if (check_objective_convergence(++nit_, ++nit_objective_, training_success)) break;
     else respawn_pool(verbose_,wsum_leaders,w_leaders);
-    getchar(); 
   } while (true);
   return training_success;
 }
