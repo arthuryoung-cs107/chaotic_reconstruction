@@ -12,8 +12,8 @@ const int MH_id=0;
 const int ulen = 12;
 const int nbeads=5;
 const int nlead = 12;
-// const int npool = 1000;
-const int npool = 100;
+const int npool = 1000;
+// const int npool = 100;
 // const int npool = 20;
 const double dt_sim = 0.002;
 // const double t_wheels = 0.012;
@@ -69,7 +69,7 @@ int main()
   MH_genetic mh_gen(mhts,Class_max,gen_max,itrain_max,t_wheels,alpha_tol,rs_full_factor,train_tol);
 
   // additional directives for debugging
-  mh_gen.write_full_training_data=true;
+  // mh_gen.write_full_training_data=true;
 
   // run
   mh_gen.run(true);

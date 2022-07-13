@@ -183,12 +183,14 @@ class MH_genetic : public basic_MH_trainer, public event_block
       {printf("(MH_genetic::train_objective) gen %d, Class %d, nit %d: %d candidates, best candidate (%d) r2 = %e. ", gen_count, Class_count, nit_, nsuccess, bpool->rid, bpool->get_r2());}
 
     inline void verbose_train_objective_2()
-      {printf("%d replacements, r2 best (%d): %e, r2 worst (%d): %e.\n", nreplace, bleader_rid, br2, wleader_rid, wr2);}
+      {printf("%d replacements, r2 best (%d): %e, r2 worst (%d): %e. ", nreplace, bleader_rid, br2, wleader_rid, wr2);}
 
     inline void verbose_respawn_pool(int offset_)
     {
-      if (offset_) printf("(MH_genetic::respawn_pool) %d reloads, ", offset_);
-      else printf("(MH_genetic::respawn_pool) ");
+      // if (offset_) printf("(MH_genetic::respawn_pool) %d reloads, ", offset_);
+      // else printf("(MH_genetic::respawn_pool) ");
+      if (offset_) printf("RESPAWNING: %d reloads, ", offset_);
+      else printf("RESPAWNING: ");
       printf("%d redraws, %d duplicates (%d unique).\n", nredraw, ndup, ndup_unique);
     }
 };

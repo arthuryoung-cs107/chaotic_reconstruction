@@ -254,11 +254,13 @@ bool MH_genetic::check_objective_convergence(int nit_, int nit_objective_, bool 
   if (br2<rho2*(1.0+train_tol))
   {
     training_success_=true;
+    printf("\n");
     return true;
   }
   else if ((nit_objective_>=itrain_max)||(gen_count>=gen_max))
   {
     training_success_=false;
+    printf("\n");
     return true;
   }
   else return false;
