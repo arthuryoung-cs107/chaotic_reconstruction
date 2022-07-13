@@ -243,27 +243,27 @@ double MH_genetic::set_leader_records()
 {
   // assumes that leader board has been already sorted to the best performing particles
 
-  printf("\n\nleaders and leader board\n");
-  for (int i = 0; i < nlead; i++)
-  {
-    printf("leader (i,rid,r2)=(%d,%d, %e), leader board (i,rid, r2)=(%d,%d, %e)\n",
-    i,leaders[i]->rid, leaders[i]->get_r2(),
-    i,leader_board[i]->rid,leader_board[i]->get_r2()
-    );
-  }
-  printf("\n");
+  // printf("\n\nleaders and leader board\n");
+  // for (int i = 0; i < nlead; i++)
+  // {
+  //   printf("leader (i,rid,r2)=(%d,%d, %e), leader board (i,rid, r2)=(%d,%d, %e)\n",
+  //   i,leaders[i]->rid, leaders[i]->get_r2(),
+  //   i,leader_board[i]->rid,leader_board[i]->get_r2()
+  //   );
+  // }
+  // printf("\n");
 
   nreplace=take_records(leader_board,leaders,irepl_leaders,nlead);
 
-  printf("\npost take records\n");
-  for (int i = 0; i < nlead; i++)
-  {
-    printf("leader (i,rid,r2)=(%d,%d, %e), leader board (i,rid, r2)=(%d,%d, %e)\n",
-    i,leaders[i]->rid, leaders[i]->get_r2(),
-    i,leader_board[i]->rid,leader_board[i]->get_r2()
-    );
-  }
-  printf("\n");
+  // printf("\npost take records\n");
+  // for (int i = 0; i < nlead; i++)
+  // {
+  //   printf("leader (i,rid,r2)=(%d,%d, %e), leader board (i,rid, r2)=(%d,%d, %e)\n",
+  //   i,leaders[i]->rid, leaders[i]->get_r2(),
+  //   i,leader_board[i]->rid,leader_board[i]->get_r2()
+  //   );
+  // }
+  // printf("\n");
 
   for (int i = 0; i < nreplace; i++)
   {
@@ -273,18 +273,18 @@ double MH_genetic::set_leader_records()
     leaders[repl_index]->Class=Class_count;
   }
 
-  printf("\npost replacement reset\n");
-  for (int i = 0; i < nlead; i++)
-  {
-    printf("leader (i,rid,r2)=(%d,%d, %e), leader board (i,rid, r2)=(%d,%d, %e)\n",
-    i,leaders[i]->rid, leaders[i]->get_r2(),
-    i,leader_board[i]->rid,leader_board[i]->get_r2()
-    );
-  }
+  // printf("\npost replacement reset\n");
+  // for (int i = 0; i < nlead; i++)
+  // {
+  //   printf("leader (i,rid,r2)=(%d,%d, %e), leader board (i,rid, r2)=(%d,%d, %e)\n",
+  //   i,leaders[i]->rid, leaders[i]->get_r2(),
+  //   i,leader_board[i]->rid,leader_board[i]->get_r2()
+  //   );
+  // }
 
-  printf("\n\n");
-
-  getchar();
+  // printf("\n\n");
+  //
+  // getchar();
 
   leader_count=nlead;
   int bleader_rid_local=0,
@@ -338,12 +338,14 @@ double MH_genetic::consolidate_genetic_training_data(double wsum_pool_,double * 
 
   // now update the leaders
   ncandidates=nsuccess;
-  for (int i = 0; i < nsuccess; i++)
-  {
-    candidates[i]=pool[isuccess_pool[i]];
-    printf("candidate %d: isuccess = %d, rid = %d , r2 = %e\n", i, isuccess_pool[i], candidates[i]->rid, candidates[i]->get_r2());
-  }
-  getchar();
+  for (int i = 0; i < nsuccess; i++) candidates[i]=pool[isuccess_pool[i]];
+
+  // for (int i = 0; i < nsuccess; i++)
+  // {
+  //   candidates[i]=pool[isuccess_pool[i]];
+  //   printf("candidate %d: isuccess = %d, rid = %d , r2 = %e\n", i, isuccess_pool[i], candidates[i]->rid, candidates[i]->get_r2());
+  // }
+  // getchar();
 
   // if we have more successful particles than we can store, we have to narrow down the candidates
   if (nsuccess>nlead) pick_nbest_records(candidates,ncandidates=nlead,nsuccess);
@@ -378,6 +380,11 @@ void MH_genetic::write_generation_diagnostics(int gen_count_)
   write_genetic_it_ints(gen_file);
   write_genetic_it_dubs(gen_file);
   basic_MH_trainer::write_ustats(gen_file);
+  if (write_full_training_data)
+  {
+    pool[0]->write_event_rec_training_header(gen_file,npool);
+    for (int i = 0; i < npool; i++) pool[i]->write_event_rec_training_data(gen_file);
+  }
   fclose(gen_file);
 }
 

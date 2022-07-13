@@ -67,6 +67,11 @@ int main()
   MH_train_struct mhts(&mh_par, &sp_min, &sp_max, &wl);
 
   MH_genetic mh_gen(mhts,Class_max,gen_max,itrain_max,t_wheels,alpha_tol,rs_full_factor,train_tol);
+
+  // additional directives for debugging
+  mh_gen.write_full_training_data=true;
+
+  // run
   mh_gen.run(true);
   return 0;
 }

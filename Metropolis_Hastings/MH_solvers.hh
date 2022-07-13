@@ -16,6 +16,8 @@ class MH_genetic : public basic_MH_trainer, public event_block
 
     void run(bool verbose_=true);
 
+    bool write_full_training_data=false;
+
   protected:
 
     size_t  obuf_end;
