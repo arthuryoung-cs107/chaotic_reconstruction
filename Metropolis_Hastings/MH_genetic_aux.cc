@@ -145,7 +145,7 @@ double MH_genetic::set_objective(bool verbose_, double &r2_scale_, bool stable_f
 
   compute_weighted_ustats(wsum_full,records_use,n_use);
   pick_nbest_records(leader_board,nlead,n_use);
-  r2_scale_=set_leader_records(nreplace,&bleader,bleader_rid,wleader_rid,br2,wr2);
+  r2_scale_=set_leader_records();
 
   if (verbose_) verbose_set_objective_2();
 
@@ -239,17 +239,52 @@ void MH_genetic::compute_weighted_ustats(double wsum_, event_record ** recs_, in
   }
 }
 
-double MH_genetic::set_leader_records(int &nreplace_, event_record **blead_address_, int &bleader_rid_, int &wleader_rid_, double &br2_, double &wr2_)
+double MH_genetic::set_leader_records()
 {
   // assumes that leader board has been already sorted to the best performing particles
-  nreplace_=take_records(leader_board,leaders,irepl_leaders,nlead);
-  for (int i = 0; i < nreplace_; i++)
+
+  printf("\n\nleaders and leader board\n");
+  for (int i = 0; i < nlead; i++)
+  {
+    printf("leader (i,rid,r2)=(%d,%d, %e), leader board (i,rid, r2)=(%d,%d, %e)\n",
+    i,leaders[i]->rid, leaders[i]->get_r2(),
+    i,leader_board[i]->rid,leader_board[i]->get_r2()
+    );
+  }
+  printf("\n");
+
+  nreplace=take_records(leader_board,leaders,irepl_leaders,nlead);
+
+  printf("\npost take records\n");
+  for (int i = 0; i < nlead; i++)
+  {
+    printf("leader (i,rid,r2)=(%d,%d, %e), leader board (i,rid, r2)=(%d,%d, %e)\n",
+    i,leaders[i]->rid, leaders[i]->get_r2(),
+    i,leader_board[i]->rid,leader_board[i]->get_r2()
+    );
+  }
+  printf("\n");
+
+  for (int i = 0; i < nreplace; i++)
   {
     int repl_index = irepl_leaders[i];
     // make sure that first bit of leaderboard is always pointing to leaders
     leader_board[repl_index]=leaders[repl_index];
     leaders[repl_index]->Class=Class_count;
   }
+
+  printf("\npost replacement reset\n");
+  for (int i = 0; i < nlead; i++)
+  {
+    printf("leader (i,rid,r2)=(%d,%d, %e), leader board (i,rid, r2)=(%d,%d, %e)\n",
+    i,leaders[i]->rid, leaders[i]->get_r2(),
+    i,leader_board[i]->rid,leader_board[i]->get_r2()
+    );
+  }
+
+  printf("\n\n");
+
+  getchar();
 
   leader_count=nlead;
   int bleader_rid_local=0,
@@ -259,10 +294,11 @@ double MH_genetic::set_leader_records(int &nreplace_, event_record **blead_addre
     if (leaders[bleader_rid_local]->isworse(leaders[i])) bleader_rid_local=i; // leader i is better than the current best record
     if (leaders[wleader_rid_local]->isbetter(leaders[i])) wleader_rid_local=i; // leader i is worse than the current worst record
   }
-  bleader_rid_=bleader_rid_local; wleader_rid_=wleader_rid_local;
-  br2_=leaders[bleader_rid_local]->get_r2(); wr2_=leaders[wleader_rid_local]->get_r2();
-  blead_address_[0]=leaders[bleader_rid_local]; blead_address_[1]=leaders[wleader_rid_local];
-  return wr2_;
+  bleader=leaders[bleader_rid_local]; wleader=leaders[wleader_rid_local];
+
+  bleader_rid=bleader->rid; wleader_rid=wleader->rid;
+  br2=bleader->get_r2(); wr2=wleader->get_r2();
+  return wr2;
 }
 
 double MH_genetic::consolidate_genetic_training_data(double wsum_pool_,double * w_leaders_, double rho2_,int &nreplace_,double &r2_scale_)
@@ -302,12 +338,17 @@ double MH_genetic::consolidate_genetic_training_data(double wsum_pool_,double * 
 
   // now update the leaders
   ncandidates=nsuccess;
-  for (int i = 0; i < nsuccess; i++) candidates[i]=pool[isuccess_pool[i]];
+  for (int i = 0; i < nsuccess; i++)
+  {
+    candidates[i]=pool[isuccess_pool[i]];
+    printf("candidate %d: isuccess = %d, rid = %d , r2 = %e\n", i, isuccess_pool[i], candidates[i]->rid, candidates[i]->get_r2());
+  }
+  getchar();
 
   // if we have more successful particles than we can store, we have to narrow down the candidates
   if (nsuccess>nlead) pick_nbest_records(candidates,ncandidates=nlead,nsuccess);
-  pick_nbest_records(leader_board,nlead,leader_count+ncandidates);
-  r2_scale_=set_leader_records(nreplace_,&bleader,bleader_rid,wleader_rid,br2,wr2);
+  pick_nbest_records(leader_board,nlead,nlead+ncandidates);
+  r2_scale_=set_leader_records();
   prob_best=gaussian_likelihood::compute_prob(sqrt(br2),sqrt(rho2_));
   prob_worst=gaussian_likelihood::compute_prob(sqrt(wr2),sqrt(rho2_));
   return compute_weights(r2_scale_,rho2_,w_leaders_);

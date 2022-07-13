@@ -31,7 +31,7 @@ struct event_record : public basic_record
   double  r2net,
           r2stable,
           r2unstable,
-          * const event_rec_dubs = &r2stable;
+          * const event_rec_dubs = &r2net;
 
   int * evframe_bead=ichunk;
 

@@ -69,15 +69,35 @@ void MH_examiner::detect_events(event_record *rec_, double *r2i_, double *alphai
   rec_->record_event_data(&nf_netobs,&netr2);
 }
 
+const int frame_debug=5;
+
 bool MH_examiner::examine_u(event_record *rec_, int i_, double r2success_threshold_)
 {
   thread_worker::reset_sim(rec_->u, ts[0]/t_phys, d_ang[0], comega_s[0], xs);
+
   // run the length of the event block, storing bead positions
   for (int i_f = 1; i_f <= stev_ordered[nbeads-1]; i_f++)
   {
     advance((ts[i_f]-ts[i_f-1])/t_phys, d_ang[i_f-1], comega_s[i_f], dt_sim);
-    for (int i=0,j=dof*i_f; i < nbeads; i++,j+=dim) {psim[j]=q[i].x; psim[j+1]=q[i].y;}
+    for (int i=0,j=dof*i_f; i < nbeads; i++,j+=dim)
+    {psim[j]=q[i].x-cx; psim[j+1]=q[i].y-cy;}
+    // {
+      // if (i_f<=frame_debug)
+      // {
+      //   double  xnow,
+      //           ynow,
+      //           rsq=thread_worker::compute_residual(
+      //           q[i].x, q[i].y,
+      //           xnow, ynow,
+      //           xs[j], xs[j+1]);
+      //
+      //   printf("(frame %d, bead %d): rsq = %e, (xn,yn)=(%e, %e), (xr,yr)=(%e, %e)\n",i_f,i,rsq,xnow,ynow,xs[j],xs[j+1]);
+      // }
+      // psim[j]=q[i].x-cx; psim[j+1]=q[i].y-cy;
+    // }
   }
+
+  // printf("\n \n");
 
   // process the event block
   double  netr2_local=0.0,
@@ -94,7 +114,18 @@ bool MH_examiner::examine_u(event_record *rec_, int i_, double r2success_thresho
   {
     for (int i=0,j=dof*i_f; i < nbeads; i++,j+=dim)
     {
-      double rsq=thread_worker::compute_residual(psim[j], psim[j+1], pref[j], pref[j+1]);
+      // if (i_f<=frame_debug)
+      // {
+      //   double  xnow,
+      //           ynow,
+      //           rsq=thread_worker::compute_diff_residual(
+      //           psim[j], psim[j+1],
+      //           xnow, ynow,
+      //           pref[j], pref[j+1]);
+      //
+      //   printf("(frame %d, bead %d): rsq = %e, (xn,yn)=(%e, %e), (xr,yr)=(%e, %e)\n",i_f,i,rsq,xnow,ynow,pref[j],pref[j+1]);
+      // }
+      double rsq=thread_worker::compute_diff_residual(psim[j], psim[j+1], pref[j], pref[j+1]);
       netr2_local+=rsq; r2net_bead[i]+=rsq;
       netr2_stable_local+=rsq; r2stable_bead[i]+=rsq;
     }
@@ -104,7 +135,7 @@ bool MH_examiner::examine_u(event_record *rec_, int i_, double r2success_thresho
   {
     for (int i=0,j=dof*i_f; i < nbeads; i++,j+=dim)
     {
-      double rsq=thread_worker::compute_residual(psim[j], psim[j+1], pref[j], pref[j+1]);
+      double rsq=thread_worker::compute_diff_residual(psim[j], psim[j+1], pref[j], pref[j+1]);
       netr2_local+=rsq; r2net_bead[i]+=rsq;
       if (i_f<=stev_comp[i]) // still stable
       {netr2_stable_local+=rsq; r2stable_bead[i]+=rsq;}
@@ -115,6 +146,9 @@ bool MH_examiner::examine_u(event_record *rec_, int i_, double r2success_thresho
   netr2=netr2_local;
   netr2_stable=netr2_stable_local;
   netr2_unstable=netr2_unstable_local;
+
+  // printf("%e, %e, %e\n",netr2,netr2_stable,netr2_unstable);
+  // getchar();
 
   bool success_local = update_training_data(i_,r2success_threshold_);
   rec_->record_training_data(&netr2,success_local);

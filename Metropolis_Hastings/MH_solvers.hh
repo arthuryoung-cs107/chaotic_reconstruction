@@ -111,7 +111,7 @@ class MH_genetic : public basic_MH_trainer, public event_block
     bool check_objective_convergence(int nit_, int nit_objective_, bool &training_success_);
 
     // sampling
-    double set_leader_records(int &nreplace_, event_record **blead_address_, int &bleader_rid_, int &wleader_rid_, double &br2_, double &wr2_);
+    double set_leader_records();
     void respawn_pool(bool verbose_, double wsum_, double *w_leaders_, int nreload_=0);
     double compute_weights(double r2_min_, double rho2in_, event_record ** recs_, int n_);
     double compute_weights(double r2_min_, double rho2in_, double *w_leaders_);
@@ -178,10 +178,10 @@ class MH_genetic : public basic_MH_trainer, public event_block
       {printf("nreplace: %d, r2 best (%d): %e, r2 worst (%d): %e.\n",nreplace,bleader_rid,br2,wleader_rid,wr2);}
 
     inline void verbose_train_objective_1(int nit_)
-      {printf("(MH_genetic::train_objective) gen %d, Class %d, nit %d: %d candidates, best candidate r2 = %e. ", gen_count, Class_count, nit_, ncandidates, br2);}
+      {printf("(MH_genetic::train_objective) gen %d, Class %d, nit %d: %d candidates, best candidate (%d) r2 = %e. ", gen_count, Class_count, nit_, nsuccess, bpool->rid, bpool->get_r2());}
 
     inline void verbose_train_objective_2()
-      {printf("%d replacements, r2 best (%d): %e, r2 worst: %e.\n", nreplace, bleader_rid, br2, wr2);}
+      {printf("%d replacements, r2 best (%d): %e, r2 worst (%d): %e.\n", nreplace, bleader_rid, br2, wleader_rid, wr2);}
 
     inline void verbose_respawn_pool(int offset_)
     {

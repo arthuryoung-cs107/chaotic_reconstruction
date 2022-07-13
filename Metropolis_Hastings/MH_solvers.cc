@@ -126,14 +126,33 @@ void MH_genetic::train_event_block(bool verbose_, bool &stable_convergence_, boo
 
   // perform stable training
   int nit_stable_train=0;
+
+  // for (int i = 0; i < nlead; i++)
+  // {
+  //   printf("pool %d : ", i);
+  //   for (int j = 0; j < ulen; j++) printf("%e ", pool[i]->u[j]);
+  //   printf("\n");
+  // }
+
   double rho2_stable_local=set_objective(verbose_, r2_scale, stable_flag=true);
-  getchar();
+
+  // for (int i = 0; i < nlead; i++)
+  // {
+  //   printf("leader %d : ", i);
+  //   for (int j = 0; j < ulen; j++) printf("%e ", leaders[i]->u[j]);
+  //   printf("\n");
+  // }
+  //
+  // for (int i = 0; i < nlead; i++)
+  // {
+  //   printf("pool %d : ", i);
+  //   for (int j = 0; j < ulen; j++) printf("%e ", pool[i]->u[j]);
+  //   printf("\n");
+  // }
+  // getchar();
 
   stable_convergence_=train_objective(verbose_,nit_train,nit_stable_train,rho2_stable_local);
 
-  printf("(MH_genetic::train_event_block) done with stable training\n");
-  getchar();
-  
   // perform unstable training
   int nit_unstable_train=0;
   double rho2_unstable_local=set_objective(verbose_, r2_scale, stable_flag=false);
@@ -173,6 +192,10 @@ bool MH_genetic::train_objective(bool verbose_, int &nit_, int &nit_objective_, 
     double wsum_leaders = consolidate_genetic_training_data(wsum_pool,w_leaders,rho2_,nreplace,r2_scale);
 
     if (verbose_) verbose_train_objective_2();
+
+    // bleader->print_event_record(nlead, npool);
+    // wleader->print_event_record(nlead, npool);
+    // getchar();
 
     report_genetic_training_data(nreplace,Class_count,gen_count);
     if (check_objective_convergence(++nit_, ++nit_objective_, training_success)) break;

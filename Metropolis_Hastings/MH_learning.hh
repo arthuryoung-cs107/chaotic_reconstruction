@@ -84,6 +84,18 @@ class thread_worker: public swirl, public thread_worker_struct
         double xerr=x_now_-xr_, yerr=y_now_-yr_;
         return xerr*xerr+yerr*yerr;
       }
+      inline double compute_diff_residual(double xdiff_, double ydiff_, double xr_, double yr_)
+      {
+        double  x_now=xdiff_*cl_im+cx_im, y_now=ydiff_*cl_im+cy_im,
+                xerr=x_now-xr_, yerr=y_now-yr_;
+        return xerr*xerr+yerr*yerr;
+      }
+      inline double compute_diff_residual(double xdiff_, double ydiff_, double &xnow_, double &ynow_, double xr_, double yr_)
+      {
+        xnow_=xdiff_*cl_im+cx_im; ynow_=ydiff_*cl_im+cy_im;
+        double xerr=xnow_-xr_, yerr=ynow_-yr_;
+        return xerr*xerr+yerr*yerr;
+      }
 };
 
 
@@ -295,7 +307,14 @@ class basic_thread_worker: public thread_worker, public event_detector
         for (int i = 0; i < dwkspc_len; i++) dub_wkspc[i]=0.0;
       }
 
-      inline bool check_success(double r2_threshold_) {return (*r2_objective)<r2_threshold_;}
+      inline bool check_success(double r2_threshold_)
+      {
+        if (thread_id==0)
+        {
+          printf("(thread %d) netr2 = %e, netr2_stable = %e, netr2_unstable %e, r2_objective = %e, r2_threshold_ = %e\n", thread_id,netr2,netr2_stable,netr2_unstable,*r2_objective,r2_threshold_);
+        }
+        return (*r2_objective)<r2_threshold_;
+      }
 
     protected:
 
