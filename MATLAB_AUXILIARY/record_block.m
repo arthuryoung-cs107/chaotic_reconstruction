@@ -17,7 +17,7 @@ classdef record_block
             if (nargin==2)
                 head=fread(file_,6,'int=>int');
                 [hlen,len,ilen,dlen,ichunk_len,dchunk_len]=deal(head(1),head(2),head(3),head(4),head(5),head(6));
-                
+
                 int_mat=nan(ilen,len);
                 dub_mat=nan(dlen,len);
                 ichunk_mat=nan(ichunk_len,len);
@@ -52,6 +52,21 @@ classdef record_block
             obj.ichunk_mat=ichunk_mat;
             obj.dchunk_mat=dchunk_mat;
             obj.u_mat=u_mat;
+        end
+        function w_out = get_w(obj)
+            w_out = obj.dub_mat(1,:);
+        end
+        function r2net_out = get_r2net(obj)
+            r2net_out = obj.dub_mat(2,:);
+        end
+        function r2net_out = get_r2stable(obj)
+            r2net_out = obj.dub_mat(3,:);
+        end
+        function r2net_out = get_r2unstable(obj)
+            r2net_out = obj.dub_mat(4,:);
+        end
+        function udiff_out = comp_udiff(obj,uref_)
+            udiff_out = reshape(uref_,[obj.ulen 1])-obj.u_mat;
         end
     end
 end
