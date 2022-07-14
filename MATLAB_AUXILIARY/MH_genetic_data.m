@@ -104,12 +104,12 @@ classdef MH_genetic_data
             gen_out.u_wmean=fread(file,ulen,'double=>double');
             gen_out.u_var=fread(file,ulen,'double=>double');
             gen_out.u_wvar=fread(file,ulen,'double=>double');
-            if (feof(file))
-                gen_out.full_diagnostics=false;
-            else
-                gen_out.full_diagnostics=true;
-                gen_out.pool=record_block(file,ulen); 
-            end
+            % if (feof(file))
+            %     gen_out.full_diagnostics=false;
+            % else
+            %     gen_out.full_diagnostics=true;
+            %     gen_out.pool=record_block(file,ulen);
+            % end
             fclose(file);
         end
         function chunk_data_out = read_int_double_chunk(file_,ilen_,dlen_)
