@@ -39,7 +39,7 @@ void MH_genetic::report_genetic_event_data()
   {
     // finish computing mean residuals for each component of the state space
     #pragma omp for
-    for (int i = 0; i < nbeads*stev_latest; i++)
+    for (int i = 0; i < nbeads*max(stev_latest,stev_min); i++)
     {
       double  nobs_inv = 1.0/((double)(nobs_state_comp[0][i])),
               nobsm1_inv = 1.0/((double)(nobs_state_comp[0][i]-1)),
@@ -113,7 +113,7 @@ double MH_genetic::set_objective(bool verbose_, double &r2_scale_, bool stable_f
     else
     {
       ex_t->set_unstable_objective();
-      #pragma omp for nowait
+      #pragma omp for
       for (int i = 0; i < npool+nlead; i++)
       {
         double r2_it = records[i]->set_record_unstable();
@@ -242,28 +242,7 @@ void MH_genetic::compute_weighted_ustats(double wsum_, event_record ** recs_, in
 double MH_genetic::set_leader_records()
 {
   // assumes that leader board has been already sorted to the best performing particles
-
-  // printf("\n\nleaders and leader board\n");
-  // for (int i = 0; i < nlead; i++)
-  // {
-  //   printf("leader (i,rid,r2)=(%d,%d, %e), leader board (i,rid, r2)=(%d,%d, %e)\n",
-  //   i,leaders[i]->rid, leaders[i]->get_r2(),
-  //   i,leader_board[i]->rid,leader_board[i]->get_r2()
-  //   );
-  // }
-  // printf("\n");
-
   nreplace=take_records(leader_board,leaders,irepl_leaders,nlead);
-
-  // printf("\npost take records\n");
-  // for (int i = 0; i < nlead; i++)
-  // {
-  //   printf("leader (i,rid,r2)=(%d,%d, %e), leader board (i,rid, r2)=(%d,%d, %e)\n",
-  //   i,leaders[i]->rid, leaders[i]->get_r2(),
-  //   i,leader_board[i]->rid,leader_board[i]->get_r2()
-  //   );
-  // }
-  // printf("\n");
 
   for (int i = 0; i < nreplace; i++)
   {
@@ -272,20 +251,6 @@ double MH_genetic::set_leader_records()
     leader_board[repl_index]=leaders[repl_index];
     leaders[repl_index]->Class=Class_count;
   }
-
-  // printf("\npost replacement reset\n");
-  // for (int i = 0; i < nlead; i++)
-  // {
-  //   printf("leader (i,rid,r2)=(%d,%d, %e), leader board (i,rid, r2)=(%d,%d, %e)\n",
-  //   i,leaders[i]->rid, leaders[i]->get_r2(),
-  //   i,leader_board[i]->rid,leader_board[i]->get_r2()
-  //   );
-  // }
-
-  // printf("\n\n");
-  //
-  // getchar();
-
   leader_count=nlead;
   int bleader_rid_local=0,
       wleader_rid_local=0;

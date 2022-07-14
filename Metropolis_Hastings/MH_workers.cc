@@ -2,7 +2,7 @@
 
 //MH_examiner
 
-void MH_examiner::detect_events(event_record *rec_, double *r2i_, double *alphai_)
+void MH_examiner::detect_events(event_record *rec_, double *r2i_, double *alphai_, int stev_min_)
 {
   thread_worker::reset_sim(rec_->u,ts[0]/t_phys, d_ang[0], comega_s[0], xs);
 
@@ -48,7 +48,7 @@ void MH_examiner::detect_events(event_record *rec_, double *r2i_, double *alphai
       else
         {netr2_unstable_local+=rsq; r2unstable_bead[i]+=rsq;}
     }
-    if (all_events_detected) break;
+    if (all_events_detected&&(f_local>=stev_min_)) break;
     else if ((f_local+1)==Frames)
     {
       for (int i = 0; i < nbeads; i++) if (!(f_event[i]))

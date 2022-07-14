@@ -18,12 +18,17 @@ class MH_examiner: public basic_thread_worker
 
     // event
     inline void clear_examiner_event_data() {event_block::clear_event_data(); ntest=0;}
-    void detect_events(event_record *rec_, double *r2i_, double *alphai_);
+    void detect_events(event_record *rec_, double *r2i_, double *alphai_, int stev_min_=0);
     void consolidate_examiner_event_data();
     bool report_examiner_event_data(bool first2finish_, int &stev_earliest_, int &stev_latest_, int *stev_c_, int ** nev_s_c_, int ** nobs_s_c_, double ** r2_s_c_, double **alpha_s_c_);
 
     inline void synchronise_examiner_event_data(int stev_e_, int stev_l_, int *stev_c_, int *stev_o_, int *comps_o_,double *rho2s_c_,double *rho2us_c_)
-      {event_block::synchronise_event_data(stev_e_,stev_l_,stev_c_,stev_o_,comps_o_,rho2s_c_,rho2us_c_);}
+    {
+      event_block::synchronise_event_data(stev_e_,stev_l_,stev_c_,stev_o_,comps_o_,rho2s_c_,rho2us_c_);
+      nf_netobs=event_block::nst_full();
+      nf_stobs=event_block::nst_stable();
+      nf_usobs=event_block::nst_unstable();
+    }
 
     void restore_event_record(event_record *rec_, double *r2_Fb_, double *alpha_Fb_);
 

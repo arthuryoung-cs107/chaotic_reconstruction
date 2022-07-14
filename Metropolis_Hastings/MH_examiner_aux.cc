@@ -104,7 +104,6 @@ bool MH_examiner::report_examiner_event_data(bool first2finish_, int &stev_earli
 void MH_examiner::restore_event_record(event_record *rec_, double *r2_Fb_, double *alpha_Fb_)
 {
   int frame_last=stev_ordered[nbeads-1],
-      iregime_local=0,
       *f_event=rec_->evframe_bead;
 
   double  netr2_local=0.0,
@@ -117,10 +116,10 @@ void MH_examiner::restore_event_record(event_record *rec_, double *r2_Fb_, doubl
 
   rec_->clear_residuals();
 
-  for (int i_frame=0,k=0; i_frame <= frame_last; i_frame++)
+  for (int i_frame=1,k=i_frame*nbeads; i_frame <= frame_last; i_frame++)
     for (int i_bead = 0; i_bead < nbeads; i_bead++,k++)
     {
-      double r2_it = r2_Fb_[k];
+      double r2_it=r2_Fb_[k];
       netr2_local+=r2_it; r2net_bead[i_bead]+=r2_it;
       if (i_frame<=(stev_comp[i_bead]+1))
       {

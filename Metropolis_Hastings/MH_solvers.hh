@@ -70,6 +70,7 @@ class MH_genetic : public basic_MH_trainer, public event_block
     inline void initialize_genetic_run()
     {
       initialize_basic_MHT_run();
+      event_block::initialize_event_block();
       Class_count=event_block_count=0;
       prob_best=prob_worst=0.0;
     }
@@ -86,9 +87,9 @@ class MH_genetic : public basic_MH_trainer, public event_block
       for (int i = 0; i < nbeads; i++)
       {
         comps_ordered[i]=i;
-        stev_ordered[i]=stev_comp[i];
+        stev_ordered[i]=stev_comp[i]=max(stev_comp[i],stev_comp_old[i]); // ensure we have strictly increasing events
       }
-      event_block::consolidate_event_data();
+      event_block::consolidate_event_data(); // sort event states
     }
 
     inline void define_genetic_event_block()
@@ -96,7 +97,12 @@ class MH_genetic : public basic_MH_trainer, public event_block
 
     void synchronise_genetic_event_data();
     void report_genetic_event_data();
-    inline void stage_event_search() {take_records(leaders,pool,nlead);}
+    inline void stage_event_search()
+    {
+      for (int i = 0; i < nbeads; i++) stev_comp_old[i] = stev_comp[i];
+      stev_min=stev_ordered[nbeads-1]; // ensuring that in our next event search, we evaluate up to the last frame of previous event block
+      take_records(leaders,pool,nlead);
+    }
 
     // training
     double set_objective(bool verbose_, double &r2_scale_, bool stable_flag_);

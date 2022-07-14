@@ -93,7 +93,7 @@ void MH_genetic::find_events(bool verbose_)
     #pragma omp for nowait
     for (int i = 0; i < npool; i++)
     {
-      ex_t->detect_events(pool[i], r2_pool_Framebead[i], alpha_pool_Framebead[i]);
+      ex_t->detect_events(pool[i], r2_pool_Framebead[i], alpha_pool_Framebead[i], stev_min);
     }
     ex_t->consolidate_examiner_event_data();
     #pragma omp critical

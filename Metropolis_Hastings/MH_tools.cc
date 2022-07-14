@@ -12,7 +12,7 @@ void print_row_vec(double *dvec_, int n_) {for (int i = 0; i < n_; i++) printf("
 // event_block
 
 event_block::event_block(int ncomp_, int nstates_, int dim_): ncomp(ncomp_), nstates(nstates_), dim(dim_), dof(ncomp*dim),
-stev_comp(new int[ncomp]), stev_ordered(new int[ncomp]), comps_ordered(new int[ncomp]),
+stev_comp(new int[ncomp]), stev_comp_old(new int[ncomp]), stev_ordered(new int[ncomp]), comps_ordered(new int[ncomp]),
 nev_state_comp(Tmatrix<int>(nstates,ncomp)), nobs_state_comp(Tmatrix<int>(nstates,ncomp)),
 rho2stable_comp(new double[ncomp]), rho2unstable_comp(new double[ncomp]),
 mur2_state_comp(Tmatrix<double>(nstates,ncomp)), stdr2_state_comp(Tmatrix<double>(nstates,ncomp)),
@@ -33,6 +33,7 @@ void event_block::clear_event_data()
   stev_earliest=nstates;
   for (int i=0,k=0; i < ncomp; i++)
   {
+    stev_comp_old[i]=stev_comp[i];
     stev_comp[i]=0;
     for (int j = 0; j < nstates; j++,k++)
     {

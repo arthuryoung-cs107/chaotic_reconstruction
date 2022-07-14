@@ -192,6 +192,8 @@ class MH_trainer : public MH_params
     // aux
     inline double max(double a_,double b_ ) {return (a_>b_)?a_:b_;}
     inline double min(double a_,double b_ ) {return (a_<b_)?a_:b_;}
+    inline int max(int a_,int b_ ) {return (a_>b_)?a_:b_;}
+    inline int min(int a_,int b_ ) {return (a_<b_)?a_:b_;}
 };
 
 const int basic_rec_ilen=7;

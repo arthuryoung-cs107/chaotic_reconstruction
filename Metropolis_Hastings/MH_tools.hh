@@ -51,7 +51,9 @@ struct event_block
 
   int stev_earliest, // state index of earliest detected event (pertains to one system component)
       stev_latest, // state index of latest detected event (pertains to one system component)
+      stev_min, // minimum state index within which we search for events
       * const stev_comp, // state index of events for each component in the system
+      * const stev_comp_old, // previous state index of events
       * const stev_ordered, // state indices of events arranged chronologically
       * const comps_ordered, // system component indices arranged in order of their experienced events
       ** const nev_state_comp, // counts of events experienced at each sequence state for many trials
@@ -88,6 +90,7 @@ struct event_block
     printf("%s(event_block) rho2unstable_comp: ",indent_); print_row_vec(rho2unstable_comp, ncomp);
   }
 
+  inline void initialize_event_block() {for (int i = 0; i < ncomp; i++) stev_comp[i]=0; stev_min=0;}
   virtual void clear_event_data();
   virtual void consolidate_event_data();
   virtual void define_event_block(double sigma_scaled_);
