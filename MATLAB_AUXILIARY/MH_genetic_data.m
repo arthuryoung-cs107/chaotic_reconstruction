@@ -104,6 +104,10 @@ classdef MH_genetic_data
             gen_out.u_wmean=fread(file,ulen,'double=>double');
             gen_out.u_var=fread(file,ulen,'double=>double');
             gen_out.u_wvar=fread(file,ulen,'double=>double');
+            if (feof(file))
+                fprintf('hit end of file\n');
+            end
+
             % if (feof(file))
             %     gen_out.full_diagnostics=false;
             % else
@@ -117,6 +121,27 @@ classdef MH_genetic_data
                                         'dlen', dlen_, ...
                                         'ints', fread(file_,ilen_,'int=>int'), ...
                                         'dubs', fread(file_,dlen_,'double=>double'));
+        end
+        function print_Class(Class_)
+            fprintf('leader_count: %d\n',Class_.ints(1));
+            fprintf('gen_count: %d\n',Class_.ints(2));
+            fprintf('nsuccess: %d\n',Class_.ints(3));
+            fprintf('ncandidates: %d\n',Class_.ints(4));
+            fprintf('bleader_rid: %d\n',Class_.ints(5));
+            fprintf('wleader_rid: %d\n',Class_.ints(6));
+            fprintf('nreplace: %d\n',Class_.ints(7));
+            fprintf('ndup: %d\n',Class_.ints(8));
+            fprintf('ndup_unique: %d\n',Class_.ints(9));
+            fprintf('nredraw: %d\n',Class_.ints(10));
+            fprintf('nreload: %d\n',Class_.ints(11));
+            fprintf('Class_count: %d\n', Class_.ints(12));
+            fprintf('event_block_count: %d\n', Class_.ints(13));
+
+            fprintf('rho2: %e\n',Class_.dubs(1));
+            fprintf('br2: %e\n',Class_.dubs(2));
+            fprintf('wr2: %e\n',Class_.dubs(3));
+            fprintf('prob_best: %e\n',Class_.dubs(4));
+            fprintf('prob_worst: %e\n',Class_.dubs(5));
         end
     end
 end
