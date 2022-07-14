@@ -10,7 +10,7 @@ const int param_id=0;
 const int MH_id=1;
 
 const int ulen = 12;
-const int nbeads=3;
+const int nbeads=5;
 const int nlead = 12;
 const int npool = 1000;
 // const int npool = 100;
