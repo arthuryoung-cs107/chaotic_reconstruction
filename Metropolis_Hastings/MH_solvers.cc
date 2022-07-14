@@ -165,7 +165,7 @@ bool MH_genetic::train_objective(bool verbose_, int &nit_, int &nit_objective_, 
         first2finish=ex_t->report_examiner_training_data(first2finish,&bpool,isuccess_pool,nsuccess,u_wmean);
       }
     }
-    if (verbose_) verbose_train_objective_1(nit_);
+    if (verbose_) verbose_train_objective_1(nit_,nsuccess_local);
 
     double wsum_leaders = consolidate_genetic_training_data(wsum_pool,w_leaders,rho2_,nreplace,r2_scale);
 

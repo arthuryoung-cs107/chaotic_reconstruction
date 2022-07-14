@@ -185,8 +185,8 @@ class MH_genetic : public basic_MH_trainer, public event_block
     inline void verbose_set_objective_2()
       {printf("nreplace: %d, r2 best (%d): %e, r2 worst (%d): %e. ",nreplace,bleader_rid,br2,wleader_rid,wr2);}
 
-    inline void verbose_train_objective_1(int nit_)
-      {printf("(MH_genetic::train_objective) gen %d, Class %d, nit %d: %d candidates, best candidate (%d) r2 = %e. ", gen_count, Class_count, nit_, nsuccess, bpool->rid, bpool->get_r2());}
+    inline void verbose_train_objective_1(int nit_, int nsuccess_local_)
+      {printf("(MH_genetic::train_objective) gen %d, Class %d, nit %d: %d (%d) candidates, best candidate (%d) r2 = %e. ", gen_count, Class_count, nit_, nsuccess, nsuccess_local_, bpool->rid, bpool->get_r2());}
 
     inline void verbose_train_objective_2()
       {printf("%d replacements, r2 best (%d): %e, r2 worst (%d): %e. ", nreplace, bleader_rid, br2, wleader_rid, wr2);}

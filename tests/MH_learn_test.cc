@@ -7,7 +7,7 @@
 #include "MH_solvers.hh"
 
 const int param_id=0;
-const int MH_id=0;
+const int MH_id=1;
 
 const int ulen = 12;
 const int nbeads=3;
@@ -29,8 +29,6 @@ const int Class_max=1000;
 const int gen_max=1000;
 const int itrain_max=100;
 
-const bool test_generation=true;
-const bool learn_data=false;
 const bool noise_data=true;
 
 char proc_loc[] = "./dat_dir/";
