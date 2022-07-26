@@ -7,12 +7,12 @@
 #include "MH_solvers.hh"
 
 const int param_id=0;
-const int MH_id=0;
+const int MH_id=2;
 
 const int ulen = 12;
-const int nbeads=1;
+const int nbeads = 3;
 const int nlead = 12;
-const int npool = 20;
+const int npool = 1000;
 // const int npool = 100;
 // const int npool = 20;
 const double dt_sim = 0.002;
@@ -64,12 +64,10 @@ int main()
   MH_params mh_par(&mh_io, ulen, nlead, npool, dt_sim, t_phys, noise_sigma);
   MH_train_struct mhts(&mh_par, &sp_min, &sp_max, &wl);
 
-  printf("initializing\n");
   MH_genetic mh_gen(mhts,Class_max,gen_max,itrain_max,t_wheels,alpha_tol,rs_full_factor,train_tol);
-  printf("initialized\n");
   // additional directives for debugging
   // mh_gen.write_full_training_data=true;
-  printf("running\n");
+  
   // run
   mh_gen.run(true);
   return 0;

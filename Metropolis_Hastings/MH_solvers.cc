@@ -126,9 +126,9 @@ void MH_genetic::train_event_block(bool verbose_, bool &stable_convergence_, boo
 
   // perform stable training
   int nit_stable_train=0;
-
+  printf("setting stable objective\n");
   double rho2_stable_local=set_objective(verbose_, r2_scale, stable_flag=true);
-
+  printf("training stable objective\n");
   stable_convergence_=train_objective(verbose_,nit_train,nit_stable_train,rho2_stable_local);
 
   // perform unstable training
@@ -146,23 +146,42 @@ bool MH_genetic::train_objective(bool verbose_, int &nit_, int &nit_objective_, 
     bool first2finish=true;
     double wsum_pool=0.0;
     clear_genetic_training_data();
+    printf("entering parallel training loop \n");
     #pragma omp parallel reduction(+:nsuccess_local) reduction(+:wsum_pool)
     {
-      MH_examiner *ex_t=examiners[thread_num()];
+      int tid = thread_num();
+      MH_examiner *ex_t=examiners[tid];
       ex_t->clear_examiner_training_data();
       double  r_scale=sqrt(r2_scale),
               rho=sqrt(rho2_);
+      bool    firstrun=true,
+              secondrun=true;
+      #pragma omp critical
+      {
+        printf("(thread %d) cleared examiner training data\n",tid);
+      }
 
       #pragma omp for nowait
       for (int i = 0; i < npool; i++)
       {
         if (ex_t->examine_u(pool[i],i,wr2)) nsuccess_local++;
         wsum_pool+=pool[i]->w=gaussian_likelihood::compute_weight(sqrt(pool[i]->get_r2()),r_scale,rho);
+        if (firstrun)
+        {
+          printf("(thread %d) examined first parameter set (%d)\n",tid,i);
+          firstrun=false;
+        }
+        else if (secondrun)
+        {
+          printf("(thread %d) examined second parameter set (%d)\n",tid,i);
+          secondrun=false;
+        }
       }
       ex_t->consolidate_examiner_training_data(pool);
       #pragma omp critical
       {
         first2finish=ex_t->report_examiner_training_data(first2finish,&bpool,isuccess_pool,nsuccess,u_wmean);
+        printf("(thread %d) reported examiner training data\n",tid);
       }
     }
     if (verbose_) verbose_train_objective_1(nit_,nsuccess_local);
