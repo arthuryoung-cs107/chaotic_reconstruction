@@ -5,7 +5,7 @@
 
 #include "swirl.hh"
 
-const int nbeads=2;
+const int nbeads=10;
 const int param_id=0;
 const bool write_split = false;
 char proc_loc[] = "./dat_dir/";
