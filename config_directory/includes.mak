@@ -1,7 +1,8 @@
 CXX:=g++-11
 CC:=gcc-11
 OS:=OSX
-CFLAGS:= -march=native -O3 -fopenmp -DGSL -DKNUTH
+# CFLAGS:= -march=native -O3 -fopenmp -DGSL -DKNUTH
+CFLAGS:= -march=native -O0 -fopenmp -DGSL -DKNUTH
 
 IBASIC:=-I/usr/local/include/
 LINK:=-L/usr/local/lib/

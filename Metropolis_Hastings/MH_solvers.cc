@@ -166,16 +166,6 @@ bool MH_genetic::train_objective(bool verbose_, int &nit_, int &nit_objective_, 
       {
         if (ex_t->examine_u(pool[i],i,wr2)) nsuccess_local++;
         wsum_pool+=pool[i]->w=gaussian_likelihood::compute_weight(sqrt(pool[i]->get_r2()),r_scale,rho);
-        if (firstrun)
-        {
-          printf("(thread %d) examined first parameter set (%d)\n",tid,i);
-          firstrun=false;
-        }
-        else if (secondrun)
-        {
-          printf("(thread %d) examined second parameter set (%d)\n",tid,i);
-          secondrun=false;
-        }
       }
       ex_t->consolidate_examiner_training_data(pool);
       #pragma omp critical
