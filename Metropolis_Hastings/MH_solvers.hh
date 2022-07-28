@@ -5,7 +5,7 @@
 
 const int genetic_train_const_ilen=3;
 const int genetic_train_const_dlen=3;
-const int genetic_train_it_ilen=2;
+const int genetic_train_it_ilen=4;
 const int genetic_train_it_dlen=2;
 class MH_genetic : public basic_MH_trainer, public event_block
 {
@@ -31,6 +31,8 @@ class MH_genetic : public basic_MH_trainer, public event_block
 
           int Class_count,
               event_block_count,
+              write_training_pool,
+              write_pool_event_data,
               * const genetic_train_it_ints = &Class_count;
 
     const double  alpha_tol,
@@ -70,9 +72,12 @@ class MH_genetic : public basic_MH_trainer, public event_block
     inline void initialize_genetic_run()
     {
       initialize_basic_MHT_run();
-      event_block::initialize_event_block();
+      initialize_event_block();
       Class_count=event_block_count=0;
       prob_best=prob_worst=0.0;
+
+      write_training_pool=(int) write_full_training_data;
+      write_pool_event_data=(int) write_full_training_data;
     }
 
     void find_events(bool verbose_);

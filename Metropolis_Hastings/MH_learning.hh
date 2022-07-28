@@ -303,6 +303,7 @@ class basic_thread_worker: public thread_worker, public event_detector
       inline void set_unstable_objective()
         {r2_objective=&netr2_unstable; rho2_objective=compute_netrho2unstable();}
 
+      inline void clear_basic_tw_event_data() {clear_event_detector_event_data();}
       inline void clear_basic_tw_training_data()
       {
         memset(int_wkspc,0,iwkspc_len*sizeof(int));

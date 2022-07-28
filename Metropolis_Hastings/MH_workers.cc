@@ -19,7 +19,16 @@ void MH_examiner::detect_events(event_record *rec_, double *r2i_, double *alphai
           *alphaev_bead=rec_->alpha_bead,
           *pref;
 
-  start_detecting_events(f_local,f_event,netr2_local,netr2_stable_local,netr2_unstable_local,t_history,r2net_bead,r2stable_bead,r2unstable_bead,alphaev_bead);
+  start_detecting_events( f_local,
+                          f_event,
+                          netr2_local,
+                          netr2_stable_local,
+                          netr2_unstable_local,
+                          t_history,
+                          r2net_bead,
+                          r2stable_bead,
+                          r2unstable_bead,
+                          alphaev_bead);
 
   do
   {
@@ -31,7 +40,7 @@ void MH_examiner::detect_events(event_record *rec_, double *r2i_, double *alphai
       r2_state_comp[f_local][i]=rsq;
       netr2_local+=rsq; r2net_bead[i]+=rsq;
 
-      basic_thread_worker::update_integral_history(0.5*(rsq+r2_state_comp[f_local-1][i])*(t_history[0]-t_history[1]),i);
+      event_detector::update_integral_history(0.5*(rsq+r2_state_comp[f_local-1][i])*(t_history[0]-t_history[1]),i);
 
       double alpha_it = alpha_state_comp[f_local-1][i]=alpha_comp(INTr2_comp_history[i], t_history[0], t_history[2]);
       if (!(f_event[i]))

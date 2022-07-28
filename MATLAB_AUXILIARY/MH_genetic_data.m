@@ -3,9 +3,15 @@ classdef MH_genetic_data
         test_dir_name;
         MHpar;
 
-        event_block0;
-        Class0;
-        gen0;
+        %% constant system values
+        ulen;
+        nbeads;
+        Frames;
+        nlead;
+        npool;
+        dt_sim;
+        t_phys;
+        sigma;
     end
     methods
         function obj = MH_genetic_data(nbeads_, par_id_, MH_id_)
@@ -18,8 +24,18 @@ classdef MH_genetic_data
             dubs=fread(startspecs_file,gen_header(3),'double=>double');
             fclose(startspecs_file);
 
+            %% assignments
             obj.test_dir_name = test_dir_name;
             obj.MHpar = MHpar;
+
+            obj.ulen=MHpar.ulen;
+            obj.nbeads=MHpar.nbeads;
+            obj.Frames=MHpar.Frames;
+            obj.nlead=MHpar.nlead;
+            obj.npool=MHpar.npool;
+            obj.dt_sim=MHpar.dt_sim;
+            obj.t_phys=MHpar.t_phys;
+            obj.sigma=MHpar.sigma;
         end
     end
 
@@ -50,23 +66,7 @@ classdef MH_genetic_data
             end
 
             file = fopen([test_dir_name 'event_block' num2str(i_) '.mhdat']);
-            header = fread(file,3,'int=>int');
-            [hlen,npool,stev_latest]=deal(header(1),header(2),header(3));
-
-            nb_x_F = nbeads*stev_latest;
-
-            event_block_out = struct(   'stev_comp',fread(file,nbeads,'int=>int'), ...
-                                        'stev_ordered',fread(file,nbeads,'int=>int'), ...
-                                        'comps_ordered',fread(file,nbeads,'int=>int'), ...
-                                        'nev_state_comp',fread(file,nb_x_F,'int=>int'), ...
-                                        'nobs_state_comp',fread(file,nb_x_F,'int=>int'), ...
-                                        'rho2stable_comp',fread(file,nbeads,'double=>double'), ...
-                                        'rho2unstable_comp',fread(file,nbeads,'double=>double'), ...
-                                        'mur2_state_comp',fread(file,nb_x_F,'double=>double'), ...
-                                        'stdr2_state_comp',fread(file,nb_x_F,'double=>double'), ...
-                                        'mualpha_state_comp',fread(file,nb_x_F,'double=>double'), ...
-                                        'stdalpha_state_comp',fread(file,nb_x_F,'double=>double'), ...
-                                        'pool',record_block(file,ulen));
+            event_block_out = event_block(file,ulen,nbeads);
             fclose(file);
         end
         function Class_out = read_Class_i(obj, i_, test_dir_name_, MHpar_)
@@ -79,11 +79,7 @@ classdef MH_genetic_data
             end
 
             file = fopen([test_dir_name 'Class' num2str(i_) '.mhdat']);
-            header = fread(file,3,'int=>int');
-            [hlen,ilen,dlen] = deal(header(1),header(2),header(3));
-            Class_out = MH_genetic_data.read_int_double_chunk(file,ilen,dlen);
-
-            Class_out.leaders = record_block(file,ulen);
+            Class_out = Class_block(file,ulen);
             fclose(file);
         end
         function gen_out = read_gen_i(obj, i_, test_dir_name_, MHpar_)
@@ -96,52 +92,14 @@ classdef MH_genetic_data
             end
 
             file = fopen([test_dir_name 'gen' num2str(i_) '.mhdat']);
-            header = fread(file,3,'int=>int');
-            [hlen,ilen,dlen] = deal(header(1),header(2),header(3));
-            gen_out = MH_genetic_data.read_int_double_chunk(file,ilen,dlen);
-
-            gen_out.u_mean=fread(file,ulen,'double=>double');
-            gen_out.u_wmean=fread(file,ulen,'double=>double');
-            gen_out.u_var=fread(file,ulen,'double=>double');
-            gen_out.u_wvar=fread(file,ulen,'double=>double');
-            if (feof(file))
-                fprintf('hit end of file\n');
-            end
-
-            % if (feof(file))
-            %     gen_out.full_diagnostics=false;
-            % else
-            %     gen_out.full_diagnostics=true;
-            %     gen_out.pool=record_block(file,ulen);
-            % end
+            gen_out = generation_block(file,ulen);
             fclose(file);
         end
-        function chunk_data_out = read_int_double_chunk(file_,ilen_,dlen_)
-            chunk_data_out = struct(    'ilen', ilen_, ...
-                                        'dlen', dlen_, ...
-                                        'ints', fread(file_,ilen_,'int=>int'), ...
-                                        'dubs', fread(file_,dlen_,'double=>double'));
-        end
-        function print_Class(Class_)
-            fprintf('leader_count: %d\n',Class_.ints(1));
-            fprintf('gen_count: %d\n',Class_.ints(2));
-            fprintf('nsuccess: %d\n',Class_.ints(3));
-            fprintf('ncandidates: %d\n',Class_.ints(4));
-            fprintf('bleader_rid: %d\n',Class_.ints(5));
-            fprintf('wleader_rid: %d\n',Class_.ints(6));
-            fprintf('nreplace: %d\n',Class_.ints(7));
-            fprintf('ndup: %d\n',Class_.ints(8));
-            fprintf('ndup_unique: %d\n',Class_.ints(9));
-            fprintf('nredraw: %d\n',Class_.ints(10));
-            fprintf('nreload: %d\n',Class_.ints(11));
-            fprintf('Class_count: %d\n', Class_.ints(12));
-            fprintf('event_block_count: %d\n', Class_.ints(13));
-
-            fprintf('rho2: %e\n',Class_.dubs(1));
-            fprintf('br2: %e\n',Class_.dubs(2));
-            fprintf('wr2: %e\n',Class_.dubs(3));
-            fprintf('prob_best: %e\n',Class_.dubs(4));
-            fprintf('prob_worst: %e\n',Class_.dubs(5));
+        function [ilen,dlen,ints,dubs] = read_int_double_chunk(file_)
+            header=fread(file_,3,'int=>int');
+            [ilen,dlen] = deal(header(2),header(3));
+            ints=fread(file_,ilen,'int=>int');
+            dubs=fread(file_,dlen,'double=>double');
         end
     end
 end

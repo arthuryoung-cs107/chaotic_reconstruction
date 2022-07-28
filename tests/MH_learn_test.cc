@@ -7,7 +7,7 @@
 #include "MH_solvers.hh"
 
 const int param_id=0;
-const int MH_id=2;
+const int MH_id=3;
 
 const int ulen = 12;
 const int nbeads = 3;
@@ -19,14 +19,14 @@ const double dt_sim = 0.002;
 // const double t_wheels = 0.012;
 const double t_wheels = -1.0;
 
-const double noise_sigma = 1e-1;
+const double noise_sigma = 1e-2;
 
 const double alpha_tol=10.0;
 const double rs_full_factor=1.0;
 const double train_tol=0.1;
 
-const int Class_max=1000;
-const int gen_max=1000;
+const int Class_max=100;
+const int gen_max=100;
 const int itrain_max=100;
 
 const bool noise_data=true;
@@ -66,8 +66,8 @@ int main()
 
   MH_genetic mh_gen(mhts,Class_max,gen_max,itrain_max,t_wheels,alpha_tol,rs_full_factor,train_tol);
   // additional directives for debugging
-  // mh_gen.write_full_training_data=true;
-  
+  mh_gen.write_full_training_data=true;
+
   // run
   mh_gen.run(true);
   return 0;

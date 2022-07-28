@@ -168,6 +168,8 @@ struct event_detector: public event_block
           ** const alpha_state_comp,
           ** const INTr2_comp_history;
 
+  inline void clear_event_detector_event_data() {event_block::clear_event_data();}
+
   inline void update_integral_history(double INT_now_, int ibead_)
   {
     INTr2_comp_history[ibead_][2]=INTr2_comp_history[ibead_][1];

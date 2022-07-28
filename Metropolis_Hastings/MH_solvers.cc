@@ -126,9 +126,7 @@ void MH_genetic::train_event_block(bool verbose_, bool &stable_convergence_, boo
 
   // perform stable training
   int nit_stable_train=0;
-  printf("setting stable objective\n");
   double rho2_stable_local=set_objective(verbose_, r2_scale, stable_flag=true);
-  printf("training stable objective\n");
   stable_convergence_=train_objective(verbose_,nit_train,nit_stable_train,rho2_stable_local);
 
   // perform unstable training
@@ -146,7 +144,6 @@ bool MH_genetic::train_objective(bool verbose_, int &nit_, int &nit_objective_, 
     bool first2finish=true;
     double wsum_pool=0.0;
     clear_genetic_training_data();
-    printf("entering parallel training loop \n");
     #pragma omp parallel reduction(+:nsuccess_local) reduction(+:wsum_pool)
     {
       int tid = thread_num();
@@ -156,11 +153,6 @@ bool MH_genetic::train_objective(bool verbose_, int &nit_, int &nit_objective_, 
               rho=sqrt(rho2_);
       bool    firstrun=true,
               secondrun=true;
-      #pragma omp critical
-      {
-        printf("(thread %d) cleared examiner training data\n",tid);
-      }
-
       #pragma omp for nowait
       for (int i = 0; i < npool; i++)
       {
@@ -171,7 +163,6 @@ bool MH_genetic::train_objective(bool verbose_, int &nit_, int &nit_objective_, 
       #pragma omp critical
       {
         first2finish=ex_t->report_examiner_training_data(first2finish,&bpool,isuccess_pool,nsuccess,u_wmean);
-        printf("(thread %d) reported examiner training data\n",tid);
       }
     }
     if (verbose_) verbose_train_objective_1(nit_,nsuccess_local);

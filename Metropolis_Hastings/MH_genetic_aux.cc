@@ -65,8 +65,8 @@ void MH_genetic::report_genetic_event_data()
 void MH_genetic::write_event_diagnostics(int event_block_count_)
 {
   // write event data
-  int hlen=2;
-  int header[] = {hlen, npool, stev_latest};
+  int hlen=3;
+  int header[] = {hlen, npool, stev_latest, write_pool_event_data};
   sprintf(obuf+obuf_end, "event_block%d.mhdat",event_block_count_);
   FILE * data_file = fopen(obuf, "wb");
   fwrite(header, sizeof(int), hlen+1, data_file);
@@ -83,6 +83,13 @@ void MH_genetic::write_event_diagnostics(int event_block_count_)
   fwrite(stdalpha_state_comp, sizeof(double), nbeads*stev_latest, data_file);
   pool[0]->write_event_rec_full_header(data_file,npool);
   for (int i = 0; i < npool; i++) pool[i]->write_record_data(data_file);
+  if (write_pool_event_data)
+  {
+    for (int i = 0; i < npool; i++)
+      fwrite(r2_pool_Framebead[i], sizeof(double), nbeads*stev_latest, data_file);
+    for (int i = 0; i < npool; i++)
+      fwrite(alpha_pool_Framebead[i], sizeof(double), nbeads*stev_latest, data_file);
+  }
   fclose(data_file);
 }
 
@@ -338,7 +345,7 @@ void MH_genetic::write_generation_diagnostics(int gen_count_)
   write_genetic_it_ints(gen_file);
   write_genetic_it_dubs(gen_file);
   basic_MH_trainer::write_ustats(gen_file);
-  if (write_full_training_data)
+  if (write_training_pool)
   {
     pool[0]->write_event_rec_training_header(gen_file,npool);
     for (int i = 0; i < npool; i++) pool[i]->write_event_rec_training_data(gen_file);

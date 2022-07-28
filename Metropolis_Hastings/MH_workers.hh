@@ -17,7 +17,7 @@ class MH_examiner: public basic_thread_worker
     double * const ustat_buf=dub_wkspc;
 
     // event
-    inline void clear_examiner_event_data() {event_block::clear_event_data(); ntest=0;}
+    inline void clear_examiner_event_data() {clear_basic_tw_event_data(); ntest=0;}
     void detect_events(event_record *rec_, double *r2i_, double *alphai_, int stev_min_=0);
     void consolidate_examiner_event_data();
     bool report_examiner_event_data(bool first2finish_, int &stev_earliest_, int &stev_latest_, int *stev_c_, int ** nev_s_c_, int ** nobs_s_c_, double ** r2_s_c_, double **alpha_s_c_);

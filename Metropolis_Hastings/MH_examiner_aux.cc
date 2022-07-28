@@ -10,8 +10,12 @@ void MH_examiner::start_detecting_events(int &f_local_,int *f_event_,double &net
   t_history_[0]=t_history_[1]=t_history_[2]=ts[f_local_];
   for (int i = 0; i < nbeads; i++)
   {
-    r2_state_comp[f_local_][i]=INTr2_comp_history[i][0]=INTr2_comp_history[i][1]=
-    r2net_bead_[i]=r2stable_bead_[i]=r2unstable_bead_[i]=0.0;
+    r2_state_comp[f_local_][i]=
+    INTr2_comp_history[i][0]=
+    INTr2_comp_history[i][1]=
+    r2net_bead_[i]=
+    r2stable_bead_[i]=
+    r2unstable_bead_[i]=0.0;
     alpha_state_comp[f_local_][i]=alphaev_bead_[i]=NAN;
     f_event_[i]=0;
   }
@@ -27,7 +31,7 @@ void MH_examiner::start_detecting_events(int &f_local_,int *f_event_,double &net
       r2_state_comp[f_local_][i]=rsq;
       netr2_local_+=rsq; r2net_bead_[i]+=rsq;
 
-      basic_thread_worker::update_integral_history(0.5*(rsq+r2_state_comp[f_local_-1][i])*(t_history_[0]-t_history_[1]),i);
+      event_detector::update_integral_history(0.5*(rsq+r2_state_comp[f_local_-1][i])*(t_history_[0]-t_history_[1]),i);
 
       alpha_state_comp[f_local_][i]=NAN;
 
@@ -50,7 +54,7 @@ void MH_examiner::update_event_data(int final_frame_, int *f_event_, double *r2i
     nev_state_comp[fevent_it][i]++;
     if (fevent_it<stev_early) stev_early = fevent_it;
     if (fevent_it>stev_late) stev_late = fevent_it;
-    for (int j = 0; j < final_frame_; j++,k++)
+    for (int j = 0; j <= final_frame_; j++,k++)
     {
       mur2_state_comp[0][k]+=r2i_[k]=r2_state_comp[0][k];
       mualpha_state_comp[0][k]+=alphai_[k]=alpha_state_comp[0][k];
@@ -95,7 +99,7 @@ bool MH_examiner::report_examiner_event_data(bool first2finish_, int &stev_earli
   else
   {
     if (stev_earliest<stev_earliest_) stev_earliest_=stev_earliest;
-    if (stev_latest<stev_latest_) stev_latest_=stev_latest;
+    if (stev_latest>stev_latest_) stev_latest_=stev_latest;
     for (int i = 0; i < ncomp; i++) if (stev_comp[i]<stev_c_[i]) stev_c_[i]=stev_comp[i];
   }
   return false;
