@@ -3,6 +3,70 @@
 
 #include "MH_learning.hh"
 
+const int basic_rec_ilen=7;
+const int basic_rec_dlen=1;
+struct basic_record: public record
+{
+  basic_record(record_struct &rs_, int rid_, int * ichunk_, double * dchunk_, double * u_): record(rs_, rid_, ichunk_, dchunk_, u_) {init_basic_record();}
+
+  basic_record(record_struct &rs_, int rid_, int * ichunk_, double * dchunk_, double * u_, MH_rng * ran_, double * umin_, double * umax_): basic_record(rs_, rid_, ichunk_, dchunk_, u_) {draw_ranuni(ran_,umin_,umax_);}
+
+  ~basic_record() {}
+
+  bool success;
+
+  int gen, // 0: generation in which this particle was generated
+      Class, // 1: leader Class this particle belongs to, if any
+      dup_count, // 2: number of times this particle has been duplicated
+      parent_count, // 3: number of particle ancestors
+      parent_rid, // 4: index position of parent particle
+      parent_gen, // 5: generation this particle comes from
+      parent_Class, // 6: leader Class this particle comes from
+      * const basic_rec_ints = &gen;
+
+  double  w,
+          * const basic_rec_dubs = &w;
+
+  // sampling
+
+  inline void init_basic_record(int gen_=0,int Class_=-1,int dup_count_=0,int parent_count_=0,int parent_rid_=-1,int parent_gen_=-1,int parent_Class_=-1,double w_=0.0)
+  {
+    gen=gen_; Class=Class_; dup_count=dup_count_;
+    parent_count=parent_count_; parent_rid=parent_rid_;
+    parent_gen=parent_gen_; parent_Class=parent_Class_;
+    w=w_;
+  }
+
+  // training
+
+  inline int take_basic_record(basic_record * rec_)
+  {
+    if (take_record_chunks(rec_)) // successful replacement
+    {
+      memcpy(basic_rec_ints, rec_->basic_rec_ints, basic_rec_ilen*sizeof(int));
+      memcpy(basic_rec_dubs, rec_->basic_rec_dubs, basic_rec_dlen*sizeof(double));
+      return 1;
+    }
+    else return 0;
+  }
+
+  inline double get_r2() {return *dub_compare_bad;}
+
+  // io
+  inline int basic_rec_ilen_full() {return basic_rec_ilen;}
+  inline int basic_rec_dlen_full() {return basic_rec_dlen;}
+
+  inline void write_basic_rec_ints(FILE * file_)
+    {fwrite(basic_rec_ints, sizeof(int), basic_rec_ilen, file_);}
+
+  inline void write_basic_rec_dubs(FILE * file_)
+    {fwrite(basic_rec_dubs, sizeof(double), basic_rec_dlen, file_);}
+
+  // debugging
+  void print_basic_record(const char indent_[]=" ", bool print_all_=true);
+
+};
+
 int comp_event_rec_ichunk_len(int nbeads_);
 int comp_event_rec_dchunk_len(int nbeads_);
 int comp_event_rec_it_ichunk_len(int nbeads_);
@@ -89,27 +153,7 @@ struct event_record : public basic_record
   inline int event_rec_dlen_train() {return basic_rec_dlen_full() + event_rec_it_dlen;}
 
   // debugging
-
-  inline void print_event_record(int nlead_, int npool_)
-  {
-    printf("(event_record) record %d of %d leaders, %d pool.\n", rid,nlead_,npool_);
-    printf("(event_record) int data:\n");
-    printf(" nfobs: %d\n",nfobs);
-    printf(" nfstable: %d\n",nfstable);
-    printf(" nfunstable: %d\n",nfunstable);
-
-    printf("(event_record) double data:\n");
-    printf(" r2net: %e\n",r2net);
-    printf(" r2stable: %e\n",r2stable);
-    printf(" r2unstable: %e\n",r2unstable);
-
-    printf("(event_record) evframe_bead: "); print_row_vec(evframe_bead,nbeads);
-    printf("(event_record) r2stable_bead: "); print_row_vec(r2stable_bead,nbeads);
-    printf("(event_record) r2unstable_bead: "); print_row_vec(r2unstable_bead,nbeads);
-    printf("(event_record) alpha_bead: "); print_row_vec(alpha_bead,nbeads);
-
-    print_basic_record();
-  }
+  void print_event_record(int nlead_, int npool_);
 
   private:
     const int event_rec_it_ichunk_len,

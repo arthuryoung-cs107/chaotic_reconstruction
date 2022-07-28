@@ -6,7 +6,8 @@
 
 struct record: public record_struct
 {
-  record(record_struct &rs_, int rid_, int * ichunk_, double * dchunk_, double * u_);
+  record(record_struct &rs_, int rid_, int * ichunk_, double * dchunk_, double * u_): record_struct(rs_),
+  rid(rid_),ichunk(ichunk_),dchunk(dchunk_), u(u_) {}
   ~record() {}
 
   const int rid;
@@ -47,8 +48,10 @@ struct record: public record_struct
     write_dubs(file_);
     write_chunks(file_);
   }
-  inline void print_record(const char indent_[]="  ")
-  {printf("%s(record): ichunk_len=%d, dchunk_len=%d\n", indent_, ichunk_len,dchunk_len);}
+
+  // debugging
+  void print_record(const char indent_[]="  ");
+
 };
 
 class thread_worker: public swirl, public thread_worker_struct
@@ -97,7 +100,6 @@ class thread_worker: public swirl, public thread_worker_struct
         return xerr*xerr+yerr*yerr;
       }
 };
-
 
 const int MHT_it_ilen=11;
 const int MHT_it_dlen=3;
@@ -153,24 +155,7 @@ class MH_trainer : public MH_params
     MH_rng ** rng; // random number generators
 
     // debugging
-
-    inline void print_MHT(const char indent_[])
-    {
-      printf("%s(MH_trainer) leader_count: %d\n", indent_,leader_count);
-      printf("%s(MH_trainer) gen_count: %d\n", indent_,gen_count);
-      printf("%s(MH_trainer) nsuccess: %d\n", indent_,nsuccess);
-      printf("%s(MH_trainer) ncandidates: %d\n", indent_,ncandidates);
-      printf("%s(MH_trainer) bleader_rid: %d\n", indent_,bleader_rid);
-      printf("%s(MH_trainer) wleader_rid: %d\n", indent_,wleader_rid);
-      printf("%s(MH_trainer) nreplace: %d\n", indent_,nreplace);
-      printf("%s(MH_trainer) ndup: %d\n", indent_,ndup);
-      printf("%s(MH_trainer) ndup_unique: %d\n", indent_,ndup_unique);
-      printf("%s(MH_trainer) nredraw: %d\n", indent_,nredraw);
-
-      printf("%s(MH_trainer) rho2: %e\n",indent_,rho2);
-      printf("%s(MH_trainer) br2: %e\n",indent_,br2);
-      printf("%s(MH_trainer) wr2: %e\n",indent_,wr2);
-    }
+    void print_MHT(const char indent_[]);
 
     // run
     inline void initialize_MHT_run()
@@ -194,192 +179,6 @@ class MH_trainer : public MH_params
     inline double min(double a_,double b_ ) {return (a_<b_)?a_:b_;}
     inline int max(int a_,int b_ ) {return (a_>b_)?a_:b_;}
     inline int min(int a_,int b_ ) {return (a_<b_)?a_:b_;}
-};
-
-const int basic_rec_ilen=7;
-const int basic_rec_dlen=1;
-struct basic_record: public record
-{
-  basic_record(record_struct &rs_, int rid_, int * ichunk_, double * dchunk_, double * u_): record(rs_, rid_, ichunk_, dchunk_, u_) {init_basic_record();}
-
-  basic_record(record_struct &rs_, int rid_, int * ichunk_, double * dchunk_, double * u_, MH_rng * ran_, double * umin_, double * umax_): basic_record(rs_, rid_, ichunk_, dchunk_, u_) {draw_ranuni(ran_,umin_,umax_);}
-
-  ~basic_record() {}
-
-  bool success;
-
-  int gen, // 0: generation in which this particle was generated
-      Class, // 1: leader Class this particle belongs to, if any
-      dup_count, // 2: number of times this particle has been duplicated
-      parent_count, // 3: number of particle ancestors
-      parent_rid, // 4: index position of parent particle
-      parent_gen, // 5: generation this particle comes from
-      parent_Class, // 6: leader Class this particle comes from
-      * const basic_rec_ints = &gen;
-
-  double  w,
-          * const basic_rec_dubs = &w;
-
-  // sampling
-
-  inline void init_basic_record(int gen_=0,int Class_=-1,int dup_count_=0,int parent_count_=0,int parent_rid_=-1,int parent_gen_=-1,int parent_Class_=-1,double w_=0.0)
-  {
-    gen=gen_; Class=Class_; dup_count=dup_count_;
-    parent_count=parent_count_; parent_rid=parent_rid_;
-    parent_gen=parent_gen_; parent_Class=parent_Class_;
-    w=w_;
-  }
-
-  // debugging
-
-  inline void print_basic_record(const char indent_[]=" ", bool print_all_=true)
-  {
-    printf("%s(basic_record) int data:\n", indent_);
-    printf("%s gen: %d\n",indent_,gen);
-    printf("%s Class: %d\n",indent_,Class);
-    printf("%s dup_count: %d\n",indent_,dup_count);
-    printf("%s parent_count: %d\n",indent_,parent_count);
-    printf("%s parent_rid: %d\n",indent_,parent_rid);
-    printf("%s parent_gen: %d\n",indent_,parent_gen);
-    printf("%s parent_Class: %d\n",indent_,parent_Class);
-
-    printf("%s(basic_record) double data:\n", indent_);
-    printf("%s w: %e\n",indent_,w);
-    printf("%s r2: %e\n",indent_,get_r2());
-    if (print_all_) print_record();
-  }
-
-  // training
-
-  inline int take_basic_record(basic_record * rec_)
-  {
-    if (take_record_chunks(rec_)) // successful replacement
-    {
-      memcpy(basic_rec_ints, rec_->basic_rec_ints, basic_rec_ilen*sizeof(int));
-      memcpy(basic_rec_dubs, rec_->basic_rec_dubs, basic_rec_dlen*sizeof(double));
-      return 1;
-    }
-    else return 0;
-  }
-
-  inline double get_r2() {return *dub_compare_bad;}
-
-  // io
-  inline int basic_rec_ilen_full() {return basic_rec_ilen;}
-  inline int basic_rec_dlen_full() {return basic_rec_dlen;}
-
-  inline void write_basic_rec_ints(FILE * file_)
-    {fwrite(basic_rec_ints, sizeof(int), basic_rec_ilen, file_);}
-
-  inline void write_basic_rec_dubs(FILE * file_)
-    {fwrite(basic_rec_dubs, sizeof(double), basic_rec_dlen, file_);}
-};
-
-class basic_thread_worker: public thread_worker, public event_detector
-{
-    public:
-
-      basic_thread_worker(swirl_param &sp_, proximity_grid *pg_, wall_list &wl_, thread_worker_struct &tws_, int thread_id_, double alpha_tol_, int iwkspc_len_, int dwkspc_len_): thread_worker(sp_, pg_, wl_, tws_, thread_id_), event_detector(nbeads, Frames, 2, alpha_tol_),
-      iwkspc_len(iwkspc_len_), dwkspc_len(dwkspc_len_),
-      int_wkspc(new int[iwkspc_len]), dub_wkspc(new double[dwkspc_len]) {}
-
-      ~basic_thread_worker() {delete [] int_wkspc; delete [] dub_wkspc;}
-
-      const int iwkspc_len,
-                dwkspc_len;
-
-      int * const int_wkspc;
-
-      double  netr2,
-              netr2_stable,
-              netr2_unstable,
-              *r2_objective,
-              * const dub_wkspc;
-
-      inline void set_net_objective()
-        {r2_objective=&netr2; rho2_objective=compute_netrho2();}
-      inline void set_stable_objective()
-        {r2_objective=&netr2_stable; rho2_objective=compute_netrho2stable();}
-      inline void set_unstable_objective()
-        {r2_objective=&netr2_unstable; rho2_objective=compute_netrho2unstable();}
-
-      inline void clear_basic_tw_event_data() {clear_event_detector_event_data();}
-      inline void clear_basic_tw_training_data()
-      {
-        memset(int_wkspc,0,iwkspc_len*sizeof(int));
-        for (int i = 0; i < dwkspc_len; i++) dub_wkspc[i]=0.0;
-      }
-
-      inline bool check_success(double r2_threshold_) {return (*r2_objective)<r2_threshold_;}
-
-    protected:
-
-      // debugging
-      inline void print_basic_tw(const char indent_[], double sigma_scaled_)
-        {print_event_block(sigma_scaled_,indent_);}
-};
-
-class basic_MH_trainer: public MH_trainer, public gaussian_likelihood
-{
-    public:
-
-      basic_MH_trainer(MH_train_struct &mhts_, int ichunk_width_, int dchunk_width_, double t_wheels0_=-1.0);
-
-      ~basic_MH_trainer()
-      {
-        delete [] ndup_leaders; delete [] irepl_leaders; delete [] isuccess_pool;
-        delete [] w_leaders;
-        delete [] u_mean; delete [] u_var;
-        delete [] u_wmean; delete [] u_wvar;
-      }
-
-    protected:
-
-      bool apply_training_wheels;
-
-      const double t_wheels0; // initial drift fraction
-
-      double  t_wheels, // current drift fraction
-              r2_scale;
-
-      int * const ndup_leaders,
-          * const irepl_leaders,
-          * const isuccess_pool;
-
-      double  * const w_leaders,
-              * const u_mean,
-              * const u_var,
-              * const u_wmean,
-              * const u_wvar;
-
-      // debugging
-      inline void print_basic_MHT(const char indent_[]="     ")
-        {print_MHT(indent_); print_gaussian_likelihood(indent_);}
-
-      // run
-      inline void initialize_basic_MHT_run() {initialize_MHT_run(); t_wheels=t_wheels0;}
-
-      // sampling
-      virtual void redraw_u(basic_record * rec_pool_, MH_rng * rng_t_)
-        {redraw_u_uni(rec_pool_, rng_t_); rec_pool_->init_basic_record(gen_count);}
-
-      void duplicate_u_basic(basic_record *child_, basic_record *parent_, MH_rng *rng_t_, double fac_low_=0.0);
-
-      // training
-      inline void clear_basic_MHT_training_data() {memset(isuccess_pool,0,npool*sizeof(int));nsuccess=0;}
-
-      // io
-      inline int basic_MHT_it_ilen_full() {return MHT_it_ilen;}
-      inline int basic_MHT_it_dlen_full() {return MHT_it_dlen;}
-      inline void write_basic_MHT_it_ints(FILE * file_) {write_MHT_it_ints(file_);}
-      inline void write_basic_MHT_it_dubs(FILE * file_) {write_MHT_it_dubs(file_);}
-      inline void write_ustats(FILE *file_)
-      {
-        fwrite(u_mean,sizeof(double),ulen,file_);
-        fwrite(u_wmean,sizeof(double),ulen,file_);
-        fwrite(u_var,sizeof(double),ulen,file_);
-        fwrite(u_wvar,sizeof(double),ulen,file_);
-      }
 };
 
 #endif

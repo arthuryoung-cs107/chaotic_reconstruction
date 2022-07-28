@@ -1,9 +1,5 @@
 #include "MH_learning.hh"
 
-// record
-
-record::record(record_struct &rs_, int rid_, int * ichunk_, double * dchunk_, double * u_): record_struct(rs_), rid(rid_), ichunk(ichunk_), dchunk(dchunk_), u(u_) {}
-
 // thread_worker
 
 thread_worker::thread_worker(swirl_param &sp_, proximity_grid * pg_, wall_list &wl_, thread_worker_struct &tws_, int thread_id_): swirl(sp_, pg_, wl_, tws_.nbeads), thread_worker_struct(tws_),
@@ -63,31 +59,4 @@ MH_trainer::~MH_trainer()
   }
   delete [] pg;
   delete [] rng;
-}
-
-// basic_MH_trainer
-
-basic_MH_trainer::basic_MH_trainer(MH_train_struct &mhts_, int ichunk_width_, int dchunk_width_, double t_wheels0_): MH_trainer(mhts_, ichunk_width_, dchunk_width_), gaussian_likelihood(sigma, mhts_.sp_min->cl_im),
-apply_training_wheels(t_wheels0_>0.0), t_wheels0(t_wheels0_),
-ndup_leaders(new int[nlead]), irepl_leaders(new int[nlead]), isuccess_pool(new int[npool]),
-w_leaders(new double[nlead]),
-u_mean(new double[ulen]), u_var(new double[ulen]),
-u_wmean(new double[ulen]), u_wvar(new double[ulen]) {}
-
-
-void basic_MH_trainer::duplicate_u_basic(basic_record *child_, basic_record *parent_, MH_rng *rng_t_, double fac_low_)
-{
-  double  r_ = sqrt(parent_->get_r2()),
-          r_rat = r_/sqrt(rho2),
-          sigma_fac = max(0.25*(1.0-exp(0.5*(1.0-r_rat)*(1.0+r_rat))), fac_low_),
-          *u_child=child_->u,
-          *u_parent=parent_->u;
-  for (int i = 0; i < ulen; i++)
-  {
-    double z = rng_t_->rand_gau();
-    u_child[i]=u_parent[i] + z*sigma_fac*((z>0.0)?(umax[i]-u_parent[i]):(u_parent[i]-umin[i]));
-    if (u_child[i]>umax[i]) u_child[i]=umax[i];
-    if (u_child[i]<umin[i]) u_child[i]=umin[i];
-  }
-  child_->init_basic_record(gen_count);
 }

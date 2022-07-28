@@ -3,6 +3,47 @@
 
 #include "MH_records.hh"
 
+class basic_thread_worker: public thread_worker, public event_detector
+{
+    public:
+
+      basic_thread_worker(swirl_param &sp_, proximity_grid *pg_, wall_list &wl_, thread_worker_struct &tws_, int thread_id_, double alpha_tol_, int iwkspc_len_, int dwkspc_len_): thread_worker(sp_, pg_, wl_, tws_, thread_id_), event_detector(nbeads, Frames, 2, alpha_tol_),
+      iwkspc_len(iwkspc_len_), dwkspc_len(dwkspc_len_),
+      int_wkspc(new int[iwkspc_len]), dub_wkspc(new double[dwkspc_len]) {}
+
+      ~basic_thread_worker() {delete [] int_wkspc; delete [] dub_wkspc;}
+
+      const int iwkspc_len,
+                dwkspc_len;
+
+      int * const int_wkspc;
+
+      double  netr2,
+              netr2_stable,
+              netr2_unstable,
+              *r2_objective,
+              * const dub_wkspc;
+
+      inline void set_net_objective()
+        {r2_objective=&netr2; rho2_objective=compute_netrho2();}
+      inline void set_stable_objective()
+        {r2_objective=&netr2_stable; rho2_objective=compute_netrho2stable();}
+      inline void set_unstable_objective()
+        {r2_objective=&netr2_unstable; rho2_objective=compute_netrho2unstable();}
+
+      inline void clear_basic_tw_event_data() {clear_event_detector_event_data();}
+      inline void clear_basic_tw_training_data()
+      {
+        memset(int_wkspc,0,iwkspc_len*sizeof(int));
+        for (int i = 0; i < dwkspc_len; i++) dub_wkspc[i]=0.0;
+      }
+
+      inline bool check_success(double r2_threshold_) {return (*r2_objective)<r2_threshold_;}
+
+      // debugging
+      void print_basic_tw(const char indent_[], double sigma_scaled_);
+};
+
 class MH_examiner: public basic_thread_worker
 {
   public:
@@ -41,14 +82,8 @@ class MH_examiner: public basic_thread_worker
     bool report_examiner_training_data(bool first2finish_, event_record ** bpool_address_, int *isuccess_pool_,int &nsuccess_,double *u_wmean_);
 
     // debugging
-
-    inline void print_MH_examiner(int thread_count_, double sigma_scaled_)
-    {
-      printf("(MH_examiner) worker %d of %d:\n", thread_id, thread_count_);
-      print_basic_tw("     ",sigma_scaled_);
-    }
-
-
+    void print_MH_examiner(int thread_count_, double sigma_scaled_);
+    
   protected:
     friend class MH_medic;
 

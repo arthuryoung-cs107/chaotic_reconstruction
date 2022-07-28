@@ -3,6 +3,68 @@
 
 #include "MH_workers.hh"
 
+class basic_MH_trainer: public MH_trainer, public gaussian_likelihood
+{
+    public:
+
+      basic_MH_trainer(MH_train_struct &mhts_, int ichunk_width_, int dchunk_width_, double t_wheels0_=-1.0);
+
+      ~basic_MH_trainer()
+      {
+        delete [] ndup_leaders; delete [] irepl_leaders; delete [] isuccess_pool;
+        delete [] w_leaders;
+        delete [] u_mean; delete [] u_var;
+        delete [] u_wmean; delete [] u_wvar;
+      }
+
+    protected:
+
+      bool apply_training_wheels;
+
+      const double t_wheels0; // initial drift fraction
+
+      double  t_wheels, // current drift fraction
+              r2_scale;
+
+      int * const ndup_leaders,
+          * const irepl_leaders,
+          * const isuccess_pool;
+
+      double  * const w_leaders,
+              * const u_mean,
+              * const u_var,
+              * const u_wmean,
+              * const u_wvar;
+
+      // debugging
+      void print_basic_MHT(const char indent_[]="     ");
+
+      // run
+      inline void initialize_basic_MHT_run() {initialize_MHT_run(); t_wheels=t_wheels0;}
+
+      // sampling
+      virtual void redraw_u(basic_record * rec_pool_, MH_rng * rng_t_)
+        {redraw_u_uni(rec_pool_, rng_t_); rec_pool_->init_basic_record(gen_count);}
+
+      void duplicate_u_basic(basic_record *child_, basic_record *parent_, MH_rng *rng_t_, double fac_low_=0.0);
+
+      // training
+      inline void clear_basic_MHT_training_data() {memset(isuccess_pool,0,npool*sizeof(int));nsuccess=0;}
+
+      // io
+      inline int basic_MHT_it_ilen_full() {return MHT_it_ilen;}
+      inline int basic_MHT_it_dlen_full() {return MHT_it_dlen;}
+      inline void write_basic_MHT_it_ints(FILE * file_) {write_MHT_it_ints(file_);}
+      inline void write_basic_MHT_it_dubs(FILE * file_) {write_MHT_it_dubs(file_);}
+      inline void write_ustats(FILE *file_)
+      {
+        fwrite(u_mean,sizeof(double),ulen,file_);
+        fwrite(u_wmean,sizeof(double),ulen,file_);
+        fwrite(u_var,sizeof(double),ulen,file_);
+        fwrite(u_wvar,sizeof(double),ulen,file_);
+      }
+};
+
 const int genetic_train_const_ilen=3;
 const int genetic_train_const_dlen=3;
 const int genetic_train_it_ilen=4;
@@ -58,15 +120,8 @@ class MH_genetic : public basic_MH_trainer, public event_block
                   ** const candidates;
 
 
-    // debugging write outs
-
-    inline void print_MH_genetic()
-    {
-      printf("(MH_genetic) Class_count: %d, event_block_count %d\n", Class_count,event_block_count);
-      printf("(MH_genetic) prob_best: %e, prob_worst %e\n", prob_best,prob_worst);
-      print_basic_MHT("     ");
-      print_event_block(sigma_scaled,"     ");
-    }
+    // debugging
+    void print_MH_genetic();
 
     // run
     inline void initialize_genetic_run()
@@ -170,40 +225,14 @@ class MH_genetic : public basic_MH_trainer, public event_block
   private:
 
     // verbose
-
-    inline void verbose_find_events_1()
-      {printf("(MH_genetic::find_events) Found event block %d with generation %d.", event_block_count,gen_count);}
-
-    inline void verbose_find_events_2() {printf(" Earliest, latest frames: %d, %d\n", stev_earliest, stev_latest);}
-    inline void verbose_find_events_3()
-      {printf("(bead,frame), chronologically:\n");
-      for (int i = 0; i < nbeads; i++) printf("(%d %d)\n",comps_ordered[i],stev_ordered[i]);}
-
-    inline void verbose_set_objective_1()
-    {
-      printf("(MH_genetic::set_objective) %d %s frames, rho2 = %e. ",
-      (stable_flag)?event_block::nst_stable():event_block::nst_unstable(),
-      (stable_flag)?"STABLE":"UNSTABLE",
-      rho2_objective);
-    }
-
-    inline void verbose_set_objective_2()
-      {printf("nreplace: %d, r2 best (%d): %e, r2 worst (%d): %e. ",nreplace,bleader_rid,br2,wleader_rid,wr2);}
-
-    inline void verbose_train_objective_1(int nit_, int nsuccess_local_)
-      {printf("(MH_genetic::train_objective) gen %d, Class %d, nit %d: %d (%d) candidates, best candidate (%d) r2 = %e. ", gen_count, Class_count, nit_, nsuccess, nsuccess_local_, bpool->rid, bpool->get_r2());}
-
-    inline void verbose_train_objective_2()
-      {printf("%d replacements, r2 best (%d): %e, r2 worst (%d): %e. ", nreplace, bleader_rid, br2, wleader_rid, wr2);}
-
-    inline void verbose_respawn_pool(int offset_)
-    {
-      // if (offset_) printf("(MH_genetic::respawn_pool) %d reloads, ", offset_);
-      // else printf("(MH_genetic::respawn_pool) ");
-      if (offset_) printf("RESPAWNING: %d reloads, ", offset_);
-      else printf("RESPAWNING: ");
-      printf("%d redraws, %d duplicates (%d unique).\n", nredraw, ndup, ndup_unique);
-    }
+    void verbose_find_events_1();
+    void verbose_find_events_2();
+    void verbose_find_events_3();
+    void verbose_set_objective_1();
+    void verbose_set_objective_2();
+    void verbose_train_objective_1(int nit_, int nsuccess_local_);
+    void verbose_train_objective_2();
+    void verbose_respawn_pool(int offset_);
 };
 
 class MH_doctor : public MH_genetic
